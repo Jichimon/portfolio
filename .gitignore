@@ -1,0 +1,14 @@
+# Confidentiality mapping and banned-terms list.
+# Committing this undoes every sanitization decision in the repository.
+private/
+
+# Rendered diagram output (regenerated from .mmd source)
+resources/diagrams/*.svg
+resources/diagrams/*.png
+
+# Original unsanitized source material
+*.original.*
+uploads/
+
+.DS_Store
+node_modules/
