@@ -29,9 +29,9 @@ Output to `resources/diagrams/{id}.mmd`, one file per id.
 | `otp-c4-after` | c4-container | otp-provider-decoupling |
 | `otp-breakeven` | table | otp-provider-decoupling |
 | `migration-phases` | flow | legacy-payment-data-migration |
-| `biosys-c4-context` | c4-context | multi-tenant-biometric-attendance |
-| `biosys-c4-container` | c4-container | multi-tenant-biometric-attendance |
-| `biosys-c4-component` | c4-component | multi-tenant-biometric-attendance |
+| `attendance-c4-context` | c4-context | multi-tenant-biometric-attendance |
+| `attendance-c4-container` | c4-container | multi-tenant-biometric-attendance |
+| `attendance-c4-component` | c4-component | multi-tenant-biometric-attendance |
 
 **Rules**
 - The spec inside each `:::diagram` block is the requirement. Follow it.
@@ -41,7 +41,7 @@ Output to `resources/diagrams/{id}.mmd`, one file per id.
   comparison.
 - `otp-breakeven` is a cost-vs-volume chart, not C4. If Mermaid can't express it
   well, say so and propose an alternative rather than shipping something weak.
-- The three `biosys-*` diagrams exist as PNGs from the original project. **Redraw
+- The three `attendance-*` diagrams exist as PNGs from the original project. **Redraw
   sanitized** — vendor and company names removed. Do not reuse as-is.
 
 **Acceptance**

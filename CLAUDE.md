@@ -137,6 +137,9 @@ Spec: what the diagram must show.
 `flow`, `table`. Both locales declare the same `id` — one asset serves both
 languages; only caption and spec text differ.
 
+Diagram ids derive from the public slug of the case study, never from an internal
+product or system name. The id becomes a public asset path.
+
 ---
 
 ## 5. Working style

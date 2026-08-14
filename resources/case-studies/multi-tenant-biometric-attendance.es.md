@@ -48,7 +48,7 @@ Construir una plataforma de asistencia y autogestión de RRHH que:
 - Equipo chico, capacidad de operación única. Lo que construyéramos, lo teníamos que
   operar nosotros.
 
-:::diagram{id="biosys-c4-context" type="c4-context"}
+:::diagram{id="attendance-c4-context" type="c4-context"}
 Contexto de sistema: empleados y administradores de RRHH, la app móvil, la plataforma,
 las terminales biométricas y el sistema de RRHH de terceros.
 Spec: diagrama C4 de contexto existente — sanitizar nombres de proveedor y de empresa antes de publicar.
@@ -72,14 +72,14 @@ Los módulos: datos organizacionales, identidad y accesos, asistencia y comunica
 internas — cada uno con su dominio, su acceso a persistencia y un contrato explícito
 hacia los demás.
 
-:::diagram{id="biosys-c4-container" type="c4-container"}
+:::diagram{id="attendance-c4-container" type="c4-container"}
 Vista de contenedores de la plataforma: app móvil, panel de administración, módulos de
 API y bases de datos por tenant.
 Spec: diagrama C4 de contenedores existente. Enfatizar las fronteras de módulo como las
 futuras costuras de servicio.
 :::
 
-:::diagram{id="biosys-c4-component" type="c4-component"}
+:::diagram{id="attendance-c4-component" type="c4-component"}
 Vista de componentes del módulo de asistencia, incluyendo el camino de integración con
 las terminales.
 Spec: diagrama C4 de componentes existente.

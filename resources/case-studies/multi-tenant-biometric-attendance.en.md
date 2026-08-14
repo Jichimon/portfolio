@@ -46,7 +46,7 @@ Build an attendance and HR self-service platform that:
   preference.
 - Small team, single operations capability. Whatever we built, we had to run.
 
-:::diagram{id="biosys-c4-context" type="c4-context"}
+:::diagram{id="attendance-c4-context" type="c4-context"}
 System context: employees and HR administrators, the mobile app, the platform, the
 biometric terminals and the third-party HR system.
 Spec: existing C4 context diagram — sanitise vendor and company names before publishing.
@@ -69,14 +69,14 @@ The modules: organisational data, identity and access, attendance, and internal
 communications — each with its own domain, its own persistence access, and an
 explicit contract to the others.
 
-:::diagram{id="biosys-c4-container" type="c4-container"}
+:::diagram{id="attendance-c4-container" type="c4-container"}
 Container view of the platform: mobile app, admin panel, API modules and per-tenant
 databases.
 Spec: existing C4 container diagram. Emphasise the module boundaries as the future
 service seams.
 :::
 
-:::diagram{id="biosys-c4-component" type="c4-component"}
+:::diagram{id="attendance-c4-component" type="c4-component"}
 Component view of the attendance module, including the terminal integration path.
 Spec: existing C4 component diagram.
 :::
