@@ -10,5 +10,9 @@ resources/diagrams/*.png
 *.original.*
 uploads/
 
+# Working intake notes — raw answers about availability, job search, and
+# employment specifics, not for publication. Not a pattern: only this file.
+resources/site/intake.md
+
 .DS_Store
 node_modules/

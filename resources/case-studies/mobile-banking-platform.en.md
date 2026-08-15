@@ -127,6 +127,6 @@ partly a communication problem, and I under-invested in that half.
 
 ## Deep dives
 
-- [QR collections for merchants](/case-studies/qr-collections-for-merchants)
-- [Decoupling one-time passwords from a third-party provider](/case-studies/otp-provider-decoupling)
-- [Migrating legacy payment data nobody understood](/case-studies/legacy-payment-data-migration)
+- [Letting merchants delegate payment collection to people without bank accounts](/case-studies/qr-collections-for-merchants)
+- [Taking second-factor authentication back from a vendor](/case-studies/otp-provider-decoupling)
+- [Migrating payment data out of a system nobody understood](/case-studies/legacy-payment-data-migration)

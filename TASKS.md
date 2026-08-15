@@ -66,7 +66,7 @@ Output to `resources/diagrams/{id}.mmd`, one file per id. 11/11 exist.
 
 ---
 
-## TASK 2 — Site copy · `TODO`
+## TASK 2 — Site copy · `DONE`
 
 Create `resources/site/`, both locales for each file.
 
@@ -87,10 +87,13 @@ section** — the CV's reference block contains third parties' personal phone nu
 and must never reach a public site.
 
 **Acceptance**
-- [ ] No generic filler sentences
-- [ ] Every claim traceable to a case study or the CV
-- [ ] Locale parity
-- [ ] `./scripts/check-terms.sh` passes
+- [x] No generic filler sentences
+- [x] Every claim traceable to a case study, the CV, or the author directly
+  (intake answers) — the last category came up mostly in `about.md`/
+  `experience.md`, where facts existed nowhere else yet.
+- [x] Locale parity — verified per file, most recently a full side-by-side
+  read of `home.en/es.md`.
+- [x] `./scripts/check-terms.sh` passes
 
 ---
 

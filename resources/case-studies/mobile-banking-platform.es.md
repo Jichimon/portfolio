@@ -129,6 +129,6 @@ entorno regulado es en parte un problema de comunicación, y subinvertí en esa 
 
 ## Deep dives
 
-- [Cobros con QR para comercios](/case-studies/qr-collections-for-merchants)
-- [Desacoplar los códigos de un solo uso de un proveedor externo](/case-studies/otp-provider-decoupling)
-- [Migrar datos de pagos legacy que nadie entendía](/case-studies/legacy-payment-data-migration)
+- [Permitir que comercios deleguen el cobro en personas sin cuenta bancaria](/case-studies/qr-collections-for-merchants)
+- [Recuperar el segundo factor de autenticación de manos de un proveedor](/case-studies/otp-provider-decoupling)
+- [Migrar datos de pagos desde un sistema que nadie entendía](/case-studies/legacy-payment-data-migration)

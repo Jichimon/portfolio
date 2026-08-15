@@ -18,8 +18,9 @@ Everything here is Markdown, bilingual (English + Spanish), sanitized for
 publication. The site build (planned: Harness + agents) will consume these files.
 
 **Author:** Luis Octavio Antelo Mansilla — backend engineer / solution architect,
-~5 years, currently at NICE, based in Cochabamba, Bolivia (GMT-4, full overlap with
-US business hours).
+~5 years, most recently Senior Software Engineer at NICE (through June 2026), based
+in Cochabamba, Bolivia (GMT-4, full overlap with US business hours). Open to remote
+or hybrid/relocation depending on the role.
 
 **Professional thesis — the single idea every page must reinforce:**
 
