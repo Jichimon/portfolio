@@ -1,0 +1,44 @@
+%%{init: {'flowchart': {'curve': 'linear'}}}%%
+flowchart LR
+  Legacy["Legacy Server<br/>(SQL Server 2012)"]:::external
+
+  subgraph P1["Phase 1 — Extract"]
+    direction TB
+    M1["Migrate batch<br/>→ staging tables"]:::internal
+    V1{"Verify batch"}:::gate
+    M1 --> V1
+    V1 -->|"batch remaining"| M1
+  end
+
+  subgraph P2["Phase 2 — Load"]
+    direction TB
+    M2["Migrate batch<br/>→ new server (off-hours)"]:::internal
+    V2{"Verify batch"}:::gate
+    M2 --> V2
+    V2 -->|"batch remaining"| M2
+  end
+
+  subgraph P3["Phase 3 — Reshape"]
+    direction TB
+    M3["Migrate batch<br/>columns → rows"]:::internal
+    V3{"Verify batch"}:::gate
+    M3 --> V3
+    V3 -->|"batch remaining"| M3
+  end
+
+  New["New Server<br/>(SQL Server 2022)"]:::external
+  Halt["Halt · flag for review"]:::deny
+
+  Legacy --> P1
+  V1 -->|"phase complete · verified"| P2
+  V2 -->|"phase complete · verified"| P3
+  V3 -->|"phase complete · verified"| New
+
+  V1 -.->|"fails acceptance criteria"| Halt
+  V2 -.->|"fails acceptance criteria"| Halt
+  V3 -.->|"fails acceptance criteria"| Halt
+
+  classDef internal fill:#fff4d6,stroke:#b8860b,color:#3d2e00
+  classDef external fill:#f0f0f0,stroke:#666666,color:#222222
+  classDef gate fill:#e3f2fd,stroke:#1565c0,color:#0d2b4a
+  classDef deny fill:#fbe9e7,stroke:#c62828,color:#4a1410

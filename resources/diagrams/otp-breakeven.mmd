@@ -1,0 +1,20 @@
+%%{init: {'theme': 'default'}}%%
+block-beta
+columns 3
+  corner[" "] lowVol["< ~430,000 ops/mo"] highVol["≥ ~430,000 ops/mo"]
+  srvLabel["Serverless"] srvLow["Wins<br/>lower cost here"] srvHigh["Loses<br/>~50x cost at push volume"]
+  ctrLabel["Containers"] ctrLow["Loses<br/>gap is small"] ctrHigh["Wins decisively"]
+  flowLabel["Flows at this volume"] otpFlow["OTP · ~10⁵/mo<br/>near the boundary"] pushFlow["Push · ~10⁷/mo"]
+  gapNote["Contact handler volume not published in the case study — omitted rather than estimated."]:3
+
+  classDef hdr fill:#f0f0f0,stroke:#666666,color:#222222
+  classDef win fill:#e6f4ea,stroke:#2e7d32,color:#1b3a20
+  classDef lose fill:#fbe9e7,stroke:#c62828,color:#4a1410
+  classDef flow fill:#e8eef7,stroke:#4a6fa5,color:#1a2b42
+  classDef note fill:#fff4d6,stroke:#b8860b,color:#3d2e00
+
+  class corner,lowVol,highVol,srvLabel,ctrLabel,flowLabel hdr
+  class srvLow,ctrHigh win
+  class srvHigh,ctrLow lose
+  class otpFlow,pushFlow flow
+  class gapNote note

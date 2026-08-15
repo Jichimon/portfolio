@@ -1,0 +1,22 @@
+%%{init: {'flowchart': {'curve': 'linear'}}}%%
+flowchart LR
+  subgraph Owner["Owner"]
+    direction TB
+    O1["Invite / revoke delegate"]:::allow
+    O2["Generate collection QR"]:::allow
+    O3["View balances"]:::allow
+    O4["View transaction history"]:::allow
+    O5["View personal data"]:::allow
+  end
+
+  subgraph Delegate["Delegate"]
+    direction TB
+    D1["Generate single-use<br/>collection QR"]:::allow
+    D2["View balances"]:::deny
+    D3["View transaction history"]:::deny
+    D4["View personal data"]:::deny
+    D5["Invite a second delegate"]:::deny
+  end
+
+  classDef allow fill:#e6f4ea,stroke:#2e7d32,color:#1b3a20
+  classDef deny fill:#fbe9e7,stroke:#c62828,color:#4a1410

@@ -1,0 +1,27 @@
+%%{init: {'flowchart': {'curve': 'linear'}}}%%
+flowchart LR
+  Branch["Branch Channel"]:::client
+  Web["Web Channel"]:::client
+  Mobile["Mobile Channel"]:::client
+
+  subgraph Platform["Platform boundary — two services, split by load profile"]
+    direction TB
+    CredSvc["Credentials Service<br/>(create · reset · lifecycle)"]:::internal
+    IdGateway["Identity Gateway<br/>(verification · vendor adapter)"]:::internal
+    Correspondence["Correspondence Service"]:::internal
+  end
+
+  Branch --> CredSvc
+  Web --> CredSvc
+  Mobile --> CredSvc
+  Branch --> IdGateway
+  Web --> IdGateway
+  Mobile --> IdGateway
+
+  CredSvc -->|"low volume<br/>enrolment · reset · recovery"| IdGateway
+  CredSvc -->|"deliver new/reset credentials"| Correspondence
+  IdGateway -->|"high volume<br/>every login + session refresh"| IdProv["Identity Provider"]:::external
+
+  classDef client fill:#e8eef7,stroke:#4a6fa5,color:#1a2b42
+  classDef internal fill:#fff4d6,stroke:#b8860b,color:#3d2e00
+  classDef external fill:#f0f0f0,stroke:#666666,color:#222222

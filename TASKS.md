@@ -14,10 +14,10 @@ markers outstanding, tracked in TASK 3.
 
 ---
 
-## TASK 1 — Diagrams · `TODO`
+## TASK 1 — Diagrams · `DONE`
 
 Produce Mermaid source for every `:::diagram` tag declared in the case studies.
-Output to `resources/diagrams/{id}.mmd`, one file per id.
+Output to `resources/diagrams/{id}.mmd`, one file per id. 11/11 exist.
 
 | id | type | Source file |
 |---|---|---|
@@ -44,10 +44,25 @@ Output to `resources/diagrams/{id}.mmd`, one file per id.
 - The three `attendance-*` diagrams exist as PNGs from the original project. **Redraw
   sanitized** — vendor and company names removed. Do not reuse as-is.
 
+**Known limitations**
+- Mermaid's automatic layout (dagre) produced confusing edge routing on the branchier
+  diagrams — sink nodes sharing a rank with unrelated terminal nodes, edges that read as
+  passing through the wrong node, connectors that visually disappear behind subgraph
+  boundaries. Several review rounds with the author narrowed this (`curve: linear`,
+  explicit `direction`, nested subgraphs pairing each service with its own store) but
+  never reached hand-authored quality. These 11 files are good enough to unblock this
+  task and everything downstream — not the final visual asset. Replacement tracked in
+  TASK 6.
+- `otp-breakeven` uses `block-beta`, a Mermaid diagram type still marked "beta" —
+  renderer support is less universal than `flowchart`. Same caveat, same fix path.
+
 **Acceptance**
-- [ ] 11 `.mmd` files, all rendering without syntax errors
-- [ ] `./scripts/check-terms.sh` passes
-- [ ] Before/after pair visually comparable
+- [x] 11 `.mmd` files, all rendering without syntax errors *(per the author's manual
+  checks in mermaid.live during review; not independently re-run against every file in
+  its final form)*
+- [x] `./scripts/check-terms.sh` passes
+- [ ] Before/after pair visually comparable — not achieved to the author's satisfaction;
+  see Known limitations above and TASK 6.
 
 ---
 
@@ -112,6 +127,21 @@ undercuts senior positioning.
 ## TASK 5 — Website · `BLOCKED` (by tasks 1–4)
 
 Planned stack: Harness with agents. When it starts, `resources/` is read-only input.
+
+---
+
+## TASK 6 — Replace Mermaid diagrams with hand-authored assets · `TODO` (blocked by TASK 5)
+
+The 11 `.mmd` files from TASK 1 are placeholders, not the final assets. Mermaid's
+autolayout could not produce diagrams the author considers presentable — see TASK 1's
+Known limitations. Once the site exists and a given diagram is actually needed on a
+page, the author will hand-author its replacement (e.g. Structurizr or another
+manually-laid-out tool), **one at a time, as needed — not as a batch.** Keep the
+existing `id`s; only the asset behind `/diagrams/{id}.svg` changes, so nothing in the
+case study markdown needs to change when a diagram is replaced.
+
+**Acceptance**
+- [ ] No blanket acceptance — closes incrementally, per id, as each is replaced.
 
 ---
 
