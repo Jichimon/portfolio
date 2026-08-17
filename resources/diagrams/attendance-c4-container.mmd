@@ -16,7 +16,7 @@ flowchart LR
   Admin --> AdminPanel
 
   Backend --> SystemDB[("Shared System DB<br/>config · cross-tenant")]:::store
-  Backend --> TenantDB[("Per-Tenant DB<br/>× N tenants")]:::store
+  Backend --> TenantDB[("Tenant-Shared DB<br/>all tenants · dedicated-DB opt-in designed, not built")]:::store
   Backend -->|"employee data sync"| HRSystem["Third-Party HR System"]:::external
 
   classDef client fill:#e8eef7,stroke:#4a6fa5,color:#1a2b42

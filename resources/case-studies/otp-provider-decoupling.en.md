@@ -7,7 +7,7 @@ subtitle: "Decomposing an overloaded notification service and choosing the more 
 role: "Solution Architect"
 context: "Regulated bank · Latin America"
 period: "2025"
-outcome: "~70% reduction in the notification stack's monthly run cost"
+outcome: "Approved decomposition plan, execution begun; OTP cutover not completed before handover — ~70% reduction in monthly run cost was the target"
 stack: [".NET", "AWS Fargate", "AWS Lambda", "DynamoDB", "Aurora", "SNS/SQS"]
 skills: [architecture-decision-records, cost-engineering, service-decomposition, latency-analysis]
 featured: true
@@ -133,22 +133,28 @@ Spec: log scale on volume. Mark where OTP, contact handler and push listener eac
 
 ## Result
 
-- **~70% reduction in the monthly run cost** of the notification stack.
-- OTP validation moved fully in-house, removing the vendor from the critical path.
+The compute decision and the service decomposition were approved, and execution
+began. I left the bank shortly after, before the OTP flow was actually cut over to
+the new in-house verification service — so what follows is the plan's targets, not
+measured outcomes.
+
+- **Projected ~70% reduction** in the monthly run cost of the notification stack,
+  once OTP validation moves fully off the vendor.
 - Complete audit trail of generations and validation attempts inside the bank's own
-  systems.
-- Latency targets: validation P95 from 83 ms to a target of ≤70 ms; generation P95
-  from 210 ms to a target of ≤200 ms.
+  systems — the design target; the vendor was still in the critical path when I left.
+- Latency targets: validation P95 from 83 ms to ≤70 ms; generation P95 from 210 ms to
+  ≤200 ms.
 
-An honest note on that last figure. Generation improves only marginally, because it
-is dominated by the outbound message hop to the delivery provider — a hop we kept.
-We added a network call and removed a slower vendor call, and the two roughly cancel.
-The win here was cost and control. Presenting it as a latency win would have been
-dishonest, and the review would have caught it.
+An honest note on that last figure, still true as a target. Generation would improve
+only marginally, because it is dominated by the outbound message hop to the delivery
+provider — a hop the design kept. The new in-house network call and the removed,
+slower vendor call roughly cancel. The intended win here was cost and control, not
+latency — claiming a latency win would have been dishonest, and the review would have
+caught it.
 
-[NEEDS INPUT] Post-implementation measured P95 and actual monthly cost, if the
-rollout has completed. Replacing targets with measured outcomes would make this the
-strongest case study in the portfolio.
+I don't have post-cutover numbers, and I won't: I left the bank before the OTP flow
+was actually moved off the vendor, so there is no measured P95 or real monthly cost
+to report — only the targets above, from the plan that was approved.
 
 ## What I would do differently
 

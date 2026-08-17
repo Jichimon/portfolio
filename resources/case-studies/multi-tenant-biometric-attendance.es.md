@@ -74,9 +74,10 @@ hacia los demás.
 
 :::diagram{id="attendance-c4-container" type="c4-container"}
 Vista de contenedores de la plataforma: app móvil, panel de administración, módulos de
-API y bases de datos por tenant.
+API y la base de datos compartida entre tenants.
 Spec: diagrama C4 de contenedores existente. Enfatizar las fronteras de módulo como las
-futuras costuras de servicio.
+futuras costuras de servicio, y etiquetar la base de datos de tenants como compartida,
+no por-tenant.
 :::
 
 :::diagram{id="attendance-c4-component" type="c4-component"}
@@ -85,17 +86,23 @@ las terminales.
 Spec: diagrama C4 de componentes existente.
 :::
 
-### Una base de datos por tenant
+### Una base de datos compartida entre tenants, con una opción dedicada diseñada pero nunca construida
 
-El aislamiento se implementa como una base de datos separada por empresa cliente. El
-tenant se resuelve en tiempo de request y la conexión se rutea en consecuencia.
+El aislamiento de los datos de tenant se implementó como una única base de datos
+tenant-shared, separada de la base de datos del sistema (configuración y datos
+cross-tenant), con cada fila resuelta por tenant id y la conexión ruteada en tiempo
+de request. El diseño también contemplaba un camino para que un tenant pudiera optar
+por su propia base de datos dedicada en lugar de la compartida, para un cliente cuyo
+contrato exigiera aislamiento más fuerte. Ese camino nunca se construyó: los 14
+tenants al momento del traspaso corrían sobre la base de datos compartida.
 
-**El trade-off:** base-por-tenant da la garantía de aislamiento más fuerte disponible
-sin llegar a infraestructura separada — que es exactamente lo que exigía el contrato
-del cliente, y lo que hace creíble una historia de SaaS a futuro. Cuesta fan-out de
-migraciones. Cada cambio de esquema se ejecuta N veces, y N crece con cada cliente
-nuevo. Es un impuesto operativo real, y es la razón por la que revisaría esta
-decisión a otra escala en vez de fingir que salía gratis.
+**El trade-off:** una base de datos compartida es mucho más barata de operar — un
+solo target de migración, una sola cosa que parchear, una sola cosa que monitorear —
+a costa de una garantía de aislamiento más débil que la separación física. Fue una
+apuesta razonable dado que el contrato real de cada cliente quedaba satisfecho igual.
+Lo que no salió gratis fue diseñar y cargar con la vía de escape de base dedicada en
+la capa de acceso a datos para un requisito que ningún cliente terminó ejerciendo —
+ese es un costo que pagué por una opcionalidad que nunca usé.
 
 ### Integración en dos direcciones
 
@@ -110,29 +117,29 @@ sistema de registro mientras la plataforma es dueña de la experiencia del emple
 
 ## Resultado
 
-- En producción en varias empresas del holding.
+- **14 tenants en producción** dentro del holding al momento del traspaso.
 - Marcado remoto de asistencia y autogestión de RRHH para miles de empleados.
-- Menor carga administrativa en los departamentos de RRHH: consultas que antes
+- **~30% de reducción en la carga administrativa de RRHH** — consultas que antes
   requerían ir a una oficina pasaron a ser autoservicio.
-- Arquitectura y modelo de aislamiento posicionados para una futura oferta SaaS.
-
-[NEEDS INPUT] Cantidad de tenants al momento del traspaso, y alguna medida de la
-reducción en la carga administrativa de RRHH. Aunque sea una cifra aproximada haría
-concreta la sección de impacto.
+- Arquitectura posicionada para una futura oferta SaaS — aunque el modelo de base
+  compartida necesitaría el camino dedicado por tenant realmente construido antes de
+  que esa historia sostenga fuera del holding.
 
 ## Qué haría distinto hoy
 
-**Automatizar el pipeline de migración de tenants desde el día uno.** Elegí
-base-por-tenant sabiendo que multiplicaba el esfuerzo de migración, y después manejé
-las migraciones a mano durante más tiempo del que debía. Si el modelo de aislamiento
-crea N de algo, el tooling para ejecutar cosas N veces es parte del modelo de
-aislamiento, no una tarea posterior.
+**No diseñar una vía de escape que no vas a validar.** El plan incluía un camino
+para que un tenant optara por una base de datos dedicada en lugar de la compartida,
+por si el contrato de algún cliente exigía aislamiento más fuerte. Ningún cliente lo
+terminó ejerciendo, así que quedó en la capa de acceso a datos como complejidad que
+nadie usó. Enviaría solo el modelo compartido y agregaría el camino dedicado el día
+que un contrato real lo exigiera, no antes.
 
-**Considerar esquema-por-tenant como punto intermedio.** Da la mayor parte del
-aislamiento con un único target de migración. En este caso puntual el lenguaje
-contractual del cliente apuntaba a bases separadas, pero no evalué seriamente la
-alternativa: fui directo a la opción más fuerte porque era la más fácil de defender,
-que no es lo mismo que ser la mejor.
+**Verificar el requisito de aislamiento por cliente, no una sola vez para todos.**
+Leí "el aislamiento entre tenants es contractual" como una restricción general y
+diseñé para el caso más estricto en todos los casos. En la práctica, la base
+compartida satisfacía a los 14 tenants que había al traspaso. El requisito era real,
+pero debí verificarlo contra el lenguaje contractual de cada cliente en vez de asumir
+que la interpretación más estricta aplicaba en todos lados.
 
 **Documentar para quien opera, no solo para quien diseña.** Los diagramas C4 eran
 buenos para explicar el diseño e inútiles para operar el sistema a las 3 de la

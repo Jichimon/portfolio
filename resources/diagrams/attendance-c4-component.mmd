@@ -22,7 +22,7 @@ flowchart LR
 
   TerminalSync -->|"biometric check-in/out"| Terminals["Biometric Terminals<br/>(plant floor)"]:::external
   HRSync -->|"employee data sync"| HRSystem["Third-Party HR System"]:::external
-  DataAccess --> TenantDB[("Per-Tenant DB")]:::store
+  DataAccess --> TenantDB[("Tenant-Shared DB")]:::store
 
   classDef client fill:#e8eef7,stroke:#4a6fa5,color:#1a2b42
   classDef internal fill:#fff4d6,stroke:#b8860b,color:#3d2e00

@@ -14,7 +14,7 @@ Cinco años, cuatro empleadores, la misma versión de ese problema cada vez: un 
 
 ## Evidencia, no adjetivos
 
-- **~70% menos costo mensual de operación.** Un servicio OTP se había convertido en el punto único de falla de todos los canales salientes de la app móvil de un banco. Lo desacoplé. → [Recuperar el segundo factor de autenticación de manos de un proveedor](/case-studies/otp-provider-decoupling)
+- **~70% de reducción proyectada en costo mensual de operación.** Un servicio OTP se había convertido en el punto único de falla de todos los canales salientes de la app móvil de un banco. Diseñé el desacoplamiento y dejé la ejecución en marcha antes de irme. → [Recuperar el segundo factor de autenticación de manos de un proveedor](/case-studies/otp-provider-decoupling)
 - **100.000 usuarios en tres meses.** Permití que comercios sin cuenta bancaria empresarial cobraran a través de los rieles QR del propio banco. → [Permitir que comercios deleguen el cobro en personas sin cuenta bancaria](/case-studies/qr-collections-for-merchants)
 - **Millones de registros, cero incidentes en producción.** Migré los datos de pagos del core de un banco a una plataforma nueva, bajo un modelo de gobernanza donde "revertir y reintentar" no era una opción. → [Migrar datos de pagos desde un sistema que nadie entendía](/case-studies/legacy-payment-data-migration)
 - **Millones de usuarios, una sola plataforma.** Más recientemente, Senior Software Engineer en NICE, construyendo funcionalidades multitenant y mejoras de performance para una plataforma CX empresarial distribuida globalmente.

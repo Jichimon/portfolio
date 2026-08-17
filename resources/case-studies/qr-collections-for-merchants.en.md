@@ -112,14 +112,13 @@ right call, and I would make it again with the same reservations.
 ## Result
 
 - **100,000 users within three months of launch.**
+- **~8 transactions per second through delegated collections** at steady state.
+- **~15% of delegates were not previous bank customers**, participating in the
+  bank's payment ecosystem for the first time — reached with no formal marketing
+  plan behind the rollout.
 - Delegated collection available to merchants without additional hardware.
-- Non-customers participating in the bank's payment ecosystem for the first time.
 - Business and personal movements separated for the merchant, without a change to
   the core transaction model.
-
-[NEEDS INPUT] Transaction volume through delegated collections, and the share of
-delegates who were not previously bank customers. Both would strengthen this section
-considerably — the user number alone reads like a vanity metric.
 
 ## What I would do differently
 

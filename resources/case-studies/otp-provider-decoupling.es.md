@@ -7,7 +7,7 @@ subtitle: "Descomponer un servicio de notificaciones sobrecargado y elegir a pro
 role: "Solution Architect"
 context: "Banco regulado · Latinoamérica"
 period: "2025"
-outcome: "~70% de reducción en el costo mensual de operación del stack de notificaciones"
+outcome: "Plan de descomposición aprobado, ejecución arrancada; el corte de OTP no se completó antes de mi salida — el ~70% de reducción en costo mensual era la meta"
 stack: [".NET", "AWS Fargate", "AWS Lambda", "DynamoDB", "Aurora", "SNS/SQS"]
 skills: [architecture-decision-records, cost-engineering, descomposicion-de-servicios, analisis-de-latencia]
 featured: true
@@ -138,23 +138,29 @@ Spec: escala logarítmica en volumen. Marcar dónde caen OTP, contact handler y 
 
 ## Resultado
 
-- **~70% de reducción en el costo mensual de operación** del stack de notificaciones.
-- Validación de OTP totalmente in-house, sacando al proveedor del camino crítico.
+La decisión de cómputo y la descomposición del servicio quedaron aprobadas, y la
+ejecución arrancó. Dejé el banco poco después, antes de que el flujo de OTP se
+cortara realmente hacia el nuevo servicio de verificación in-house — así que lo que
+sigue son las metas del plan, no resultados medidos.
+
+- **Reducción proyectada de ~70%** en el costo mensual de operación del stack de
+  notificaciones, una vez que la validación de OTP salga por completo del proveedor.
 - Rastro de auditoría completo de generaciones e intentos de validación dentro de los
-  sistemas del propio banco.
-- Metas de latencia: validación P95 de 83 ms a una meta de ≤70 ms; generación P95 de
-  210 ms a una meta de ≤200 ms.
+  sistemas del propio banco — la meta de diseño; el proveedor seguía en el camino
+  crítico cuando me fui.
+- Metas de latencia: validación P95 de 83 ms a ≤70 ms; generación P95 de 210 ms a
+  ≤200 ms.
 
-Una nota honesta sobre esa última cifra. La generación mejora apenas, porque está
-dominada por el salto de mensajería saliente hacia el proveedor de entrega, salto que
-mantuvimos. Agregamos una llamada de red y quitamos una llamada más lenta del
-proveedor, y las dos se cancelan casi por completo. La ganancia acá fue costo y
-control. Presentarlo como una mejora de latencia habría sido deshonesto, y la
-revisión lo habría detectado.
+Una nota honesta sobre esa última cifra, que sigue siendo válida como meta. La
+generación mejoraría apenas, porque está dominada por el salto de mensajería saliente
+hacia el proveedor de entrega, salto que el diseño mantuvo. La nueva llamada de red
+in-house y la llamada más lenta del proveedor que se elimina se cancelan casi por
+completo. La ganancia buscada acá era costo y control, no latencia — presentarlo como
+una mejora de latencia habría sido deshonesto, y la revisión lo habría detectado.
 
-[NEEDS INPUT] P95 medido post-implementación y costo mensual real, si el rollout ya
-terminó. Reemplazar metas por resultados medidos convertiría a este en el case study
-más fuerte del portfolio.
+No tengo números post-corte y no los voy a tener: dejé el banco antes de que el flujo
+de OTP se moviera realmente fuera del proveedor, así que no hay P95 medido ni costo
+mensual real que reportar — solo las metas de arriba, del plan que quedó aprobado.
 
 ## Qué haría distinto hoy
 

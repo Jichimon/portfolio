@@ -119,14 +119,13 @@ fue la decisión correcta, y la volvería a tomar con las mismas reservas.
 ## Resultado
 
 - **100.000 usuarios en los tres meses posteriores al lanzamiento.**
+- **~8 transacciones por segundo a través de cobros delegados** en régimen estable.
+- **~15% de los delegados no eran clientes previos del banco**, participando por
+  primera vez del ecosistema de pagos del banco — alcanzado sin un plan de marketing
+  formal detrás del lanzamiento.
 - Cobro delegado disponible para comercios sin hardware adicional.
-- No-clientes participando por primera vez del ecosistema de pagos del banco.
 - Movimientos comerciales y personales separados para el comerciante, sin cambiar el
   modelo transaccional del core.
-
-[NEEDS INPUT] Volumen transaccional a través de cobros delegados, y proporción de
-delegados que no eran clientes previos del banco. Ambos fortalecerían mucho esta
-sección: el número de usuarios solo, aislado, suena a métrica de vanidad.
 
 ## Qué haría distinto hoy
 

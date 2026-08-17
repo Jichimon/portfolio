@@ -97,22 +97,38 @@ and must never reach a public site.
 
 ---
 
-## TASK 3 — Resolve `[NEEDS INPUT]` · `BLOCKED` (needs author)
+## TASK 3 — Resolve `[NEEDS INPUT]` · `DONE`
 
-Four markers block publication. `grep -rn "NEEDS INPUT" resources/`.
-No agent can resolve these. When an answer arrives, update **both** locales and
-delete the marker.
+All four markers resolved with the author, 2026-08-15. `grep -rn "NEEDS INPUT"
+resources/` now returns nothing.
 
-Highest value first:
+1. **`otp-provider-decoupling`** — the rollout never completed: the plan was
+   approved and execution began, but the author left the bank before the OTP flow
+   was actually cut over to the in-house service. There is no measured P95 or real
+   monthly cost, and there will not be one. Reworded `Result` (both locales) and the
+   frontmatter `outcome` to present the ~70% figure and the latency numbers as the
+   plan's targets, not achieved outcomes — plus a closing note explaining why no
+   measured numbers exist. This corrected an overstatement that had also leaked into
+   `home.{en,es}.md` and `about.{en,es}.md` (both reworded in the same pass, since
+   they cited the OTP result as a completed fact).
+2. **`qr-collections-for-merchants`** — ~8 transactions/second through delegated
+   collections, ~15% of delegates were not previous bank customers, reached with no
+   formal marketing plan. Added as two new `Result` bullets, both locales.
+3. **`multi-tenant-biometric-attendance`** — 14 tenants at handover, ~30% reduction
+   in HR administrative workload. **Also surfaced a bigger correction while asking:**
+   the case study described the isolation model as "database per tenant," but the
+   real implementation was a single tenant-shared database for all 14 tenants, with
+   a dedicated-per-tenant opt-in path designed but never built. Rewrote the
+   "Database" section, the two related "What I would do differently" bullets, the
+   `attendance-c4-container` diagram spec, and the two already-generated `.mmd`
+   files (`attendance-c4-container.mmd`, `attendance-c4-component.mmd`) to match
+   reality — both locales.
 
-1. **`otp-provider-decoupling`** — measured post-rollout P95 and actual monthly
-   cost. Also confirm whether the rollout executed at all: the file is written as an
-   approved decision with targets, and needs rewording if it shipped. Highest-value
-   gap in the whole portfolio.
-2. **`qr-collections-for-merchants`** — transaction volume, and share of delegates
-   who were not previously bank customers. The 100k user figure alone reads as a
-   vanity metric without one of these.
-3. **`multi-tenant-biometric-attendance`** — tenant count at handover.
+`Avícola Sofía` (the holding's real name, confirmed during this session) was added
+to `private/glossary.md`. It stays named in `home`/`about`/`experience` per the
+2026-08-15 employer-naming policy already in the glossary, and stays generic
+("an agro-industrial holding") in the case study and diagrams, unchanged from
+before.
 
 ---
 

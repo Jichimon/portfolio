@@ -14,7 +14,7 @@ Five years, four employers, one version of that problem each time: an on-premise
 
 ## Evidence, not adjectives
 
-- **~70% lower monthly run cost.** An OTP service had become a single point of failure for every outbound channel in a bank's mobile app. I decoupled it. → [Taking second-factor authentication back from a vendor](/case-studies/otp-provider-decoupling)
+- **~70% projected reduction in monthly run cost.** An OTP service had become a single point of failure for every outbound channel in a bank's mobile app. I designed the decoupling and got execution started before I moved on. → [Taking second-factor authentication back from a vendor](/case-studies/otp-provider-decoupling)
 - **100,000 users in three months.** Let merchants without a business bank account collect payments through the bank's own QR rails. → [Letting merchants delegate payment collection to people without bank accounts](/case-studies/qr-collections-for-merchants)
 - **Millions of records, zero production incidents.** Migrated a bank's core payment data onto a new platform, under a governance model where "roll back and retry" wasn't an option. → [Migrating payment data out of a system nobody understood](/case-studies/legacy-payment-data-migration)
 - **Millions of users, one platform.** Most recently Senior Software Engineer at NICE, shipping multitenant features and performance work for a globally distributed enterprise CX platform.

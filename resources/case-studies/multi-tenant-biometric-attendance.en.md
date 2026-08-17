@@ -70,10 +70,10 @@ communications — each with its own domain, its own persistence access, and an
 explicit contract to the others.
 
 :::diagram{id="attendance-c4-container" type="c4-container"}
-Container view of the platform: mobile app, admin panel, API modules and per-tenant
-databases.
+Container view of the platform: mobile app, admin panel, API modules and the shared
+tenant database.
 Spec: existing C4 container diagram. Emphasise the module boundaries as the future
-service seams.
+service seams, and label the tenant database as shared, not per-tenant.
 :::
 
 :::diagram{id="attendance-c4-component" type="c4-component"}
@@ -81,17 +81,22 @@ Component view of the attendance module, including the terminal integration path
 Spec: existing C4 component diagram.
 :::
 
-### Database per tenant
+### A shared tenant database, with a dedicated option designed but never built
 
-Tenant isolation is implemented as a separate database per client company. The
-tenant is resolved at request time and the connection routed accordingly.
+Tenant data isolation was implemented as a single tenant-shared database, separate
+from the system database (configuration and cross-tenant data), with every row
+scoped by tenant id and the connection resolved at request time. The design also
+included a path for a tenant to opt into its own dedicated database instead of the
+shared one, for a client whose contract demanded stronger isolation. That path was
+never built — all 14 tenants at handover ran on the shared database.
 
-**The trade-off:** database-per-tenant gives the strongest isolation guarantee
-available short of separate infrastructure — which is exactly what the client's
-contract required, and what makes an eventual SaaS story credible. It costs
-migration fan-out. Every schema change is executed N times, and N grows with every
-customer. That is a real operational tax, and it is the reason I would revisit this
-decision at a different scale rather than pretend it was free.
+**The trade-off:** a shared database is far cheaper to operate — one migration
+target, one thing to patch, one thing to monitor — at the cost of a weaker isolation
+guarantee than physical separation gives. It was a reasonable bet given that every
+tenant's actual contract was satisfied by it. What was not free was designing and
+carrying the dedicated-database escape hatch in the data-access layer for a
+requirement no client ever exercised — that is a cost I paid for optionality I never
+used.
 
 ### Integration in two directions
 
@@ -106,28 +111,28 @@ while the platform owns the employee-facing experience.
 
 ## Result
 
-- In production across multiple companies within the holding.
+- **14 tenants in production** across the holding at handover.
 - Remote attendance marking and HR self-service for thousands of employees.
-- Reduced administrative load on HR departments — queries that previously required
-  an office visit became self-service.
-- Architecture and isolation model positioned for a future SaaS offering.
-
-[NEEDS INPUT] Number of tenants at handover, and any measure of the reduction in HR
-administrative workload. Even a rough figure would make the impact section concrete.
+- **~30% reduction in HR administrative workload** — queries that previously
+  required an office visit became self-service.
+- Architecture positioned for a future SaaS offering — though the shared-database
+  model would need the dedicated-per-tenant path actually built before that story
+  holds up outside the holding.
 
 ## What I would do differently
 
-**Automate the tenant migration pipeline on day one.** I chose database-per-tenant
-knowing it multiplied migration effort, and then handled migrations manually for
-longer than I should have. If the isolation model creates N of something, the
-tooling for running things N times is part of the isolation model, not a follow-up
-task.
+**Don't design an escape hatch you don't validate.** The plan included a path for a
+tenant to opt into a dedicated database instead of the shared one, in case a
+client's contract demanded stronger isolation. No client ever exercised it, so it sat
+in the data-access layer as complexity nobody used. I would ship the shared model
+alone and add the dedicated path the day a real contract required it, not before.
 
-**Consider schema-per-tenant as the middle ground.** It gives most of the isolation
-with a single migration target. In this specific case the client's contractual
-language pointed at separate databases, but I did not seriously evaluate the
-alternative — I went straight to the strongest option because it was the safest to
-defend, which is not the same as being the best.
+**Check the isolation requirement per client, not once for all of them.** I read
+"tenant isolation is contractual" as a blanket constraint and designed for the
+strictest case across the board. In practice the shared database satisfied every one
+of the 14 tenants at handover. The requirement was real, but I should have verified
+it against each client's actual contract language instead of assuming the strongest
+interpretation applied everywhere.
 
 **Document for the operators, not just the architects.** The C4 diagrams were good
 for explaining the design and useless for running the system at 3am. A platform
