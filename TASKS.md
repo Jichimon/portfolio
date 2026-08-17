@@ -132,14 +132,22 @@ before.
 
 ---
 
-## TASK 4 — GitHub profile README · `TODO`
+## TASK 4 — GitHub profile README · `DONE`
 
-`resources/github/profile-README.md`. English only.
+`resources/github/profile-README.md` written, 2026-08-16. English only, per spec.
 
-Often the first thing a technical interviewer opens. Same thesis, three-line
-version, linking to the portfolio. Also audit the existing public repos and
-recommend which to pin, archive or make private — a stale tutorial repo actively
-undercuts senior positioning.
+No live site to link yet (TASK 5 still blocked at the time, and this content
+repo has no GitHub remote), so the README's call to action is email + LinkedIn
+only — revisit once TASK 5 ships and there's a real portfolio URL.
+
+Audited all 18 public repos on `github.com/Jichimon`. Recommend-only, per the
+author — pin/archive/private recommendations and full rationale are in
+`progress/2026-08-16-02-task4-github-readme.md`, not executed against GitHub
+in this session. Two decisions made with the author during the audit:
+`control_asistencia` → make private (hardcoded expired API key, names a
+vendor the matching case study omits); the four overlapping OpenTK/graphics
+repos → consolidate the public story around `MyFirstGameEngine`, archive the
+other three.
 
 ---
 
