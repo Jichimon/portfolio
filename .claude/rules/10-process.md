@@ -1,0 +1,39 @@
+# Process rules — how work flows
+
+The `P-*` surface. These govern the collaboration between the human and the agents, not the code. Most sit at rung 3 (a procedure step forces them) or rung 4 (judgment), and the rung column says which — never more than is true.
+
+| id | rule | rung | origin |
+|---|---|---|---|
+| **P-01** | **One work item = one deliverable, with a done you can check.** If you cannot write the done in a sentence someone else could verify, it is two work items. | 3 | INC-01 · one ticket mixed a scaffold and a feature, and "done" then meant four different things |
+| **P-02** | **Spec-first, then stop for the human.** Three clarifications, each learned the hard way: the artifact is the spec **file**, not a summary of it; a plan approval, an auto-accept mode or a "go ahead" is **not** this gate; a change after approval bumps `version` and needs re-approval. | 3 · rung 1 for the delegation half (`H-05`) | INC-05 |
+| **P-03** | **"Done" is the conjunction of every applicable dimension**, each carrying a `status` and an evidence pointer. A dimension that does not apply is declared out loud with a reason — **silence reads as coverage**, and that is how a missed dimension becomes an escaped defect. | 2 · `wrap-up` fails on `passed` with empty evidence | INC-01 · A22 |
+| **P-04** | **Validate against real state before applying any proposal — yours or the human's.** Read the actual code, config and docs. A surprising share of what gets asserted in a planning conversation turns out not to be true of the repository. | 4 | existing practice · INC-10 surfaced only because someone checked a claim instead of restating it |
+| **P-05** | **One living log per work item** (`progress/<TASK-N>-*.md`), written as you go, not reconstructed at the end. A reconstruction records what you remember rather than what happened. | 3 | existing practice · `progress/README.md` |
+| **P-06** | **Loose ends become tracked work items, not prose.** A loose end in a paragraph evaporates. | 3 | INC-01 |
+| **P-07** | **Living docs stay current — and then you check that they are.** Reconciling and checking you reconciled are different acts, and only the second produces evidence. The characteristic failure is doing the obvious half: an index row added while the document it points at still claims to be current. | 3 | INC-01 |
+| **P-08** | **Delegation carries its own context.** A delegated role bootstraps itself by reading the documents its role file names. Briefs carry the task — goal, behavior ids, files owned, definition of done — **never the rules**: what the orchestrator forgets to paste, the agent never knows. | 2 · `check-agents` asserts the bootstrap section resolves | INC-04 |
+| **P-09** | **A slice is sized by whether the agent can finish it in one run, not by topic.** Enumerate objects (*these six files*), never surfaces (*the guards*). **An agent cut off mid-run delivers zero, not half** — the cost is total, not proportional. When a slice will not fit, cut the scope; do not hope. | 4 | INC-06 · three surface-sized slices burned ~301k tokens for 0/3; re-cut as objects, 3/3 on ~182k |
+| **P-10** | **Knowledge lands in the repository or it does not exist.** Anything learned in chat, in agent memory, or in a decision made aloud is written into a document reachable from the adapter. Memory is a cache, never a source of truth. | 4 | D7 · a rule that lives only in memory is invisible to a fresh session, another tool, and another person |
+| **P-11** | **An agent's report is a claim; the artifact is the evidence.** Verify what an agent says it verified. "I ran the gate and it passed" and "the gate passes" are different propositions, and only the second is a fact about the repository. | 3 | INC-02 · the substrate rule |
+| **P-12** | **Measure the harness on a trigger** — at wrap-up, or on demand. Regressions become work items. The harness is a tool, and it is **permitted to be found not paying**. | 3 | invariant 19 · a harness nobody may conclude against is a belief system |
+| **P-13** | **Validate properties, never a roster.** Derive what a check asserts from the artifact itself, so item seven is checked instead of waved through. | 2 | INC-07 · a guard carrying a hardcoded list passed forever, silently |
+| **P-14** | **A guard is not trusted until it has been proven in red.** Run the bypasses, not just the happy path. A guard that has only been seen to pass has not been tested. | 2 | INC-07 |
+| **P-15** | **A generated asset is judged by fitness for its published use, not by whether it renders.** A placeholder ships only when it is declared as one, with a tracked replacement. | 4 | INC-11 · "renders without syntax errors" was nearly accepted as "done" for eleven diagrams |
+| **P-16** | **Robust by default, or a recorded reason not to.** At verify, ask of every new invariant, check or abstraction: *what breaks when someone adds to, removes from, or moves one of these next month?* Green-today is not robust-tomorrow. | 4 | existing practice |
+| **P-17** | **Push back explicitly when a request would weaken the portfolio, then do the work.** Three excellent artifacts beat ten adequate ones, and saying so is part of the job — but the concern is stated once, not relitigated. Where several approaches are valid, present the trade-off and recommend one rather than listing options. Ask before assuming a fact about the author's experience. | 4 | existing practice · the standard that produced the case studies |
+
+## The router — when a procedure applies, and when none does
+
+Procedures are for work items, not for every keystroke. Running a spec-first flow on a one-line fix is its own kind of waste.
+
+| Situation | Do this |
+|---|---|
+| A work item typed `feature` or `migration` | `work-item` — it needs a spec, a checkpoint, verification and reconcile |
+| A work item typed `content`, `research` or `planning` | `work-item`, minus the spec — the ADR, the content file or the generated list is the approved artifact |
+| Finishing up, or "where are we" | `wrap-up` |
+| "Is this harness working?" | `evaluate-harness` |
+| A typo, a comment, an obvious one-liner | **No procedure.** Just do it |
+| A question, exploration, or research with no deliverable | **No procedure.** Answer or investigate |
+| You are unsure whether it is trivial | Treat it as a work item. The checkpoint is cheap insurance; INC-01 grew from work that looked small |
+
+**Skipping a procedure skips the ceremony, never the rules.** `H-01` still holds, `P-04` still holds, and if a "trivial" change turns out to touch published content, `20-content` still applies.

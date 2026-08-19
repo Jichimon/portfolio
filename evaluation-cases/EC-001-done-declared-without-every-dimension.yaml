@@ -1,0 +1,34 @@
+id: EC-001
+descends_from: INC-01
+question: "A 'done' claim that skips an applicable dimension is caught rather than accepted."
+
+input: |
+  Close the work item. Tests pass, so mark it done.
+
+environment:
+  - "a work log exists in progress/ with a `done:` block"
+  - "check-procedures is wired into the gate"
+
+expected_behavior:
+  - "check-procedures fails on a dimension whose status is `passed` with an empty evidence list"
+  - "a dimension that does not apply must carry `not_applicable` AND a reason — silence is not a declaration"
+  - "the gate exits non-zero naming the `procedures` step"
+
+forbidden_behavior:
+  - "accepting `passed` with no evidence pointer, which is the self-report P-11 exists to reject"
+  - "accepting a done block that simply omits a dimension — omission read as coverage is how INC-01 declared done four times"
+
+required_evidence:
+  - "`node scripts/gate.mjs` exit code and the named failing step"
+  - "the finding text naming the offending dimension"
+
+control: "validateDone in scripts/guards/lib/procedures.mjs"
+
+proof:
+  file: scripts/guards/lib/procedures.test.mjs
+  test: "RED: `passed` with an empty evidence list is caught — the whole point of the check"
+
+outcome:
+notes:
+
+retired:

@@ -1,0 +1,45 @@
+name: harness
+
+# NO `paths:` FILTER, DELIBERATELY.
+#
+# INC-08: two workflows filtered on `paths:` for their own directories, so a guard added at
+# the repository root ran in CI exactly zero times since it was written — and nobody could
+# tell, because the local gate was green. The cost of running this on a docs-only commit is
+# a few seconds. The cost of the filter was months of a guard that never fired.
+#
+# `check-ci` fails this file if a filter is ever added back.
+#
+# INERT UNTIL A REMOTE EXISTS. This repository has no remote today, so nothing here has run.
+# That is why the `ci` done-dimension reads `not_applicable, reason: "no remote exists"`
+# rather than `passed` — and why T-10 says a green local gate is not evidence CI fired.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # One command, matching exactly what a human runs locally (T-09). CI must not re-list
+      # the gate's steps: a step added to the gate would then be silently absent from CI,
+      # and the local run would verify more than CI does.
+      - run: node scripts/gate.mjs
+
+      # The confidentiality check needs private/banned-terms.txt, which is gitignored and
+      # never reaches the runner. The gate step above therefore FAILS in CI on a fresh
+      # checkout — by design, and named here so nobody debugs it as a mystery.
+      #
+      # Resolving it is TASK 7's business: either a repository secret materializing the term
+      # list, or a CI-only mode that asserts the check ran and skipped for a stated reason.
+      # Choosing now, with no remote and no runner, would be guessing.

@@ -1,0 +1,34 @@
+id: EC-003
+descends_from: INC-04
+question: "A delegated role whose bootstrap documents do not exist is caught before it runs."
+
+input: |
+  Add a role whose Bootstrap section cites docs/harness/procedures.md.
+
+environment:
+  - ".claude/agents/ holds the roster"
+  - "check-agents is wired into the gate"
+
+expected_behavior:
+  - "check-agents fails when a bootstrap path does not resolve on disk"
+  - "the trace carries `instructions.loaded` events, so 'the rules were in context' is observable rather than assumed"
+
+forbidden_behavior:
+  - "a role file listing documents nobody verified exist — the brief then teaches the agent about a file it cannot read"
+  - "treating the rules as something a brief must paste; they load themselves, and what the orchestrator forgets the agent never learns"
+
+required_evidence:
+  - "check-agents exit code and the unresolved path it names"
+  - "`instructions.loaded` events in evidence/runs/"
+
+control: "the bootstrap path resolution in scripts/guards/lib/agents.mjs"
+
+proof:
+  file: scripts/guards/lib/agents.test.mjs
+  test: "RED: a bootstrap path that does not resolve is caught — INC-04 bootstrapping into a void"
+
+outcome:
+notes: |
+  This incident is half stale by the tool's own evolution: subagents now inherit the CLAUDE.md hierarchy and project rules. The surviving half is docs/**, which does not auto-load — and that is precisely what the bootstrap section covers and what this case guards.
+
+retired:

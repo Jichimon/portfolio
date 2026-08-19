@@ -1,0 +1,288 @@
+{
+  "_purpose": "Every calibrated number and every exception in one place, each with a written reason. A reasonless entry fails its guard.",
+  "rulesRegistry": {
+    "ruleDir": ".claude/rules",
+    "citingGlobs": [
+      ".claude/rules/**/*.md",
+      "docs/harness/**/*.md",
+      "CLAUDE.md",
+      "TASKS.md"
+    ],
+    "retiredRuleIds": [],
+    "_retiredNote": "An id retired here is never reused (G-10). Retiring leaves a visible gap rather than a silent renumbering, so anyone holding an older registry sees a deliberate absence.",
+    "adapter": "CLAUDE.md",
+    "_adapterNote": "The law of the split: the adapter holds identity, layout, commands and pointers — never a rule body. Checked with the same parser that reads the registry, so the two cannot disagree about what a rule definition is."
+  },
+  "evidence": {
+    "retainRuns": 50,
+    "_threshold_rationale": "Enough to cover a wrap-up cycle and a baseline comparison without the directory becoming unbrowsable. Not a durability guarantee: evidence/runs/ is gitignored operational output, not knowledge.",
+    "enforcementEnvironment": "policy-controlled",
+    "_enforcementEnvironmentRationale": "Stamped on every run header. Boundaries here are enforced by the permission engine and hooks, not by the operating system — the Bash sandbox needs macOS, Linux or WSL2 (G-07). An evaluation produced under a different regime is not comparable to one produced here, and TASK 9 exports this harness to machines that differ, so the regime travels with the trace rather than being assumed.",
+    "traceEvents": [
+      "run.header",
+      "run.footer",
+      "tool.requested",
+      "policy.decision",
+      "tool.result",
+      "instructions.loaded",
+      "trace.rejected"
+    ],
+    "_traceEventsRationale": "The event vocabulary, as data. check-trace derives what it accepts from this list rather than carrying its own copy, so adding an event to the writer without declaring it here fails loudly instead of validating as 'unknown' forever.",
+    "recordedHookEvents": [
+      "PostToolUse",
+      "PostToolUseFailure",
+      "PermissionDenied",
+      "SessionStart",
+      "SessionEnd",
+      "SubagentStart",
+      "SubagentStop",
+      "InstructionsLoaded"
+    ],
+    "_recordedHookEventsRationale": "Which runtime events must be wired to record-event.mjs. check-trace asserts settings.json carries every one — a hook nobody registered fires zero times and reports nothing, which is INC-08 exactly."
+  },
+  "exclusions": {
+    "_purpose": "Paths excluded from repo-wide scans. This list is the ONLY roster in the guard suite, and it is an exclusion list rather than an inclusion list on purpose (INC-07): forgetting to add a path here makes a scan noisier, never blinder.",
+    "paths": [
+      {
+        "path": ".git",
+        "reason": "version control internals, not authored content"
+      },
+      {
+        "path": "node_modules",
+        "reason": "third-party code, not ours to audit"
+      },
+      {
+        "path": "private",
+        "reason": "the confidentiality mapping itself; scanning it would report every banned term as a hit"
+      },
+      {
+        "path": "evidence/runs",
+        "reason": "machine-written trace, gitignored, already redacted at write time"
+      }
+    ]
+  },
+  "contextBudget": {
+    "maxLines": 320,
+    "adapter": "CLAUDE.md",
+    "ruleDir": ".claude/rules",
+    "_threshold_rationale": "No documented total budget exists — the vendor guidance is <200 lines PER instruction file, not for the sum. 320 is a judgment call: it is above the ~261 lines projected once step 4 rewrites CLAUDE.md thin, leaving roughly 60 lines of growth before it complains, and below the current total so the gate names the outstanding work instead of staying quietly green. Lines are a coarse proxy for context cost, chosen because they are stable and trivially checkable."
+  },
+  "templates": {
+    "searchRoots": [
+      "docs",
+      "evaluation-cases",
+      "progress"
+    ],
+    "requiredFields": [
+      {
+        "file": "SPEC-TEMPLATE.md",
+        "fields": [
+          {
+            "name": "status",
+            "reason": "the delegation gate (H-05) refuses to launch a write-capable role while a spec is draft. Remove this field and the gate cannot tell."
+          },
+          {
+            "name": "version",
+            "reason": "drift detection compares it against approved_version."
+          },
+          {
+            "name": "approved_version",
+            "reason": "the gate compares it to version. Remove it and every spec silently reads as approved."
+          },
+          {
+            "name": "tdd",
+            "reason": "T-01 keys TDD on work-item type AND surface, so a feature item touching the content pipeline requires it while the same item touching only presentation does not. Without this field the spec cannot record which it is, and the implementer has to guess."
+          },
+          {
+            "name": "tdd_rationale",
+            "reason": "a spec that opts out of TDD must say why. P-03: an inapplicable dimension is declared out loud, because silence reads as coverage."
+          },
+          {
+            "name": "reproduces",
+            "reason": "a bugfix with no bug-reproducing failing test is not done (T-01). Without the field the requirement has nowhere to land and quietly stops being met."
+          },
+          {
+            "name": "behaviors",
+            "reason": "behaviors are the atomic unit a spec exists to carry; without them a spec is a summary."
+          }
+        ]
+      },
+      {
+        "file": "EC-TEMPLATE.yaml",
+        "fields": [
+          {
+            "name": "descends_from",
+            "reason": "every eval case names its incident. A case with no origin is one nobody can justify keeping."
+          },
+          {
+            "name": "required_evidence",
+            "reason": "an eval scored on the agent report measures the model, not the harness (A16)."
+          },
+          {
+            "name": "forbidden_behavior",
+            "reason": "the bypass attempt is usually the real test (P-14)."
+          }
+        ]
+      }
+    ],
+    "_note": "Each required field is a COUPLING between a template and a guard that reads it. Dropping one disarms the guard silently — INC-08 shape. Every entry carries a reason; a reasonless entry fails the check."
+  },
+  "boundaries": {
+    "write": [
+      "resources",
+      "evidence",
+      ".git"
+    ],
+    "read": [
+      "private"
+    ],
+    "ruleFor": {
+      "resources": "H-02",
+      "evidence": "H-03",
+      ".git": "H-01",
+      "private": "H-04"
+    },
+    "_note": "One policy, two vectors. settings.json deny rules cover the file tools; the PreToolUse guard covers the shell, which deny patterns cannot reach reliably. Both are needed: neither alone closes the boundary."
+  },
+  "delegation": {
+    "_purpose": "H-05's inputs. The gate reads write-capability off the role's own tools list and the approval state off the spec file; these entries say where those artifacts live and which tools are known to be read-only.",
+    "agentDir": ".claude/agents",
+    "specDir": "docs/specs",
+    "register": "TASKS.md",
+    "readOnlyTools": [
+      "Read",
+      "Grep",
+      "Glob",
+      "WebFetch",
+      "WebSearch",
+      "TodoWrite",
+      "AskUserQuestion"
+    ],
+    "_readOnlyToolsRationale": "An ALLOWLIST of read-only tools, never a roster of write tools. The direction is the whole point (P-13, P-16): a tool the runtime ships next month is unknown here, so the gate treats it as write-capable and gets stricter. A write-tool roster would silently wave the new tool through, which is INC-07's shape.",
+    "specRequiredFor": [
+      "feature",
+      "migration"
+    ],
+    "_specRequiredForRationale": "The work-item types whose approved artifact is a spec file, per the Work Item model in TASKS.md. Every other type approves something else — an ADR, a content file, a diff — so gating them on a spec would deny legitimate work, and a guard that blocks real work is a guard someone turns off."
+  },
+  "roleWriteScopes": {
+    "harness-evaluator": [
+      "progress/evaluation-results"
+    ]
+  },
+  "_roleWriteScopesRationale": "A20/A21. ONE role is enforced, not four, and the asymmetry is the decision: harness-evaluator's conclusions are only worth something if it cannot edit what it scores. implementer and test-engineer keep procedural scopes — named in the brief, checked by the auditor — because enforcing them has no incident behind it yet. The trigger for adding them is two roles writing concurrently. An allowlist, unlike `boundaries`, which is a denylist: a role named here may write NOWHERE except the listed prefixes, and a role not named here is unaffected.",
+  "procedures": {
+    "doneBlockRequiredFrom": "2026-08-18",
+    "_doneBlockRationale": "The date the done-block convention landed in progress/README.md, at blueprint step 3. Logs written before it are not retroactively required to carry one: demanding it would force either inventing evidence for finished work — which C-01 forbids for numbers and the same logic forbids here — or an exclusion roster of filenames, which is INC-07's shape. A dated threshold with a written reason is neither: a NEW log cannot slip through it, which is the property that matters."
+  },
+  "docs": {
+    "roots": [
+      "CLAUDE.md",
+      "TASKS.md",
+      "README.md",
+      ".claude",
+      "docs",
+      "progress/README.md",
+      "progress/evaluation-results",
+      "evaluation-cases"
+    ],
+    "exclude": [
+      "docs/harness/architecture-findings.md"
+    ],
+    "_excludeRationale": "The findings document records a resolution that is superseded once architecture.md is frozen. It cites paths as they were proposed during the review, several of which were then decided against — checking it would demand files a decision deliberately did not create.",
+    "ignore": [
+      {
+        "ref": "docs/harness-rules.md",
+        "reason": "the registry's PRE-MOVE location, named in the KEEP/MODIFY matrix precisely to say that it moved to .claude/rules/. The reference is correct because the file is absent."
+      }
+    ],
+    "_ignoreRationale": "An EXCLUSION list, so forgetting an entry makes the check noisier and never blinder (INC-07). Every entry carries a reason, a reasonless one fails, and an entry whose target starts resolving is reported as stale so the list shrinks on its own."
+  },
+  "evals": {
+    "caseDir": "evaluation-cases",
+    "template": "evaluation-cases/EC-TEMPLATE.yaml",
+    "architecture": "docs/harness/architecture.md",
+    "outcomes": [
+      "Caught",
+      "Partial",
+      "Gap"
+    ],
+    "filledLater": [
+      {
+        "field": "outcome",
+        "reason": "empty until the case is run. A fresh case with no verdict is the normal state, not a defect."
+      },
+      {
+        "field": "notes",
+        "reason": "written with the outcome, and only meaningful beside one."
+      },
+      {
+        "field": "retired",
+        "reason": "set only when a case stops being useful. Present-and-empty is the healthy state (G-10)."
+      },
+      {
+        "field": "proof_reason",
+        "reason": "required only when proof is none, which validateCases enforces conditionally. Demanding it everywhere would fail every case that HAS a proof."
+      }
+    ],
+    "_filledLaterRationale": "The required-field set is DERIVED from EC-TEMPLATE.yaml minus these four, rather than listed. An inclusion list has to be updated by whoever adds a template field - the one moment they are thinking about something else - and a forgotten entry makes the guard blinder. Subtracting makes a forgotten entry merely noisier, which is the direction every exclusion list in this repository points (P-13).",
+    "excluded": [
+      {
+        "incident": "INC-03",
+        "reason": "dev-not-equal-prod: seven element-level defects survived two visual reviews against a dev build. Its remedy is the visual-QA rigor checklist, deferred in architecture.md section M until the site has screens worth diffing. There is nothing to execute against today, and a case asserting on a build that does not exist would be documentation wearing a case filename. Returns with the first rendered page."
+      }
+    ],
+    "_excludedRationale": "An incident with no case is normally a hole in the regression net. These are the ones where the hole is a recorded decision instead - each names why no executable form exists and what brings it back. A reasonless entry fails the check, and an entry whose incident no longer exists is reported as stale, the same rule the docs ignore-list follows."
+  },
+  "content": {
+    "roots": [
+      "resources"
+    ],
+    "locales": [
+      "en",
+      "es"
+    ],
+    "universal": [
+      "slug",
+      "lang",
+      "type",
+      "title",
+      "confidentiality"
+    ],
+    "_universalRationale": "The five keys every content file in the repository actually carries. C-14 originally named thirteen as if they applied to everything, which described no file: the eight pages carry five, the case studies carry more. A rule no file satisfies is a rule that gets disbelieved, and one disbelieved rule discredits the registry.",
+    "byType": {
+      "page": [],
+      "case-study": [
+        "subtitle",
+        "role",
+        "context",
+        "period",
+        "stack",
+        "skills",
+        "featured"
+      ],
+      "platform": [
+        "subtitle",
+        "role",
+        "context",
+        "period",
+        "stack",
+        "skills",
+        "featured"
+      ]
+    },
+    "_byTypeRationale": "Required keys are keyed on the declared type, and an UNKNOWN type is a finding rather than a pass - it is either a typo or a content shape nobody has specified the keys for, and both need a human (P-13). Note outcome is NOT required: mobile-banking-platform carries none in either locale, and resources/ is read-only input, so demanding it would fail the gate on frozen content that cannot be edited.",
+    "noFrontmatter": [
+      {
+        "path": "resources/github/profile-README.md",
+        "reason": "a GitHub profile README is rendered by GitHub, which shows frontmatter as literal text. It is English-only by decision (TASK 4) and carries no locale suffix, so it claims no pair either."
+      },
+      {
+        "path": "resources/site/intake.md",
+        "reason": "the intake questionnaire used to gather the author facts. It is an input to content, never published content, so it has no slug, no locale and no route."
+      }
+    ],
+    "singleLocale": [],
+    "_singleLocaleRationale": "Empty, and that is the healthy state: every locale-suffixed file today has its counterpart. An entry here would exempt a page from C-09, which is a hard rule, so each one would need a reason strong enough to survive review."
+  }
+}

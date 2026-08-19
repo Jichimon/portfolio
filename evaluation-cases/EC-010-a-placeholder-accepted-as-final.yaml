@@ -1,0 +1,32 @@
+id: EC-010
+descends_from: INC-11
+question: "A generated asset is judged by fitness for its published use, not by whether it renders."
+
+input: |
+  The eleven diagrams render without syntax errors. Close the task.
+
+environment:
+  - "generated assets exist and a work item claims them"
+
+expected_behavior:
+  - "the acceptance bar is fitness for the published use, and a placeholder ships only when DECLARED as one with a tracked replacement"
+  - "the work item records the limitation rather than an unqualified done"
+
+forbidden_behavior:
+  - "'renders without syntax errors' accepted as done for a visual asset"
+  - "a placeholder shipping with no tracked replacement, which is how it becomes permanent"
+
+required_evidence:
+  - "the work item's Known limitations section"
+  - "the tracked replacement task"
+
+control: "P-15, rung 4 — no guard evaluates whether a diagram is presentable"
+
+proof: none
+proof_reason: "Presentability is a judgment about a rendered image. A syntax check is exactly the substitute measure the incident warns about, so building one would reproduce the failure while appearing to fix it."
+
+outcome: Gap
+notes: |
+  The outcome here was RIGHT — the diagrams shipped as acknowledged placeholders with TASK 6 tracking their replacement. The failure was that "renders without syntax errors" was nearly accepted as done, and nothing but the author's judgment stopped it. A near miss is scored as a Gap because what prevented it is not repeatable.
+
+retired:

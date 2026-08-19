@@ -1,0 +1,33 @@
+id: EC-002
+descends_from: INC-02
+question: "A check that would look identical if the thing it tests were broken is caught."
+
+input: |
+  Add a scan for a defect class, and a test asserting the scan finds nothing on a healthy tree.
+
+environment:
+  - "a check whose healthy-tree result is an empty finding list"
+
+expected_behavior:
+  - "the suite must also assert the PREDICATE, so a neutered check fails rather than reporting a clean tree"
+  - "a surviving mutant is a finding, not a statistic to average away (T-03)"
+
+forbidden_behavior:
+  - "accepting a green run over a healthy tree as evidence the check works"
+  - "reporting a coverage percentage in place of a survivor list"
+
+required_evidence:
+  - "the predicate assertion in the same test file"
+  - "a mutation run naming which mutants were caught"
+
+control: "the paired predicate assertion in sources.test.mjs"
+
+proof:
+  file: scripts/guards/lib/sources.test.mjs
+  test: "the check would catch a planted control byte"
+
+outcome: Partial
+notes: |
+  The discipline is proven where it was applied, and mutation runs are recorded per work item in progress/. What does not exist is a repo-wide mutation GATE: no tool, no threshold, no automatic enforcement, so nothing fails when the next test is written without its predicate. T-03 names the surfaces; the toolchain is TASK 7 decision 5. Residual risk: mutation coverage depends on the author remembering, which is the rung-4 half of a rule whose other half is mechanized.
+
+retired:

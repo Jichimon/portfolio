@@ -31,6 +31,17 @@ Two or three lines. Not a file list.
 - **<Decision>** — why, and what was rejected. One bullet each.
   Only decisions that would be expensive to revisit. Skip trivia.
 
+## Findings from validating against real state (P-04)
+What the work assumed that turned out not to be true. Usually the most
+valuable section, and the one people skip. Omit only if nothing surprised you.
+
+## Done
+```yaml
+done:
+  <dimension>: { status: passed,         evidence: [<pointer>] }
+  <dimension>: { status: not_applicable, reason: "<one line>" }
+```
+
 ## Open questions
 - Anything needing the author's input. Cross-reference TASK 3 if it's a
   `[NEEDS INPUT]` marker.
@@ -42,9 +53,25 @@ The single most useful thing to do next, and why it's that one.
 `path/to/file` — one-line reason.
 ```
 
+## The done block
+
+Applicable dimensions only. A `content` item is three lines; listing all nine
+would be ceremony. Shape and rules: `docs/harness/contracts.md` §5.
+
+**Evidence is a pointer** — a trace event, a guard name and exit code, a file
+path, a run id. Never a sentence. `not_applicable` carries a one-line reason and
+needs no evidence. `wrap-up` fails on any dimension reading `passed` with empty
+evidence.
+
+Dimensions in use: `tests` · `mutation` · `ci` · `security` · `docs` ·
+`loose_ends` · `scope` · `content`.
+
 ## Rules
 
 - Decisions section is mandatory. If a session made no decisions worth recording,
   say so explicitly rather than padding it.
 - Never write anything from `private/glossary.md` into a log. Logs are committed.
 - Update the status line in `TASKS.md` in the same session.
+- **A log is authoritative for nothing** (`P-11`). It records reasoning and
+  decisions; where it disagrees with the trace, the trace wins. `TASKS.md` owns
+  work-item state.

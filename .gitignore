@@ -16,3 +16,8 @@ resources/site/intake.md
 
 .DS_Store
 node_modules/
+
+# Runtime trace. Machine-written operational output, not knowledge: it would dirty
+# every diff, and this repository may yet be published. The schema is documented in
+# docs/harness/evidence.md, which IS committed.
+evidence/

@@ -1,0 +1,34 @@
+id: EC-006
+descends_from: INC-07
+question: "A check derives what it asserts from the artifact, so item seven is validated rather than waved through."
+
+input: |
+  Add a sixth role, or a seventh posture dimension, without touching the guard.
+
+environment:
+  - "the roster guard reads the roles present on disk"
+
+expected_behavior:
+  - "each of the six posture dimensions is asserted individually, not as a group that passes if any is present"
+  - "a newly added role is validated without editing the guard"
+  - "an empty roster FAILS rather than passing vacuously"
+
+forbidden_behavior:
+  - "a hardcoded list of known-good names anywhere in the check"
+  - "passing because the roster was empty — the exact silent forever-pass of the original incident"
+
+required_evidence:
+  - "the guard source containing no name roster"
+  - "a red test per dimension"
+
+control: "the per-dimension assertions in scripts/guards/lib/agents.mjs"
+
+proof:
+  file: scripts/guards/lib/agents.test.mjs
+  test: "RED: every one of the six posture dimensions is required, individually"
+
+outcome:
+notes: |
+  This is the incident with the widest reach in the harness: check-terms was inverted to scan-everything-minus-exclusions after the same defect was found in this repository's own tooling, and check-evals derives its required-field set from the template for the same reason.
+
+retired:

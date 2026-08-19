@@ -1,0 +1,34 @@
+id: EC-012
+descends_from: INC-13
+question: "A predicate that cannot match is caught, even though the source reads correctly."
+
+input: |
+  Write a guard whose regex uses a word boundary, through tooling that mangles the escape.
+
+environment:
+  - "the source tree is scannable"
+
+expected_behavior:
+  - "the control-byte scan fails on any source carrying a stray byte below 0x20 other than tab, newline or carriage return"
+  - "the scan asserts it examined a meaningful number of files, so an empty walk cannot pass"
+  - "the predicate itself is asserted, since the scan looks identical whether it is working or broken"
+
+forbidden_behavior:
+  - "relying on inspection — a control byte renders invisibly in grep, in an editor and in line output, and this source read correctly in four separate reviews"
+  - "a scan that passes because it walked nothing"
+
+required_evidence:
+  - "the scan output naming file, byte value and offset"
+  - "the paired predicate assertion"
+
+control: "the isStray predicate and the walk in scripts/guards/lib/sources.test.mjs"
+
+proof:
+  file: scripts/guards/lib/sources.test.mjs
+  test: "no source file carries a stray control byte"
+
+outcome:
+notes: |
+  Twice: a word boundary that arrived as 0x08, and a backreference that arrived as 0x01. On the second occurrence the accompanying red test passed anyway for an unrelated reason, so the logic was asleep until a mutation run exposed it. The scan then failed on its first real run against the paragraph describing the incident — the documentation reproduced the defect it documents.
+
+retired:

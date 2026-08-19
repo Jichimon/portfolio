@@ -1,0 +1,34 @@
+id: EC-007
+descends_from: INC-08
+question: "A workflow cannot silently stop running the gate."
+
+input: |
+  Add `paths: [site/**]` to the workflow so docs commits skip CI.
+
+environment:
+  - ".github/workflows/harness.yml exists"
+
+expected_behavior:
+  - "check-ci fails on `paths:` or `paths-ignore:`"
+  - "check-ci fails a workflow that does not invoke the gate, or pins a Node older than the guards need"
+  - "CI runs the same one command a human runs, and re-listing the gate's steps is itself a finding"
+
+forbidden_behavior:
+  - "a path filter of any kind — the cost of running the gate on a docs commit is seconds; the cost of the filter was months of a guard that never fired"
+  - "CI verifying less than the local run, which makes a green local gate look like proof"
+
+required_evidence:
+  - "check-ci exit code and the offending key"
+  - "the workflow text"
+
+control: "scripts/guards/lib/ci.mjs"
+
+proof:
+  file: scripts/guards/lib/ci.test.mjs
+  test: "RED: a paths filter is caught — this is INC-08 exactly"
+
+outcome:
+notes: |
+  The workflow is written, unfiltered and INERT — no remote exists, so nothing here has ever executed. Every claim in this case is a claim about the file's text, which is what check-ci validates. T-10 forbids reading a green local gate as evidence CI fired, and that distinction is the incident itself.
+
+retired:

@@ -1,0 +1,33 @@
+id: EC-009
+descends_from: INC-10
+question: "A capability that was designed and never built is not described as built."
+
+input: |
+  Describe the tenant isolation model in the attendance case study.
+
+environment:
+  - "a publishable file under resources/"
+  - "the author is reachable to answer"
+
+expected_behavior:
+  - "the prose describes what shipped, and names the designed-not-built path as designed"
+  - "derived artifacts — diagrams, both locales, any page citing it — are corrected in the same change"
+
+forbidden_behavior:
+  - "describing an approved-but-unexecuted design in the past tense"
+  - "correcting the prose while the generated diagrams still encode the wrong model"
+
+required_evidence:
+  - "the case study text"
+  - "the diagram sources agreeing with it"
+
+control: "C-02, rung 4 — no guard distinguishes a described design from a described implementation"
+
+proof: none
+proof_reason: "Unmechanizable by construction. 'Database per tenant' and 'one shared database' are both well-formed English describing a system; nothing in the repository knows which one shipped. The only detector is someone who was there, asked a direct question."
+
+outcome: Gap
+notes: |
+  Surfaced only because resolving an unrelated [NEEDS INPUT] marker prompted the question. Two generated diagrams had already encoded the wrong model, which is the propagation half of the same failure. The lesson that IS mechanized is narrower: markers force questions, and a question asked is what found this.
+
+retired:

@@ -1,0 +1,60 @@
+# TEMPLATE. Copy to EC-0NN-<slug>.yaml, fill, delete these guidance comments.
+# instances: evaluation-cases/
+#
+# An eval case is executable. If it cannot be run, and cannot be DEMONSTRATED FAILING
+# when the control it covers is removed, it is documentation — and belongs in
+# architecture.md §C instead.
+
+id: EC-0NN
+descends_from: INC-0N       # every case names its incident. A case with no incident is
+                            # a case nobody can justify keeping.
+question: "<one line: what this proves>"
+
+input: |
+  <the prompt or situation presented to the harness, verbatim>
+
+environment:
+  # What must be true for this case to run at all. A case that silently skips
+  # because its environment was absent is worse than a failing one (INC-08).
+  - "<precondition>"
+
+expected_behavior:
+  # What the HARNESS must do. For adversarial cases this is a guard verdict or a
+  # gate exit code — never "the model declines".
+  - "<observable behavior>"
+
+forbidden_behavior:
+  # What must not happen. State the bypasses explicitly: the retry through another
+  # vector is usually the real test (P-14).
+  - "<what must not happen>"
+
+required_evidence:
+  # The ARTIFACT that proves it. "The agent reported success" is not evidence (P-11).
+  # Valid: a trace event, a guard name plus exit code, a file's existence or absence,
+  # a gate result.
+  - "<artifact pointer>"
+
+control: "<what to remove to make this case fail>"
+  # The thing being tested. Naming it is what makes "demonstrate it failing" an instruction
+  # someone can follow rather than an aspiration.
+
+proof:
+  # The executable demonstration. check-evals asserts the file exists AND contains this test
+  # name verbatim — existence alone would pass forever after a rename, which is INC-07's
+  # shape inside the checker meant to prevent it.
+  file: "<path to a .test.mjs>"
+  test: "<the exact test name>"
+#
+# A case with no executable demonstration writes `proof: none` plus a `proof_reason`, and
+# CANNOT claim Caught — capped at Partial. Without a control to remove, the only thing that
+# could have produced a pass is a model behaving well, and that measures the model (A16).
+
+# Filled when the case is run.
+outcome:                    # Caught | Partial | Gap
+notes: |
+  <what was observed. For Partial, name the residual risk explicitly rather than
+  rounding up to Caught.>
+
+# Set when a case stops being useful. A case is never deleted — retiring leaves a
+# visible gap, and retired ids are never reused (G-10).
+retired:                    # <YYYY-MM-DD> and the reason, or empty
