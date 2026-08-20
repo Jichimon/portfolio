@@ -2,9 +2,17 @@
 # Committing this undoes every sanitization decision in the repository.
 private/
 
-# Rendered diagram output (regenerated from .mmd source)
-resources/diagrams/*.svg
+# NOTE (ADR-002, 2026-08-19): resources/diagrams/*.svg used to be ignored here on the
+# assumption it was always regenerated from .mmd at build time. That assumption is gone —
+# ADR-002 commits to a one-time render (TASK 17) with the .svg as real, checked-in content;
+# the build only ever copies it. Do not re-add an ignore pattern for resources/diagrams/*.svg
+# without updating ADR-002 first.
+# resources/diagrams/*.png stays ignored below (TASK 1: original, unsanitized vendor PNGs
+# for the attendance diagrams existed transiently during the redraw — unrelated to this note).
 resources/diagrams/*.png
+
+# Local scratch space — never published content, never a build input.
+tmp/
 
 # Original unsanitized source material
 *.original.*

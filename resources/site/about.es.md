@@ -21,3 +21,5 @@ Cinco años no son una carrera larga bajo ciertos parámetros, y no pretendo lo 
 Todavía estoy terminando la carrera de Ingeniería Informática en la Universidad Autónoma Gabriel René Moreno (UAGRM), empezada en 2017 — congelada por ahora, pero con la idea de retomarla. Más adelante me gustaría dedicarme a la docencia.
 
 Fuera del trabajo, el mismo instinto aparece en el deporte: escalada y hiking por toda Bolivia (con el Huayna Potosí ya subido), y boxeo amateur — me gusta simplemente ser malo en algo nuevo hasta dejar de serlo.
+
+Como segundo dato sobre lo mismo: en 16Personalities salí INTJ-A — "Arquitecto". Independiente, racional, y más cómodo diseñando un sistema que dirigiendo la sala donde vive, algo que coincide con cómo se tomó la mayoría de las decisiones de arriba. Perfil completo → https://www.16personalities.com/profiles/21180e3e5b55c

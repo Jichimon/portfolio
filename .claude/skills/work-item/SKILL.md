@@ -64,6 +64,8 @@ Loose ends become tracked work items in `TASKS.md`, never prose (`P-06`). A loos
 
 Run `/wrap-up`. It refuses a `done` block that claims success with nothing behind it, which is the check this whole procedure exists to earn.
 
+Closing a work item records an `iterations` dimension in the done block: the count of human-visible implement→verify cycles it took — a checkpoint round, a delegated slice returning for verification, a rejected artifact sent back — never a tool-call count, which would move for reasons unrelated to what K1 measures.
+
 ## Boundaries
 
 - Never invoke a git write. The human owns commits (`H-01`).

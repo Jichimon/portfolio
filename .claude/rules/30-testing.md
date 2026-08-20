@@ -50,16 +50,16 @@ Stated as a universal rule it would be disbelieved on its first content item —
 | **T-09** | **The gate is one command and is CI parity.** It **delegates** to sub-gates rather than re-listing their steps — otherwise a step added to a sub-gate is silently absent from the gate, and the local run verifies less than CI does. | 2 | INC-08 |
 | **T-10** | **A green local gate is not evidence that CI fired.** Read the real run result from the provider. | 4 | **INC-08** · two path-filtered workflows meant a repo-root guard ran in CI exactly zero times, invisibly |
 
-## Stack-dependent rows — deliberately blank until TASK 7
-
-The test runner, the mutation tool, its surviving-mutant threshold, the e2e runner and the gate's sub-gate commands are decided by TASK 7's ADRs and written here afterwards.
+## Stack-dependent rows — decided by `ADR-006`
 
 | Question the stack must answer | Answer |
 |---|---|
-| Unit test runner and invocation | |
-| Mutation tool, threshold, and the `_threshold_rationale` if it differs from the tool's default | |
-| E2E runner, and what "real" means for this stack (real browser, real build, real filesystem) | |
-| The gate's sub-gate commands | |
-| Integration test strategy, if any | |
+| Unit test runner and invocation | `node:test`, for both `scripts/guards/**` (already true) and `site/lib/content/**`. `node --test "scripts/guards/**/*.test.mjs"` · `node --test "site/lib/content/**/*.test.mjs"` |
+| Mutation tool, threshold, and the `_threshold_rationale` if it differs from the tool's default | Stryker Mutator (`@stryker-mutator/core`) with `@stryker-mutator/tap-runner` (drives `node:test` via TAP, one config for the whole mutation-covered surface). `break: 100` — Stryker's own default (`high: 80, low: 60, break: null`, non-enforcing) is looser than this project's established by-hand convention: every mutation result reported in `progress/` since TASK 5 is 100% mutant-kill, matching `T-04`'s "the battery must fail when the guard is neutered" |
+| E2E runner, and what "real" means for this stack (real browser, real build, real filesystem) | Playwright. "Real" is Astro's own documented pattern: `npm run build` then `webServer` serves the actual output via `npm run preview` — never a mock, matching `T-02` by construction. Three real browser engines (Chromium, Firefox, WebKit) |
+| The gate's sub-gate commands | `node --test "site/lib/content/**/*.test.mjs"` · `npx stryker run` (`testRunner: "tap"`, one config, both surfaces) · `npm run build && npx playwright test` |
+| Integration test strategy, if any | None — declared, not blank. Playwright's e2e tier already runs against a real build, exercising the full pipeline (validation, diagram resolution, i18n routing) wired together exactly as production does; a separate tier would duplicate that coverage without a named gap |
 
-**A blank row is a legitimate answer.** Filling one speculatively produces a rule nobody believes in, and `C-01`'s logic applies to rules as much as to metrics: a missing answer is fine, an invented one is not.
+**Open, not blank:** whether `site/lib/content/**`'s eventual code needs Astro's Vite-powered runtime to test meaningfully — unknowable until `TASK 8` writes it. `ADR-006`'s review trigger: if it does, Vitest is introduced for that specific module, accepting a second Stryker config only then, not preemptively.
+
+Full reasoning, options considered and sources: [docs/adr/ADR-006-testing-toolchain.md](../../docs/adr/ADR-006-testing-toolchain.md).

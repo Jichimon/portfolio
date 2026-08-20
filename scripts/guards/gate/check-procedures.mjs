@@ -10,7 +10,10 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseRouter, validateRouter, parseDoneBlock, validateDone, logDate } from '../lib/procedures.mjs';
+import {
+  parseRouter, validateRouter, parseDoneBlock, validateDone, logDate,
+  validateIterationsRequired, validateIterationsEvidence,
+} from '../lib/procedures.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const RULES = '.claude/rules/10-process.md';
@@ -36,6 +39,7 @@ for (const s of skills.filter((s) => !names.includes(s))) {
 // Dated logs only: progress/README.md carries the template, whose placeholders are not
 // dimensions. The filter is a property — a work log is a dated file — not a list of skips.
 const since = cfg.doneBlockRequiredFrom ?? '9999-12-31';
+const sinceIterations = cfg.iterationsRequiredFrom ?? '9999-12-31';
 const logs = readdirSync(join(ROOT, 'progress')).filter((f) => f.endsWith('.md') && logDate(f));
 let checked = 0;
 let predating = 0;
@@ -52,6 +56,8 @@ for (const f of logs) {
   }
   checked++;
   findings.push(...validateDone(block, `progress/${f}`));
+  findings.push(...validateIterationsRequired(block, logDate(f), sinceIterations, `progress/${f}`));
+  findings.push(...validateIterationsEvidence(block, `progress/${f}`));
 }
 
 console.log(`      router: ${names.length} procedure(s) — ${names.join(', ')}`);

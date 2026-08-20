@@ -2,7 +2,7 @@
 
 **Read this before any ADR.** An ADR is almost never refuted wholesale; it is amended point by point. Consulting one without this index risks applying a decision a later point already overturned — which is a defect, not a style issue. Citing a refuted decision is itself a finding (`P-07`).
 
-No ADRs yet. TASK 7 writes the founding set: site stack, hosting and deploy, i18n strategy, content pipeline, testing toolchain, publication.
+TASK 7 writes the founding set: site stack, hosting and deploy, i18n strategy, content pipeline, testing toolchain, publication. **6 of 6 accepted — TASK 7 closed 2026-08-19.**
 
 ## Level 1 — status of each ADR
 
@@ -10,7 +10,12 @@ No ADRs yet. TASK 7 writes the founding set: site stack, hosting and deploy, i18
 
 | ADR | Title | Date | Status |
 |---|---|---|---|
-| — | *none yet* | — | — |
+| [ADR-001](ADR-001-site-stack.md) | Site stack — Astro, static output | 2026-08-19 | `Current` |
+| [ADR-002](ADR-002-content-pipeline.md) | Content pipeline — frontmatter validation and diagram resolution | 2026-08-19 | `Current` |
+| [ADR-003](ADR-003-i18n-strategy.md) | i18n strategy — unprefixed English, `/es/` Spanish | 2026-08-19 | `Current` |
+| [ADR-004](ADR-004-hosting-deploy.md) | Hosting and deploy — Cloudflare Workers, static assets | 2026-08-19 | `Current` |
+| [ADR-005](ADR-005-publication.md) | Publication — public GitHub remote, now, whole repository | 2026-08-19 | `Current` |
+| [ADR-006](ADR-006-testing-toolchain.md) | Testing toolchain — `node:test`, Stryker (`tap-runner`), Playwright | 2026-08-19 | `Current` |
 
 ## Level 2 — amendments, point by point
 

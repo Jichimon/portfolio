@@ -4,6 +4,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   parseRouter, validateRouter, logDate, parseDoneBlock, validateDone,
+  validateIterationsRequired, validateIterationsEvidence,
 } from './procedures.mjs';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
@@ -134,6 +135,54 @@ test('a log predating the convention is not retroactively required to carry a bl
   assert.ok(logDate('2026-08-15-01-task2-intake.md') < '2026-08-18');
 });
 
+// --- iterations (K1) ---------------------------------------------------------
+
+const LOG_K1 = `# A log
+
+\`\`\`yaml
+done:
+  tests:      { status: passed, evidence: ["node --test", "247 pass 0 fail"] }
+  iterations: { status: passed, evidence: ["2"] }
+\`\`\`
+`;
+
+test('RED: a dated done block missing `iterations` is caught', () => {
+  const b = parseDoneBlock(LOG_K1.replace('  iterations: { status: passed, evidence: ["2"] }\n', ''));
+  const f = validateIterationsRequired(b, '2026-08-19', '2026-08-19', 'log.md');
+  assert.equal(f.length, 1);
+  assert.match(f[0].message, /iterations/);
+});
+
+test('green path: a done block carrying `iterations` passes', () => {
+  const b = parseDoneBlock(LOG_K1);
+  assert.deepEqual(validateIterationsRequired(b, '2026-08-19', '2026-08-19', 'log.md'), []);
+});
+
+test('a log predating the cutoff is not required to carry iterations', () => {
+  // Same precedent as doneBlockRequiredFrom: a NEW log cannot slip through, an old one is
+  // not retroactively demanded to carry a dimension nobody told it to when it was written.
+  const b = parseDoneBlock(LOG_K1.replace('  iterations: { status: passed, evidence: ["2"] }\n', ''));
+  assert.deepEqual(validateIterationsRequired(b, '2026-08-15', '2026-08-19', 'log.md'), []);
+});
+
+test('RED: `iterations` evidence that is not a bare integer is caught', () => {
+  const b = parseDoneBlock(LOG_K1.replace('evidence: ["2"]', 'evidence: ["two passes"]'));
+  const f = validateIterationsEvidence(b, 'log.md');
+  assert.equal(f.length, 1);
+  assert.match(f[0].message, /iterations/);
+});
+
+test('green path: `iterations: { status: passed, evidence: ["2"] }` passes', () => {
+  const b = parseDoneBlock(LOG_K1);
+  assert.deepEqual(validateIterationsEvidence(b, 'log.md'), []);
+});
+
+test('iterations status not_applicable with a reason is legitimate', () => {
+  const b = parseDoneBlock(LOG_K1.replace('status: passed, evidence: ["2"]',
+    'status: not_applicable, reason: "documentation-only closure, no implement/verify cycle"'));
+  assert.deepEqual(validateIterationsEvidence(b, 'log.md'), []);
+});
+
 // --- liveness ---------------------------------------------------------------
 
 test('LIVENESS: the real router resolves to real skills on disk', () => {
@@ -164,4 +213,11 @@ test('LIVENESS: every skill named in the router has a Bootstrap-equivalent and i
     assert.match(text, /^---[\s\S]*?name:\s*\S+/m, `${n}: no name in frontmatter`);
     assert.match(text, /^---[\s\S]*?description:\s*\S+/m, `${n}: no description`);
   }
+});
+
+test('LIVENESS: work-item/SKILL.md\'s Close step mentions capturing iterations', () => {
+  const text = readFileSync(join(ROOT, '.claude/skills/work-item/SKILL.md'), 'utf8');
+  const closeStep = text.split(/^## 7 · Close/m)[1] ?? '';
+  assert.match(closeStep, /iterations/i, 'Close step does not mention iterations');
+  assert.match(closeStep, /implement.*verify|verify.*implement/i, 'Close step does not name the implement/verify cycle');
 });

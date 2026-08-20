@@ -21,3 +21,5 @@ Five years is not a long career by some measures, and I don't pretend otherwise.
 I'm still finishing a degree in Ingeniería Informática at Universidad Autónoma Gabriel René Moreno (UAGRM), started in 2017 — paused for now, but I plan on finishing it. Teaching is where I'd like to take it, eventually.
 
 Outside of work, the same instinct shows up in sport: climbing and hiking around Bolivia (Huayna Potosí included), and amateur boxing — I just like being bad at something new until I'm not.
+
+For a second data point on the same thing: I tested as an INTJ-A — "Architect" — on 16Personalities. Independent, rational, and more at ease designing a system than running the room it lives in, which lines up with how most of the decisions above actually got made. Full profile → https://www.16personalities.com/profiles/21180e3e5b55c

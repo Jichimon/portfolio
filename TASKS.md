@@ -184,7 +184,7 @@ other three.
 
 **Cerrada 2026-08-19.** Doce steps, 13 pasos de gate, 371 tests, 14 incidentes transcritos y cubiertos por 13 eval cases. El export heredado eliminado con cero referencias. La arquitectura queda **congelada**: cambiarla es ahora un work item como cualquier otro.
 
-**Una dimensión de aceptación queda abierta y se declara en voz alta** (`P-03`: el silencio se lee como cobertura). El ítem 8 de la suite — el smoke test de sesión fresca — **no se corrió**, porque no es auto-administrable: pide que una sesión nueva describa sin ayuda el boundary de git, el flujo spec-first y dónde viven las reglas, y una sesión que acaba de construir el harness no puede dar esa respuesta sin contaminarla. Se corre al abrir TASK 7, que es una sesión fresca por naturaleza. Los otros diez ítems pasaron, siete verificados contra artefactos.
+**11/11 ítems de aceptación pasaron.** El ítem 8 — el smoke test de sesión fresca — quedó deliberadamente sin correr en el cierre de TASK 5 (`P-03`: el silencio se lee como cobertura, así que se declaró abierto en vez de omitido), porque no es auto-administrable: pide que una sesión nueva describa sin ayuda el boundary de git, el flujo spec-first y dónde viven las reglas, y una sesión que acaba de construir el harness no puede dar esa respuesta sin contaminarla. **Corrido y pasado el 2026-08-19**, al abrir TASK 7 con una sesión fresca real — ver `progress/2026-08-19-01-task5-smoke-test-and-session-kickoff.md`. Los otros diez ítems pasaron antes, siete verificados contra artefactos.
 
 **Lo que el harness demostró de sí mismo:** encontró `INC-14` — dos fronteras rung-1 rotas, una de ellas fallando *abierta* — que trece guards, 371 tests y doce pasos del gate no habían encontrado. Y `EVAL-000` concluye que **todavía no puede demostrarse que esté pagando**, porque ningún work item ha corrido a través de él. Ese número llega con TASK 7.
 
@@ -259,7 +259,9 @@ The one that matters most: **a run stopped by `maxTurns` is recorded as `COMPLET
 
 ---
 
-## TASK 13 — Capture K1 · `feature` · `TODO`
+## TASK 13 — Capture K1 · `feature` · `DONE`
+
+**Closed 2026-08-19.** `SPEC-TASK-13-capture-k1.spec.md` approved and implemented test-first, one delegation, first pass clean (K1 = 1 for this item itself). `check-procedures` now fails a dated log (from 2026-08-19 on) whose `done:` block omits an `iterations` dimension, and fails one whose `iterations` evidence isn't a bare integer. `work-item`'s Close step instructs capturing it. Detail: `progress/2026-08-19-02-task13-capture-k1.md`.
 
 From `EVAL-000` (`GAP-10`). K1 — implement→verify passes until the human accepts done — is the metric `contracts.md` §6 calls *"the single most important number here"*, and **no procedure step records it.** `EVAL-000` reports it `unmeasurable` with raw 0 for two independent reasons: nothing has completed under the harness, and even when something does, there will be no substrate to read.
 
@@ -281,11 +283,11 @@ From `EVAL-000` (`GAP-01`), which downgraded `EC-001` to `Partial` on exactly th
 
 ---
 
-## TASK 15 — Mutation gate, or an honest rung · `harness` · `TODO` (blocked by TASK 7)
+## TASK 15 — Mutation gate, or an honest rung · `harness` · `TODO`
 
 From `EVAL-000` (`GAP-02`). `T-03` places the mutation gate at **rung 2**; `scripts/gate.mjs` has thirteen steps and none is a mutation run. Every mutation result in `progress/` was produced by hand. The rung claim is therefore ahead of reality, which is the same defect step 12 found in `C-09` and `C-14`.
 
-Blocked because the mutation tool and its threshold are TASK 7's decision 5. **Either outcome closes this:** the gate runs mutation over `scripts/guards/**` and a surviving mutant fails it, **or** `T-03` reads rung 4 with the reason recorded. `G-11` requires the honest claim, including downward.
+**Unblocked 2026-08-19** — `TASK 7`'s decision 5 (`ADR-006`) fixed the tool: Stryker Mutator + `@stryker-mutator/tap-runner`, `break: 100`, one config over `scripts/guards/**` (and, once it exists, `site/lib/content/**`). **Either outcome closes this:** the gate runs mutation over `scripts/guards/**` and a surviving mutant fails it, **or** `T-03` reads rung 4 with the reason recorded. `G-11` requires the honest claim, including downward.
 
 **Done:** `T-03`'s rung matches what the gate actually enforces, and if it stays at 2, the gate enforces it.
 
@@ -321,20 +323,24 @@ case study markdown needs to change when a diagram is replaced.
 
 ---
 
-## TASK 7 — Founding ADRs · `research` · `TODO` (blocked by TASK 5)
+## TASK 7 — Founding ADRs · `research` · `DONE`
+
+**Closed 2026-08-19.** 6/6 ADRs accepted. `docs/adr/README.md` live. The five blank stack-dependent rows in `.claude/rules/30-testing.md` filled from `ADR-006`, with an explicit "open, not blank" note where the honest answer is still unknown (whether `site/lib/content/**` needs Vite's runtime — a fact about code `TASK 8` hasn't written yet). **The gate's sub-gates are documented, not yet wired**: `ADR-006` names the exact commands (`node --test`, `npx stryker run` with `testRunner: "tap"`, `npm run build && npx playwright test`), but nothing runs them in `gate.mjs` yet, because `site/` doesn't exist — that wiring is `TASK 15`'s and `TASK 8`'s job, not this one's. Declared explicitly (`P-03`) rather than silently claimed as "real" when there's nothing to run.
 
 The technology decisions the site rests on. One short ADR each, human-approved one at a time, indexed in `docs/adr/README.md`.
 
-**This is the first real work item to run through the harness**, and that run is the harness's acceptance test. If it needs more than two implement→verify passes, K1 says so and the harness gets corrected before any site code is written.
+**This is the first real work item to run through the harness**, and that run is the harness's acceptance test. **K1, measured per decision (`TASK 13`'s convention, first real data):** stack 2 · content pipeline 2 · i18n 1 · hosting/deploy 1 · publication 1 · testing toolchain 2 — **max 2, never exceeded, sum 9 across 6 decisions.** Neither 2-pass decision was a defect correction: stack's second pass added the React/plain-HTML clarification the author asked for; testing toolchain's second pass caught and fixed a real factual error in the first draft (a false claim that no dedicated Stryker runner exists for `node:test` — `tap-runner` does). The checkpoint discipline found something real twice, not just cost two extra rounds. Full detail: `progress/2026-08-19-12-task7-closed.md`.
 
-**Decisions to resolve**
+Order agreed with the author, by dependency rather than the numeric listing: site stack → content pipeline → i18n → hosting/deploy → publication → testing toolchain.
 
-1. **Site stack** — generator/framework, rendering model, and *why not the alternatives*.
-2. **Hosting and deploy** — where it runs, what that constrains, how a deploy is verified.
-3. **i18n strategy** — how the `slug` join key across `.en.md` / `.es.md` becomes routes.
-4. **Content pipeline** — how `resources/**` is read, validated and rendered, including the `:::diagram` directive and the `/diagrams/{id}.svg` resolution.
-5. **Testing toolchain** — unit runner, mutation tool and its threshold, e2e runner.
-6. **Publication** — whether this repository gets a remote and under what visibility. Open since the TASK 4 audit; the site cannot deploy and CI cannot fire without it.
+**Decisions**
+
+1. ~~**Site stack**~~ — **[ADR-001](docs/adr/ADR-001-site-stack.md), Accepted 2026-08-19: Astro, static output.** No blank `.claude/rules/` rows resolved by this one — the stack-dependent blanks in `30-testing.md` belong to decision 5.
+2. ~~**Hosting and deploy**~~ — **[ADR-004](docs/adr/ADR-004-hosting-deploy.md), Accepted 2026-08-19: Cloudflare Workers, static assets — `wrangler deploy`, no adapter, deploy path independent of decision 6.**
+3. ~~**i18n strategy**~~ — **[ADR-003](docs/adr/ADR-003-i18n-strategy.md), Accepted 2026-08-19: unprefixed English (default), `/es/` for Spanish; two `getStaticPaths` route files joined on `slug`.** Two items left explicitly open for TASK 8: the in-body link-rewriting mechanism, and whether Astro's built-in i18n fallback fires for collection-driven routes.
+4. ~~**Content pipeline**~~ — **[ADR-002](docs/adr/ADR-002-content-pipeline.md), Accepted 2026-08-19: minimal Zod schema (5 universal keys) + one-time diagram pre-render (TASK 17), zero Mermaid at build time.** Raised and resolved along the way: TASK 16 (content) and TASK 17 (content) both closed as side effects of this decision. No blank `.claude/rules/` rows resolved by this one either.
+5. ~~**Testing toolchain**~~ — **[ADR-006](docs/adr/ADR-006-testing-toolchain.md), Accepted 2026-08-19: `node:test` everywhere + Stryker's `tap-runner` (one config, real coverage-based mutant filtering), `break: 100`; Playwright for e2e.** Fills all five blank rows in `30-testing.md`. Unblocks `TASK 15`.
+6. ~~**Publication**~~ — **[ADR-005](docs/adr/ADR-005-publication.md), Accepted 2026-08-19: public GitHub remote, now, whole repository.** Verified git history clean (no `private/`/`evidence/`/unsanitized-original commits, ever) before deciding. The push itself is the author's action (`H-01`), not yet done as of this ADR.
 
 **Done:** an accepted ADR per decision, the ADR index live, the blank stack rows in `.claude/rules/` filled from the decisions actually made, and the gate's sub-gates real.
 
@@ -342,11 +348,18 @@ The technology decisions the site rests on. One short ADR each, human-approved o
 
 ---
 
-## TASK 8 — Site work breakdown · `planning` · `TODO` (blocked by TASK 7)
+## TASK 8 — Site work breakdown · `planning` · `TODO`
+
+**Unblocked 2026-08-19** — `TASK 7` closed, 6/6 ADRs accepted.
 
 Turn the site from one word into a backlog. Runs through the `work-item` procedure and produces new `TASK N` entries here — design items, implementation items, and evaluation items for both the site and the harness.
 
 **Done:** every entry has a type, one deliverable, and a done someone else could check. No entry reads "investigate X" without a concrete definition of done — if you cannot say when it ends, it is a note, not a work item.
+
+**Constraints — two items the breakdown must not omit:**
+
+- **A design/UX task**, generating the actual per-page designs the implementation items build against. Raised by the author while reviewing `ADR-006`: nothing in the backlog yet owns "what each screen looks like" as its own deliverable.
+- **The `INC-03` visual-QA rigor checklist**, as its own evaluation item — a script/test comparing the real rendered site, both locally and once deployed (`ADR-004`: Cloudflare Workers), against each screen the design task produces. `docs/harness/architecture.md` §M already recorded this as deferred *"until the site has screens worth diffing"* — `TASK 8` is that trigger. `INC-03`'s own origin: a CSS-purge defect invisible in dev, seven element-level defects surviving two visual reviews against a dev build — the remedy has to diff dev, prod, and the design intent as three distinct things, not two reviews at a glance.
 
 ---
 
@@ -357,6 +370,57 @@ Turn the site from one word into a backlog. Runs through the `work-item` procedu
 **Written from the harness, not from this plan** — and only after the harness has driven real work (TASK 8's first items) and been scored at least once. The point of an export is to carry what worked, not what was designed. Writing it earlier would export a hypothesis.
 
 **Trigger:** the first `EVAL` with a real, non-harness workload.
+
+---
+
+## TASK 16 — About page: 16Personalities aside · `content` · `DONE`
+
+**Closed 2026-08-19.** The author applied the drafted paragraph to both locales directly (`H-02` — the agent could draft it but not write it). `check-terms` and `check-content` pass. One drift from the draft: the link landed as plain text (`Full profile → https://...`) rather than a Markdown link (`[Full profile →](https://...)`) — worth fixing to a real link when next editing this file, since it won't render as a clickable link otherwise; not blocking, and the agent cannot fix it directly (`resources/` stays frozen).
+
+One short closing paragraph on `about.{en,es}.md`: the author tested as INTJ-A ("Architect") on 16Personalities, linked to the full profile, tied to the independent-decision pattern already visible in the case studies above it — not the test's standalone trait/weakness list (`C-10`, `C-15` — reviewed and agreed with the author before drafting).
+
+**Found while executing this item:** `resources/` is rung-1 read-only for **every** agent in this session, including the orchestrator — not only delegated roles. `H-02`'s deny rule (`Write(./resources/**)`, `Edit(./resources/**)`) and `D1` ("`resources/` becomes a runtime-enforced read-only input") apply session-wide; there is no reopening mechanism, by design — TASK 5 closed the content backlog on purpose. This is the same boundary TASK 6 will hit when the author hand-authors diagram replacements: content changes to `resources/` happen through the author's own editor, never through the agent, from here on.
+
+**Done:** the drafted paragraph (below, both locales) is applied to `resources/site/about.{en,es}.md` by the author directly, and `./scripts/check-terms.sh` + `check-content` pass on the result.
+
+**Blocked on:** the author applying the text — drafted and ready, `TASKS.md`/`progress/` cannot carry it further.
+
+**Drafted text — English** (appended after the closing "Outside of work…" paragraph):
+
+> For a second data point on the same thing: I tested as an INTJ-A — "Architect" — on 16Personalities. Independent, rational, and more at ease designing a system than running the room it lives in, which lines up with how most of the decisions above actually got made. [Full profile →](https://www.16personalities.com/profiles/21180e3e5b55c)
+
+**Drafted text — Spanish** (mismo lugar, `about.es.md`):
+
+> Como segundo dato sobre lo mismo: en 16Personalities salí INTJ-A — "Arquitecto". Independiente, racional, y más cómodo diseñando un sistema que dirigiendo la sala donde vive, algo que coincide con cómo se tomó la mayoría de las decisiones de arriba. [Perfil completo →](https://www.16personalities.com/profiles/21180e3e5b55c)
+
+---
+
+## TASK 17 — Pre-render placeholder diagrams to static SVG · `content` · `DONE`
+
+**Closed 2026-08-19.** All 11 `.svg` files applied to `resources/diagrams/` by the author (confirmed via `git status` — tracked, not gitignored). `tmp/diagrams-task17/` removed. Gate green.
+
+Raised by the author while reviewing `ADR-002` (content pipeline, TASK 7 decision 4): rather than have the site's build render Mermaid on every build (a headless-browser/Puppeteer dependency that would persist for as long as any diagram `id` lacks a hand-authored replacement, per TASK 6's "one at a time, as needed" pace), render the current 11 `.mmd` placeholders to real `.svg` files **once**, now, and check them in as the actual content. From then on the build's diagram step is a plain file copy — no Mermaid, no Puppeteer, ever — and a pre-rendered placeholder is indistinguishable from a future hand-authored replacement to the pipeline. See `ADR-002`'s Sub-decision 2 for the full reasoning.
+
+**Feasibility verified this session, not assumed (`P-04`):** all 11 `.mmd` files rendered successfully with `@mermaid-js/mermaid-cli@11.16.0`, exit 0, including `otp-breakeven` (`block-beta` — the one TASK 1 flagged as fragile; it rendered fine, 18.6 KB, 26 real `<rect>` elements, no error). Output — `attendance-c4-component.svg`, `attendance-c4-container.svg`, `attendance-c4-context.svg`, `migration-phases.svg`, `otp-breakeven.svg`, `otp-c4-after.svg`, `otp-c4-before.svg`, `platform-auth-boundary.svg`, `platform-c4-context.svg`, `qr-c4-container.svg`, `qr-permission-model.svg` — sits at `tmp/diagrams-task17/` in this repository (gitignored scratch space, not published content), ready to copy in.
+
+**Done:** all 11 `.svg` files placed at `resources/diagrams/{id}.svg` by the author (the `.mmd` sources can stay alongside as the editable record, or be removed — author's call, the pipeline only reads the `.svg`), `tmp/diagrams-task17/` removed once copied, and `./scripts/check-terms.sh` passes on the result.
+
+**Blocked on:** the author copying the files from `tmp/diagrams-task17/` into `resources/diagrams/` — same `H-02` boundary as TASK 16, the agent generated the files but cannot write them into frozen `resources/`. **Also fixed while opening this item:** `.gitignore` was ignoring `resources/diagrams/*.svg` on the old assumption that it was always build-regenerated — corrected, or these files would land in `resources/diagrams/` and git would silently never track them.
+
+---
+
+## TASK 18 — Trace redaction false-positives on opaque IDs · `bugfix` · `TODO`
+
+`INC-15` (`docs/harness/architecture.md` §C). `check-trace`'s whole-file redaction scan (`validateTrace` in `scripts/guards/lib/evidence.mjs`) substring-matches every `private/banned-terms.txt` entry against the **entire serialized trace line**, including fields that are never authored content — `tool_use_id`, `run_id`, `parent_run_id` are opaque, API-generated random tokens. A 4-character banned term coincidentally appeared inside a `tool_use_id` during a `researcher` run this session, failing the gate on a true string match that carries zero actual confidentiality risk.
+
+**The check's whole-file design is correct and should not be narrowed carelessly** — its whole point is catching a leak by a route nobody wrote a specific redactor for (`docs/harness/architecture.md`, INC-15's row). The fix is precise, not a general loosening: exclude the known-opaque, system-generated fields from the scan by name, and keep every content-bearing field (tool inputs, results, targets, messages) covered exactly as today.
+
+**Done:** `validateTrace` (or its caller) excludes `tool_use_id`, `run_id` and `parent_run_id` from redaction scanning by field name — never by a blanket "looks like an ID" heuristic, which would quietly widen the exclusion over time — with a red test proving a banned term inside one of those three fields no longer fails the check, and a red test proving a banned term in any other field (e.g. a tool `target` or a future content field) still does.
+
+**Constraints**
+
+- Do not touch `redactToolInput`'s own scrubbing (`scripts/guards/lib/evidence.mjs`) — that's a separate, working mechanism for a different purpose (masking known-sensitive input fields at write time), not the one that flagged this.
+- This incident's affected trace file (`evidence/runs/9a066423-fbac-4ece-8677-6d0ac7fce237/researcher-a0400b23ffcda81af.jsonl`) was hand-edited by the human to remove the leaked lines, which broke `seq` continuity — a second, expected finding from the same guard, working correctly. That file should be deleted outright (evidence is gitignored, uncommitted, disposable) rather than hand-patched to restore density; not this task's job to fix, since evidence/ is `H-03`-protected from every agent, including this one.
 
 ---
 

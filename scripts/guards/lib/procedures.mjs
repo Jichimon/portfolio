@@ -129,3 +129,39 @@ export function validateDone(block, label = '') {
 
   return findings;
 }
+
+/**
+ * K1-001: a done block dated on/after the iterations convention's cutoff must carry an
+ * `iterations` dimension. Same mechanism as `doneBlockRequiredFrom` — a dated threshold with a
+ * written reason, so a NEW log cannot slip through it, and a log predating the cutoff is not
+ * retroactively demanded to carry a dimension nobody told it to when it was written.
+ *
+ * K1 (implement→verify cycles) is otherwise unmeasurable: SPEC-TASK-13 exists because no
+ * procedure step captured it even when a work item did run through the harness.
+ */
+export function validateIterationsRequired(block, date, since, label = '') {
+  const at = label ? `${label}: ` : '';
+  if (!date || date < since) return [];
+  if (!block || !('iterations' in block)) {
+    return [{ message: `${at}the done block carries no \`iterations\` dimension. The convention has existed since ${since}, and a completed work log without one leaves K1 unmeasurable (SPEC-TASK-13)` }];
+  }
+  return [];
+}
+
+/**
+ * K1-002: when `iterations` reads `passed`, `evidence[0]` must be a bare non-negative integer
+ * (`^\d+$`) — not a sentence — because a future evaluator (EVAL-001) reads it without
+ * interpreting prose. `not_applicable` with a reason stays legitimate via `validateDone`, and
+ * absent evidence is `validateDone`'s finding, not this one — this only narrows the SHAPE of
+ * `iterations`'s own evidence once it exists.
+ */
+export function validateIterationsEvidence(block, label = '') {
+  const at = label ? `${label}: ` : '';
+  const d = block?.iterations;
+  if (!d || d.status !== 'passed' || !(d.evidence?.length)) return [];
+  const first = d.evidence[0];
+  if (!/^\d+$/.test(first)) {
+    return [{ message: `${at}\`iterations\` reads \`passed\` with evidence[0] = "${first}", which is not a shape a future evaluator can read without interpreting prose — it must be a bare integer (e.g. "2")` }];
+  }
+  return [];
+}

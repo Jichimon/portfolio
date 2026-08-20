@@ -1,0 +1,39 @@
+id: EC-014
+descends_from: INC-15
+question: "Whole-file redaction scanning distinguishes an opaque, system-generated token from actual content — so a coincidental substring match inside a tool_use_id does not fail the same check that has to catch a real leak."
+
+input: |
+  A delegated run's trace contains a `tool_use_id` (or `run_id` / `parent_run_id`) whose
+  random characters happen to contain, as a substring, an entry from private/banned-terms.txt.
+
+environment:
+  - "a trace file exists with at least one tool.requested event carrying a real tool_use_id"
+  - "private/banned-terms.txt contains at least one short (<=4 character) term"
+
+expected_behavior:
+  - "check-trace's redaction scan does not fail on a banned-terms.txt match found only inside tool_use_id, run_id or parent_run_id"
+  - "check-trace's redaction scan still fails on a banned-terms.txt match found in any other field — a tool target, a result, a message"
+
+forbidden_behavior:
+  - "widening the exclusion by a heuristic (\"looks like an opaque id\") rather than by the three named fields — that drifts silently over time, INC-07's shape"
+  - "disabling or narrowing redaction scanning generally to make this one case pass"
+
+required_evidence:
+  - "a red test: a banned term inside tool_use_id, run_id or parent_run_id no longer fails validateTrace"
+  - "a red test: a banned term inside any other field still fails validateTrace"
+
+control: "validateTrace's whole-file scan in scripts/guards/lib/evidence.mjs, once TASK 18 narrows it"
+
+proof: none
+proof_reason: "TASK 18 (the fix) is not implemented yet — there is no test to point at. This incident happened for real this session (a researcher trace's tool_use_id coincidentally contained a 4-character banned term, failing the gate on a true string match with zero actual confidentiality risk), transcribed as INC-15 in architecture.md §C. Returns to `proof` once TASK 18 ships its red tests."
+
+outcome: Gap
+notes: |
+  Found live, not constructed: a real researcher-role trace failed check-trace this session
+  over a banned term appearing inside an Anthropic-API-generated tool_use_id. The human located
+  and removed the affected lines (only a human can write evidence/, H-03), which broke seq
+  continuity — a second, correct finding from the same guard. The redaction design itself is
+  sound (whole-file scanning exists specifically to catch leaks nobody wrote a redactor for);
+  the gap is that it does not yet distinguish three known-opaque fields from content.
+
+retired:
