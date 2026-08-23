@@ -1,0 +1,250 @@
+{
+  "pages": [
+    {
+      "id": "screens",
+      "name": "Screens (pass 1)"
+    },
+    {
+      "id": "directions",
+      "name": "Directions (pass 0, history)"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Home",
+      "x": 0,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "screens"
+    },
+    {
+      "file": "CaseStudyDetail.dc.html",
+      "title": "Case study — otp-provider-decoupling",
+      "x": 1560,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "screens"
+    },
+    {
+      "file": "CaseStudiesIndex.dc.html",
+      "title": "Case studies index",
+      "x": 3120,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "screens"
+    },
+    {
+      "file": "PlatformPage.dc.html",
+      "title": "Platform anchor — mobile-banking-platform",
+      "x": 4680,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "screens"
+    },
+    {
+      "file": "About.dc.html",
+      "title": "About",
+      "x": 6240,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "screens"
+    },
+    {
+      "file": "Experience.dc.html",
+      "title": "Experience",
+      "x": 7800,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "screens"
+    },
+    {
+      "file": "DirectionB.dc.html",
+      "title": "B · Estratos y falla (not chosen)",
+      "x": 0,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "directions"
+    },
+    {
+      "file": "DirectionC.dc.html",
+      "title": "C · Todo pasa por acá (not chosen)",
+      "x": 1560,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "directions"
+    },
+    {
+      "file": "DirectionCDark.dc.html",
+      "title": "C — dark (not chosen)",
+      "x": 3120,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "directions"
+    },
+    {
+      "file": "MobileSeam.dc.html",
+      "title": "Mobile seam test (direction C, superseded)",
+      "x": 4680,
+      "y": 60,
+      "w": 390,
+      "h": 900,
+      "expand": "fill",
+      "page": "directions"
+    },
+    {
+      "file": "HomeES.dc.html",
+      "title": "Home — es (length stress test)",
+      "x": 9360,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "screens"
+    },
+    {
+      "file": "NotFound.dc.html",
+      "title": "404 — bilingual",
+      "x": 10920,
+      "y": 60,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "page": "screens"
+    },
+    {
+      "file": "Components.dc.html",
+      "title": "Component sheet",
+      "x": 12480,
+      "y": 60,
+      "w": 1560,
+      "h": 900,
+      "expand": "fill",
+      "page": "screens"
+    },
+    {
+      "file": "HomeMobile.dc.html",
+      "title": "Home — 390",
+      "x": 14200,
+      "y": 60,
+      "w": 390,
+      "h": 1600,
+      "expand": "fit",
+      "page": "screens"
+    },
+    {
+      "file": "CaseStudyMobile.dc.html",
+      "title": "Case study — 390",
+      "x": 14700,
+      "y": 60,
+      "w": 390,
+      "h": 1600,
+      "expand": "fit",
+      "page": "screens"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "screens-summary",
+      "x": 0,
+      "y": -280,
+      "w": 1100,
+      "page": "screens",
+      "text": "Pass 1 — the first 4 real screens, desktop only (mobile + the Spanish stress test are next). Built against the accepted direction: A's structure (density resolving into openness) carrying B's stacked-strata texture for the legacy side, rendered as a blurred atmospheric background behind the hero copy rather than a foreground diagram — see docs/design/decisions/2026-08-20-hero-direction.md for the full reasoning.\n\nSITE STRUCTURE (decided 2026-08-22): the home page IS the work page. There is no separate Home nav item — the wordmark is the way back — and Work and Contact are sections of home (#work, #contact), not routes. About and Experience are their own pages; the five case studies are their own pages. That leaves four destinations in the nav plus three reserved 'soon' slots.\n\nThe scroll-spy and the routes are declared in the markup but do NOT run inside this canvas editor: the Design runtime does not execute a plain script tag in an artboard, and the artboard iframe has nowhere to navigate to. They are here so the implementation inherits them, not because they work here.\n\nNO COPY COUNTS A GROWING THING (author, 2026-08-23). Every list here is expected to grow — case studies, deep dives, employers, testimonials, technologies — so no visible string says how many there are. \"Five case studies\" is wrong the day a sixth lands, and nothing fails when it does: the copy just quietly starts lying. Descriptions say what a destination IS, never how much is in it. This is the content-driven-components constraint applied to copy rather than to markup, and it cost nine rewrites across four screens when it was first checked — including Experience’s h1, which counted employers and so expired the day the author changed job. Enforced now: docs/design/canvas/verify.mjs, check 5, sentence-scoped."
+    },
+    {
+      "id": "note-otp-diagrams",
+      "x": 1560,
+      "y": -80,
+      "w": 460,
+      "page": "screens",
+      "text": "The before/after C4 pair (Fig. 1 / Fig. 2) appear where the prose naturally calls for them, not literally side by side — they share identical layout and labeling so they read as a pair even scrolled apart. If literal side-by-side matters more than narrative flow, flag it — TASK 6 will care about this exact question for the real diagram assets."
+    },
+    {
+      "id": "note-pass2-reading",
+      "x": 6240,
+      "y": -140,
+      "w": 900,
+      "page": "screens",
+      "text": "PASS 2 — the two remaining content pages, built after the author approved the first four screens on 2026-08-22, then re-split when the author found they read as the same page twice.\n\nTHE SPLIT: Experience owns the employer chronology outright — role, narrative, case studies and stack, one ruled entry each. About owns the person: it is an ARTICLE, with a headline in his own words, three photographs, a wide measure, and no marginal spine and no employer markers of any kind. Neither page signposts the other in prose; if the split is real the reader does not need to be told.\n\nSTILL NEEDED, marked on the screens themselves rather than left to be discovered: three photographs (portrait 4:5, Huayna Potosi 21:9, a Bolivia square 1:1), a lead paragraph for About, a short passage on working from Cochabamba for teams abroad, and — on Experience — an h1, an intro line and per-role stack lines that experience.md does not carry. All of it is a content change to about.{en,es}.md and experience.{en,es}.md, tracked as TASK 20, outside this design task because resources/ is read-only to agents (H-02)."
+    },
+    {
+      "id": "note-index-deferred",
+      "x": 3120,
+      "y": -80,
+      "w": 460,
+      "page": "screens",
+      "text": "DESIGNED, NOT ROUTED YET. With five case studies, this index shows exactly what the home page's 'What I've built' section already shows — a second page for the same five items earns nothing. It is the growth path: when the list outgrows the home section (roughly 8+), home keeps the strongest five and this becomes /case-studies. Kept in the canvas so that day is a routing change, not a design round."
+    },
+    {
+      "id": "note-platform-distinct",
+      "x": 4680,
+      "y": -80,
+      "w": 460,
+      "page": "screens",
+      "text": "Distinct from the case-study template as the brief asked: a scale stat instead of an outcome metric in the header, a 2-col services grid instead of a bullet list, and Deep Dives styled as the same card language its 3 children use elsewhere — reinforcing that this page is their parent, not a peer."
+    },
+    {
+      "id": "directions-note",
+      "x": 0,
+      "y": -140,
+      "w": 900,
+      "page": "directions",
+      "text": "Pass 0's three directions, kept for history per docs/design/canvas/README.md. A (now Home, on the Screens page) won, amended with B's strata texture for the legacy side per the accepted decision. B and C as shown here were not chosen. MobileSeam tested C's seam, which is no longer the accepted hero — a fresh mobile test against the accepted hero is pass 1's next step, not yet built."
+    },
+    {
+      "id": "note-home-es",
+      "x": 9360,
+      "y": -180,
+      "w": 900,
+      "page": "screens",
+      "text": "HOME IN SPANISH — this is a LENGTH STRESS TEST, not a second design. It is generated from Main.dc.html by substituting copy only: identical CSS, identical markup structure, only the words differ. That is what makes it evidence — if it holds, the components are text-length-agnostic; if it breaks, the break is caused by the words alone.\n\nMEASURED, not assumed: across the 37 corresponding strings, Spanish runs +10% overall — well under the 15-20% usually quoted. The large ratios are all short strings where the ratio is misleading (Work -> Trabajo is +75% and three characters). The one element that actually changes shape is the rail's timezone line, 43 -> 63 characters, which goes from two lines to three inside a 264px rail; the rail is space-between with room to spare, so it grows rather than overflows.\n\nNothing in the layout is sized to an English string, which is why nothing else moves. The copy here is the real content from resources/site/home.es.md and the Spanish case-study frontmatter, not a translation written for the mockup.\n\nNOT VERIFIED BY RENDERING. No headless browser is installed in this repo yet (that arrives with TASK 15's Playwright setup), so overflow was reasoned from measured character counts, not screenshotted. Judge it in the local preview at 390 / 768."
+    },
+    {
+      "id": "note-404",
+      "x": 10920,
+      "y": -180,
+      "w": 900,
+      "page": "screens",
+      "text": "404 — BILINGUAL, AND BILINGUAL FOR A REASON. One file answers every unmatched route in both locales, so it cannot read the visitor's language off a URL that just failed to match. Two panels, each a complete monolingual page, never interleaved: you read your half and ignore the other.\n\nTHE LANGUAGE SWITCHER SHOWS NEITHER LOCALE AS CURRENT. On every other screen one is current and the other links to THIS page in that language. Here there is no current locale to mark — which is a designed state, not a missing one.\n\nTHE MOTIF IS THE SITE'S OWN VOCABULARY: strata that cannot move on the left, discrete nodes on the right, and the channel between them severed, with the status code sitting in the gap where the connection should be. A link that does not connect, on a site about connecting things. Same two-sided geometry as the hero and the tile motifs, so it is the language of the site rather than decoration bought in for one page.\n\nThe rail stays. This is the one page whose entire job is to get you somewhere else, so removing the navigation would remove the only thing that helps.\n\nIMPLEMENTATION: must be served with a real 404 status, never a 200 carrying error copy — a soft 404 is indexed as a real page. Carried on the page itself so it reaches whoever builds it."
+    },
+    {
+      "id": "note-components",
+      "x": 12480,
+      "y": -200,
+      "w": 1000,
+      "page": "screens",
+      "text": "COMPONENT SHEET — the hand-off document. Every component the screens are made of, with its class name, its states, and WHAT CONTENT IT IS HANDED. That last column is the one that matters at implementation: every list here grows, so a component that cannot be given its content is a component somebody has to edit to add an item.\n\nASSEMBLED LAST, on purpose and not for budget. A sheet is an inventory, and an inventory taken before the set closes has to be taken twice — the language switcher, the link row and the severed-seam motif all arrived after the first six screens were approved.\n\nIT IS A DOCUMENT, NOT A PAGE. No rail, because there is nowhere to navigate to from a specimen; its prose is ABOUT the site rather than OF it, which is why it may quote a rule the pages have to obey. verify.mjs derives that distinction from the artboard (does it have a rail?) rather than from a filename, and scopes three of its checks by it.\n\nTHE CONTACT FORM'S FOUR STATES are new design work, not an inventory of something that existed: idle, sending, sent, error. Two rules do the work — on success the form is GONE (an emptied form beside a success message invites sending the same thing twice), and on failure the contents SURVIVE and a second channel is named (a failed send that also loses what someone wrote costs them the message twice, and by then they are not writing it again). The backend is still undecided — Cloudflare Worker per ADR-004, or a plain mailto: — and these four states are the same either way, which is why they can be designed now.\n\nSection 13, the MOTIF VOCABULARY, is the most load-bearing part for TASK 6: strata, nodes, channel, severed channel, all stroked geometry and never glow, because a stroke survives both themes without being redesigned. The hero, every tile motif and the eleven diagram replacements can then share one language instead of three.\n\nLOGO SLOTS (author, 2026-08-23). Company and technology marks belong in three places — the home employer card (32px), the Experience entry (38px) and the home stack strip (18px) — and none of them exists yet. The slots are declared, sized and visible rather than left to be remembered. ONE RULE governs all three: the logo is layered on a wordmark that ALREADY READS, never a replacement for it, so an employer whose logo nobody can find is not a hole and a technology without a usable mark keeps its dot. Two consequences: the slot is a fixed box and not a natural size, because a row of logos at their own dimensions has no optical baseline; and a placeholder is legible in a static list of four but reads as breakage in a moving strip of fifteen, which is why the employer cards show visible slots while the marquee keeps its dots. Sourcing the files is unowned work and carries a per-mark licensing question a design cannot answer. C-06 STILL BINDS: no named security vendor gets a mark — no identity provider, no liveness or fraud tooling, no OTP provider, not as a logo and not as a label."
+    },
+    {
+      "id": "note-mobile",
+      "x": 14200,
+      "y": -200,
+      "w": 900,
+      "page": "screens",
+      "text": "THE PHONE FRAMES — 390px, frozen. Two archetypes and not all eight: home (hero, bento, marquee) and the article (the disappearing table of contents, the stacked masthead, the overflowing diagrams). Every other screen is one of those two shapes.\n\nBYTE-IDENTICAL TO THEIR DESKTOP SOURCES, and generated rather than copied. A phone frame that has drifted from its source documents a screen that does not exist, and hand-maintaining a duplicate guarantees it drifts — silently, in the direction nobody is looking. docs/design/canvas/derive.mjs writes them; verify.mjs re-runs it in memory and fails if a checked-in file differs. Drift is not discouraged here, it is impossible.\n\nThe only difference from the desktop artboard is the FRAME WIDTH, set here in canvas.json. The board is width:100%, so a 390px frame genuinely fires the narrow media queries — this is the real state, not a scaled-down picture of the wide one.\n\nStill unrendered by a browser: no headless browser exists in this repo until TASK 15 installs Playwright. Judge these in the artboard, or in the local preview's width buttons."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "screens"
+  }
+}

@@ -58,6 +58,14 @@
       {
         "path": "evidence/runs",
         "reason": "machine-written trace, gitignored, already redacted at write time"
+      },
+      {
+        "path": "docs/design/canvas/build",
+        "reason": "generated intermediate (TASK 8): src/*.dc.html with public OFL webfonts expanded to base64 data: URIs. Gitignored, regenerated on demand by build.mjs — the base64 is third-party font binary, not authored content, and trips the scanner the same way any opaque blob does"
+      },
+      {
+        "path": "docs/design/canvas/.fonts",
+        "reason": "cached raw woff2 files build.mjs downloads from Fontsource's CDN. Gitignored, third-party, not ours to audit"
       }
     ]
   },

@@ -1,0 +1,174 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style data-fonts="space-grotesk,ibm-plex-sans,ibm-plex-mono-400,ibm-plex-mono-500"></style>
+  <style>
+    * { box-sizing: border-box; }
+    .board {
+      --bg: #F8F7F4;
+      --bg-elevated: #FFFFFF;
+      --ink: #14140F;
+      --ink-muted: rgba(20, 20, 15, 0.64);
+      --ink-faint: rgba(20, 20, 15, 0.38);
+      --border: rgba(20, 20, 15, 0.12);
+      --border-strong: rgba(20, 20, 15, 0.28);
+      --accent: oklch(52% 0.1 175);
+      --accent-soft: oklch(52% 0.1 175 / 0.12);
+      --accent-line: oklch(52% 0.1 175 / 0.55);
+      font-family: "IBM Plex Sans", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      width: 390px;
+      transition: background .25s ease, color .25s ease;
+    }
+    .board[data-theme="dark"] {
+      --bg: #131311;
+      --bg-elevated: #1C1B17;
+      --ink: #F4F3EE;
+      --ink-muted: rgba(244, 243, 238, 0.66);
+      --ink-faint: rgba(244, 243, 238, 0.4);
+      --border: rgba(244, 243, 238, 0.14);
+      --border-strong: rgba(244, 243, 238, 0.3);
+      --accent: oklch(78% 0.1 175);
+      --accent-soft: oklch(78% 0.1 175 / 0.16);
+      --accent-line: oklch(78% 0.1 175 / 0.6);
+    }
+    .board a { color: inherit; text-decoration: none; }
+    .board a:hover { color: var(--accent); }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 2;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .wordmark { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 16px; }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .icon-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; padding: 0; cursor: pointer; }
+    .switch { width: 34px; height: 18px; border-radius: 9px; border: 1px solid var(--border-strong); position: relative; background: var(--bg-elevated); }
+    .switch .thumb { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); transition: transform .18s ease, background .18s ease; }
+    .board[data-theme="dark"] .switch .thumb { transform: translateX(16px); background: var(--accent); }
+
+    .hero { padding: 40px 20px 44px; }
+    .dateline { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-muted); letter-spacing: 0.02em; margin: 0 0 8px; line-height: 1.6; }
+    .role-line { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-faint); margin: 0 0 32px; }
+
+    .seam-figure { width: 100%; height: 340px; display: block; margin-bottom: 32px; }
+    .pulse { offset-path: path("M 100 150 L 100 200"); animation: travel 2.6s linear infinite; }
+    .pulse.p2 { animation-delay: .7s; }
+    .pulse.p3 { animation-delay: 1.4s; }
+    @keyframes travel {
+      0% { offset-distance: 0%; opacity: 0; }
+      8% { opacity: 1; } 92% { opacity: 1; }
+      100% { offset-distance: 100%; opacity: 0; }
+    }
+
+    .seam-label { display: flex; justify-content: space-between; font-family: "IBM Plex Mono", monospace; font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin: -18px 0 28px; }
+
+    .thesis {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 600;
+      font-size: 26px;
+      line-height: 1.28;
+      letter-spacing: -0.01em;
+      margin: 0;
+    }
+
+    .marquee { padding: 20px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); overflow: hidden; }
+    .marquee-track { display: flex; gap: 28px; width: max-content; padding: 0 20px; animation: scroll-left 26s linear infinite; }
+    .marquee-track span { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-muted); white-space: nowrap; }
+    .marquee-track span::after { content: "·"; margin-left: 28px; color: var(--ink-faint); }
+    @keyframes scroll-left { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    .note { margin: 28px 20px 40px; padding: 14px 16px; border: 1px dashed var(--border-strong); border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-faint); line-height: 1.6; }
+  </style>
+</helmet>
+
+<div class="board" data-theme="{{theme}}">
+  <div class="topbar">
+    <div class="wordmark">Luis Antelo</div>
+    <div class="topbar-right">
+      <button class="icon-btn" onClick="{{toggleTheme}}" aria-pressed="{{isDark}}">
+        <span class="switch"><span class="thumb"></span></span>
+      </button>
+      <button class="icon-btn" aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 20 20"><g stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round"><line x1="2" y1="5" x2="18" y2="5"/><line x1="2" y1="10" x2="18" y2="10"/><line x1="2" y1="15" x2="18" y2="15"/></g></svg>
+      </button>
+    </div>
+  </div>
+
+  <section class="hero">
+    <p class="dateline">Senior Software Engineer</p>
+    <p class="role-line">Cochabamba, Bolivia (GMT-4) &middot; Open to remote or hybrid/relocation</p>
+
+    <!-- the seam rotated to portrait: legacy above (dense), the seam as a horizontal band, modern below (open) -->
+    <svg class="seam-figure" viewBox="0 0 200 340" fill="none">
+      <g stroke="var(--ink-faint)" stroke-width="1.2">
+        <line x1="20" y1="10" x2="20" y2="90"/><rect x="14" y="88" width="12" height="12" fill="var(--ink-faint)" stroke="none"/>
+        <line x1="60" y1="10" x2="60" y2="90"/><rect x="54" y="88" width="12" height="12" fill="var(--ink-faint)" stroke="none"/>
+        <line x1="100" y1="10" x2="100" y2="90"/><rect x="94" y="88" width="12" height="12" fill="var(--ink-faint)" stroke="none"/>
+        <line x1="140" y1="10" x2="140" y2="90"/><rect x="134" y="88" width="12" height="12" fill="var(--ink-faint)" stroke="none"/>
+        <line x1="180" y1="10" x2="180" y2="90"/><rect x="174" y="88" width="12" height="12" fill="var(--ink-faint)" stroke="none"/>
+      </g>
+      <g stroke="var(--border-strong)" stroke-width="1">
+        <line x1="20" y1="100" x2="100" y2="140"/>
+        <line x1="60" y1="100" x2="100" y2="140"/>
+        <line x1="100" y1="100" x2="100" y2="140"/>
+        <line x1="140" y1="100" x2="100" y2="140"/>
+        <line x1="180" y1="100" x2="100" y2="140"/>
+      </g>
+      <rect x="50" y="150" width="100" height="60" rx="2" fill="var(--accent-soft)" stroke="var(--accent-line)" stroke-width="1.2"/>
+      <circle class="pulse" cx="0" cy="0" r="3.5" fill="var(--accent)"/>
+      <circle class="pulse p2" cx="0" cy="0" r="3.5" fill="var(--accent)"/>
+      <circle class="pulse p3" cx="0" cy="0" r="3.5" fill="var(--accent)"/>
+      <g stroke="var(--border-strong)" stroke-width="1">
+        <line x1="100" y1="210" x2="30" y2="260"/>
+        <line x1="100" y1="210" x2="70" y2="300"/>
+        <line x1="100" y1="210" x2="130" y2="300"/>
+        <line x1="100" y1="210" x2="170" y2="260"/>
+      </g>
+      <g fill="none" stroke="var(--ink)" stroke-width="1.4">
+        <circle cx="30" cy="260" r="6"/>
+        <circle cx="70" cy="300" r="6"/>
+        <circle cx="130" cy="300" r="6"/>
+        <circle cx="170" cy="260" r="6"/>
+      </g>
+    </svg>
+    <div class="seam-label"><span>Legacy, dense</span><span>Modern, open</span></div>
+
+    <p class="thesis">When a system is too critical to touch and too old to ignore, that's my problem to solve.</p>
+  </section>
+
+  <section class="marquee">
+    <div class="marquee-track">
+      <span>.NET</span><span>AWS Fargate</span><span>AWS Lambda</span><span>DynamoDB</span><span>Aurora</span><span>SNS/SQS</span><span>MassTransit</span><span>Polly</span><span>SQL Server</span><span>BIAN</span>
+      <span>.NET</span><span>AWS Fargate</span><span>AWS Lambda</span><span>DynamoDB</span><span>Aurora</span><span>SNS/SQS</span><span>MassTransit</span><span>Polly</span><span>SQL Server</span><span>BIAN</span>
+    </div>
+  </section>
+
+  <div class="note">This artboard tests the layout risk, not the full page: the seam rotates from left&rarr;right to top&rarr;bottom at 390px. Nav collapses to a top bar; cards, employer strip and footer follow the same single-column stack below (not mocked here — same components as desktop, full width).</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","section":"Preview"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { theme: props.theme ?? "light" };
+  }
+  renderVals() {
+    const theme = this.state.theme;
+    return {
+      theme,
+      isDark: theme === "dark",
+      toggleTheme: () => this.setState({ theme: this.state.theme === "light" ? "dark" : "light" }),
+    };
+  }
+}
+</script>
+</body>
+</html>

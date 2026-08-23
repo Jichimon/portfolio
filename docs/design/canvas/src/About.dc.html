@@ -1,0 +1,359 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style data-fonts="space-grotesk,ibm-plex-sans,ibm-plex-mono-400,ibm-plex-mono-500"></style>
+  <style>
+    * { box-sizing: border-box; }
+    html, body, .scaler { scroll-behavior: smooth; }
+    .board {
+      --bg: #F8F7F4;
+      --bg-elevated: #FFFFFF;
+      --ink: #14140F;
+      --ink-muted: rgba(20, 20, 15, 0.64);
+      --ink-faint: rgba(20, 20, 15, 0.38);
+      --border: rgba(20, 20, 15, 0.12);
+      --border-strong: rgba(20, 20, 15, 0.28);
+      --accent: oklch(42% 0.15 15);
+      --accent-soft: oklch(42% 0.15 15 / 0.16);
+      --accent-line: oklch(42% 0.15 15 / 0.6);
+      --label: oklch(52% 0.1 75);
+      font-family: "IBM Plex Sans", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      width: 100%;
+      display: flex;
+      align-items: flex-start;
+    }
+    .board[data-theme="dark"] {
+      --bg: #131311; --bg-elevated: #1C1B17; --ink: #F4F3EE;
+      --ink-muted: rgba(244, 243, 238, 0.66); --ink-faint: rgba(244, 243, 238, 0.4);
+      --border: rgba(244, 243, 238, 0.14); --border-strong: rgba(244, 243, 238, 0.3);
+      --accent: oklch(70% 0.15 15); --accent-soft: oklch(70% 0.15 15 / 0.2); --accent-line: oklch(70% 0.15 15 / 0.65);
+      --label: oklch(75% 0.11 75);
+    }
+    .board a { color: inherit; text-decoration: none; }
+    .board a:hover { color: var(--accent); }
+
+    /* nav rail — shared with every screen */
+    .rail { position: sticky; top: 0; flex: 0 0 264px; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between; padding: 40px 32px; border-right: 1px solid var(--border); }
+    .wordmark { font-family: "IBM Plex Sans", sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -0.006em; }
+    .wordmark a { text-decoration: none; }
+    .wordmark a:hover { color: var(--accent); }
+    .role { font-size: 14px; color: var(--ink-muted); margin-top: 7px; line-height: 1.5; }
+    .location { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-faint); margin-top: 14px; line-height: 1.5; }
+    .location .tz { display: block; margin-top: 5px; }
+    .rail-nav { list-style: none; margin: 40px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+    .rail-nav li { display: flex; }
+    .rail-nav li a, .rail-nav li .item {
+      display: flex; align-items: center; gap: 10px; flex: 1 1 auto;
+      font-family: "IBM Plex Sans", sans-serif; font-size: 14px; font-weight: 600;
+      color: var(--ink-muted); padding: 9px 0; text-decoration: none;
+      transition: color .14s ease;
+    }
+    .rail-nav li a:hover { color: var(--ink); }
+    .rail-nav li a:hover .ind { width: 26px; background: var(--ink); }
+    .rail-nav li a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+    .rail-nav li.active a { color: var(--ink); }
+    .rail-nav li.soon .item { color: var(--ink-faint); cursor: default; }
+    .rail-nav .ind { width: 14px; height: 1px; background: var(--border-strong); flex: 0 0 auto; transition: width .16s ease, background .16s ease; }
+    .rail-nav li.active .ind { width: 26px; background: var(--accent); }
+    .rail-nav .tag { margin-left: auto; font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); }
+    .rail-bottom { display: flex; flex-direction: column; gap: 22px; }
+
+    /* ---------- language switcher ----------
+       Two locales, so this is a two-state control and not a menu: a dropdown holding two
+       options always spends a click showing one row you did not want. The alternate href
+       points at THIS page in the other language, never at the other language's home —
+       being thrown back to the home page is the classic locale-switch defect. It survives
+       narrow (unlike the socials): on a phone, language outranks a GitHub link. */
+    .lang { display: flex; align-items: center; gap: 7px; font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.06em; }
+    .lang .cur { color: var(--ink); font-weight: 500; }
+    .lang .sep { color: var(--border-strong); }
+    .lang a { color: var(--ink-faint); }
+    .lang a:hover { color: var(--accent); }
+    .lang a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+    .theme-toggle { display: flex; align-items: center; gap: 10px; background: none; border: none; padding: 0; cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-muted); }
+    .switch { width: 34px; height: 18px; border-radius: 9px; border: 1px solid var(--border-strong); position: relative; background: var(--bg-elevated); }
+    .switch .thumb { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); transition: transform .18s ease, background .18s ease; }
+    .board[data-theme="dark"] .switch .thumb { transform: translateX(16px); background: var(--accent); }
+    .socials { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-faint); }
+    .socials a:hover { color: var(--accent); }
+
+    /* ---------- the article ----------
+       ONE CENTRED AXIS. Everything on this page is centred on the same vertical line and
+       there are exactly TWO widths: the column (680px — headline, prose, byline, pull
+       quote, drafts, and the photo pair) and one full-width break (the panorama).
+
+       Two earlier versions were wrong in different ways and both are worth remembering.
+       The first alternated sides for variety, so the page had no findable centre —
+       variety is not a layout rule. The second put everything on a left spine, which
+       fixed the order but left ~350px of dead space down the right of every text block:
+       an ASYMMETRIC leftover reads as a mistake, where a symmetric margin reads as a
+       margin. Centring the column turns the same empty pixels into intended air.
+
+       The single full-width moment is therefore the only one on the page, which is what
+       makes it mean something. */
+    main { flex: 1 1 auto; min-width: 0; max-width: 1176px; margin-inline: auto; padding: 64px 72px 96px; }
+
+    .page-label { font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--label); margin: 0 0 30px; }
+
+    /* the column: one measure, centred. Every text element uses it, no exceptions. */
+    .col { max-width: 680px; margin-inline: auto; }
+    h1 {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 500;
+      font-size: 42px;
+      line-height: 1.15;
+      letter-spacing: -0.018em;
+      margin: 0 0 26px;
+    }
+    .lead { font-size: 18px; line-height: 1.72; color: var(--ink-muted); margin: 0; }
+    .byline { display: flex; gap: 24px; flex-wrap: wrap; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-faint); margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .byline .k { color: var(--label); }
+
+    /* Photo frames — real proportions, no image yet. A frame that states what belongs in
+       it is a brief; a grey box is a bug. The two paired photographs are BOTH specified
+       4:5, so the module has one baseline and one cap: the design sets the crop rather
+       than the layout bending around whatever aspect ratio the files happen to have. */
+    .photo { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; }
+    .photo .slot { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent); }
+    .photo .what { font-size: 13.5px; line-height: 1.55; color: var(--ink-muted); max-width: 340px; }
+    .photo .spec { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--ink-faint); }
+    .photo-pano { aspect-ratio: 21 / 9; }
+    .photo-tall { aspect-ratio: 4 / 5; }
+
+    figure { margin: 56px 0; }
+    figcaption { font-family: "IBM Plex Mono", monospace; font-size: 11px; line-height: 1.6; color: var(--ink-faint); margin-top: 12px; }
+    /* the one full-width moment on the page */
+    .break-wide { margin: 60px 0 64px; }
+    .break-wide figcaption { max-width: 680px; margin-inline: auto; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .pair figcaption { margin-top: 10px; }
+
+    .body { max-width: none; }
+    .body p { font-size: 17.5px; line-height: 1.8; color: var(--ink-muted); margin: 0 0 24px; }
+    .body p:last-child { margin-bottom: 0; }
+    .body p b { color: var(--ink); font-weight: 650; }
+    .body a { color: var(--ink); border-bottom: 1px solid var(--accent-line); padding-bottom: 1px; }
+    .body a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+    .body .drop { font-size: 21px; line-height: 1.66; color: var(--ink); }
+
+    /* the pull line, used once, on the spine like everything else */
+    .pull {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 500;
+      font-style: italic;
+      font-size: 28px;
+      line-height: 1.42;
+      color: var(--ink);
+      margin: 60px 0;
+      padding-left: 24px;
+      border-left: 2px solid var(--accent);
+    }
+
+    .needs-input { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent-line); border-radius: 2px; padding: 3px 7px; margin-bottom: 12px; }
+    .draft { border-left: 2px solid var(--accent-line); padding-left: 22px; margin: 0 0 24px; }
+    .draft p { color: var(--ink-faint); font-style: italic; margin: 0; font-size: 17.5px; line-height: 1.8; }
+
+    .next-up { margin-top: 80px; }
+    .next-up .sep { height: 1px; background: var(--border); margin-bottom: 28px; }
+    .next-links { display: flex; gap: 32px; flex-wrap: wrap; font-family: "IBM Plex Mono", monospace; font-size: 12.5px; }
+    .next-links a { color: var(--ink-muted); }
+    .next-links a:hover { color: var(--accent); }
+    .next-links .arrow { color: var(--accent); margin-right: 7px; }
+
+    /* ---------- responsive: medium ---------- */
+    @media (max-width: 1180px) {
+      .rail { flex: 0 0 208px; padding: 32px 24px; }
+      .wordmark { font-size: 20px; }
+      .role { font-size: 13px; }
+      main { padding-left: 48px; padding-right: 48px; }
+      section { padding-left: 48px; padding-right: 48px; }
+    }
+
+    /* ---------- responsive: narrow — the rail stops being a rail ---------- */
+    @media (max-width: 820px) {
+      .board { flex-direction: column; align-items: stretch; }
+      .rail {
+        position: static; height: auto; flex: 0 0 auto; width: 100%;
+        flex-direction: row; align-items: center; gap: 20px; flex-wrap: wrap;
+        padding: 20px 24px; border-right: none; border-bottom: 1px solid var(--border);
+      }
+      .rail > div:first-child { flex: 0 0 auto; }
+      .role, .location { display: none; }
+      .rail-nav {
+        margin: 0; flex-direction: row; gap: 18px; flex: 1 1 auto;
+        overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+      }
+      .rail-nav::-webkit-scrollbar { display: none; }
+      .rail-nav li a, .rail-nav li .item { padding: 4px 0; white-space: nowrap; font-size: 13.5px; }
+      .rail-nav .ind, .rail-nav .tag { display: none; }
+      .rail-nav li.active a { color: var(--accent); }
+      .rail-bottom { flex-direction: row; align-items: center; gap: 16px; flex: 0 0 auto; }
+      .socials { display: none; }
+      .toc { display: none; }
+
+      main { padding: 36px 24px 64px; max-width: none; }
+      section { padding-left: 24px; padding-right: 24px; }
+      figure.diagram { overflow-x: auto; }
+    }
+
+    @media (max-width: 560px) {
+      main { padding-left: 18px; padding-right: 18px; }
+      section { padding-left: 18px; padding-right: 18px; }
+      .wordmark { font-size: 18px; }
+    }
+
+    @media (max-width: 820px) {
+      .col { max-width: none; }
+      h1 { font-size: 30px; }
+      .lead { font-size: 16.5px; }
+      .body p, .draft p { font-size: 16px; line-height: 1.75; }
+      .body .drop { font-size: 18px; }
+      .pull { font-size: 21px; margin: 40px 0; padding-left: 18px; }
+      .break-wide { margin: 40px 0; }
+      .break-wide figcaption { max-width: none; }
+      .photo { padding: 16px; gap: 7px; }
+      .photo .what { font-size: 12.5px; }
+      .next-links { flex-direction: column; gap: 12px; }
+    }
+    @media (max-width: 560px) {
+      h1 { font-size: 25px; }
+      .pair { grid-template-columns: 1fr; gap: 28px; }
+      .photo-pano { aspect-ratio: 3 / 2; }
+    }
+  </style>
+</helmet>
+
+<div class="board" data-theme="{{theme}}">
+  <nav class="rail">
+    <div>
+      <div class="wordmark"><a href="/">Luis Antelo</a></div>
+      <div class="role">Senior Software Engineer</div>
+      <div class="location">Cochabamba, Bolivia<span class="tz">GMT-4 &middot; full overlap with US business hours</span></div>
+    </div>
+    <ul class="rail-nav">
+      <li><a href="/#work"><span class="ind"></span>Work</a></li>
+      <li class="active"><a href="/about"><span class="ind"></span>About</a></li>
+      <li><a href="/experience"><span class="ind"></span>Experience</a></li>
+      <li class="soon"><span class="item"><span class="ind"></span>Writing<span class="tag">soon</span></span></li>
+      <li class="soon"><span class="item"><span class="ind"></span>Architectures<span class="tag">soon</span></span></li>
+      <li class="soon"><span class="item"><span class="ind"></span>Search<span class="tag">soon</span></span></li>
+      <li><a href="/#contact"><span class="ind"></span>Contact</a></li>
+    </ul>
+    <div class="rail-bottom">
+      <div class="lang" role="group" aria-label="Language">
+        <span class="cur" lang="en" aria-current="true">EN</span>
+        <span class="sep" aria-hidden="true">/</span>
+        <a href="/es/about" hreflang="es" lang="es">ES</a>
+      </div>
+      <button class="theme-toggle" onClick="{{toggleTheme}}" aria-pressed="{{isDark}}">
+        <span class="switch"><span class="thumb"></span></span>{{themeLabel}}
+      </button>
+      <div class="socials"><a href="https://github.com/Jichimon">GitHub</a> &middot; <a href="https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/">LinkedIn</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="col">
+      <p class="page-label">About</p>
+      <h1>I'd rather design the system than run the room it lives in.</h1>
+      <p class="lead"><span class="needs-input">Needs input &mdash; lead paragraph</span><br>Two or three sentences that open the article as a person, not as a r&eacute;sum&eacute;. The one thing this page cannot borrow from Experience is a reason to keep reading that isn't a job title.</p>
+      <div class="byline">
+        <span><span class="k">Based in</span> Cochabamba, Bolivia</span>
+        <span><span class="k">Since</span> 2021 in software</span>
+        <span><span class="k">Reads as</span> INTJ-A</span>
+      </div>
+    </div>
+
+    <figure class="break-wide">
+      <div class="photo photo-pano">
+        <span class="slot">Photo 1 of 3</span>
+        <span class="what">Huayna Potos&iacute;, on the summit. Wide, taken from far enough back that the mountain is the subject and you are the scale.</span>
+        <span class="spec">21:9 panoramic &middot; 2000px wide min</span>
+      </div>
+      <figcaption>Huayna Potos&iacute;, 6,088 m. <span class="needs-input" style="margin:0 0 0 8px;">Needs input &mdash; when, and who took it</span></figcaption>
+    </figure>
+
+    <div class="col">
+      <div class="body">
+        <p class="drop">Five years is not a long career by some measures, and I don't pretend otherwise. What moved faster than the calendar was scope: from proof-of-concept work as a trainee to owning architecture decisions that hundreds of thousands of people now depend on, made under real constraints &mdash; a live system that can't go down while you rebuild it, a security review that has to sign off before anything ships, a bank that needs the business case before it needs the technical one.</p>
+        <p><b>Judgment isn't a title.</b> It's having made enough of those calls, in public, with real consequences, to know which questions to ask before the ones that come back to bite you.</p>
+      </div>
+
+      <figure class="pair">
+        <div>
+          <div class="photo photo-tall">
+            <span class="slot">Photo 2 of 3</span>
+            <span class="what">Portrait. Looking at the camera, plain background.</span>
+            <span class="spec">4:5 &middot; 800&times;1000 min</span>
+          </div>
+          <figcaption>Cochabamba.</figcaption>
+        </div>
+        <div>
+          <div class="photo photo-tall">
+            <span class="slot">Photo 3 of 3</span>
+            <span class="what">Somewhere in Bolivia &mdash; a landscape, or you travelling.</span>
+            <span class="spec">4:5 &middot; 800&times;1000 min</span>
+          </div>
+          <figcaption><span class="needs-input" style="margin:0;">Needs input &mdash; where, and when</span></figcaption>
+        </div>
+      </figure>
+
+      <div class="body">
+        <p>I'm still finishing a degree in Ingenier&iacute;a Inform&aacute;tica at Universidad Aut&oacute;noma Gabriel Ren&eacute; Moreno (UAGRM), started in 2017 &mdash; paused for now, but I plan on finishing it. <b>Teaching is where I'd like to take it, eventually.</b></p>
+      </div>
+
+      <div class="draft">
+        <span class="needs-input">Needs input &mdash; why Bolivia matters here</span>
+        <p>Working from Cochabamba for teams abroad is a real part of the story, and the site currently says nothing about it beyond a timezone. Two or three sentences would carry it.</p>
+      </div>
+
+      <div class="body">
+        <p>Outside of work, the same instinct shows up in sport: climbing and hiking around Bolivia (Huayna Potos&iacute; included), and amateur boxing.</p>
+      </div>
+
+      <p class="pull">I just like being bad at something new until I'm not.</p>
+
+      <div class="body">
+        <p>For a second data point on the same thing: I tested as an INTJ-A &mdash; &ldquo;Architect&rdquo; &mdash; on 16Personalities. Independent, rational, and more at ease designing a system than running the room it lives in, which lines up with how most of the decisions above actually got made. <a href="https://www.16personalities.com/profiles/21180e3e5b55c">Full profile &rarr;</a></p>
+      </div>
+
+      <div class="next-up">
+        <div class="sep"></div>
+        <div class="next-links">
+          <a href="/experience"><span class="arrow">&rarr;</span>Where I've worked, and what happened there</a>
+          <a href="/#work"><span class="arrow">&rarr;</span>The work in depth</a>
+          <a href="/#contact"><span class="arrow">&rarr;</span>Get in touch</a>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","section":"Preview"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { theme: props.theme ?? "light" };
+  }
+  renderVals() {
+    const theme = this.state.theme;
+    return {
+      theme,
+      isDark: theme === "dark",
+      themeLabel: theme === "light" ? "Dark mode" : "Light mode",
+      toggleTheme: () => this.setState({ theme: this.state.theme === "light" ? "dark" : "light" }),
+    };
+  }
+}
+</script>
+</body>
+</html>

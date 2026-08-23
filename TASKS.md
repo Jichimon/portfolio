@@ -308,7 +308,7 @@ Stated as a hypothesis, not a finding: unlike `INC-14`'s two defects, this one h
 
 ---
 
-## TASK 6 — Replace Mermaid diagrams with hand-authored assets · `content` · `TODO` (blocked by TASK 8)
+## TASK 6 — Replace Mermaid diagrams with hand-authored assets · `content` · `TODO` (unblocked 2026-08-23 — TASK 8 closed; replace incrementally once TASK 25 renders a diagram in a real page)
 
 The 11 `.mmd` files from TASK 1 are placeholders, not the final assets. Mermaid's
 autolayout could not produce diagrams the author considers presentable — see TASK 1's
@@ -318,8 +318,19 @@ manually-laid-out tool), **one at a time, as needed — not as a batch.** Keep t
 existing `id`s; only the asset behind `/diagrams/{id}.svg` changes, so nothing in the
 case study markdown needs to change when a diagram is replaced.
 
+**Legibility is an acceptance criterion, not a nice-to-have.** Raised by the author across three
+rounds of `TASK 8`'s design review, against the placeholder SVG diagrams drawn into the canvas:
+*"los diagramas quedan con fuente muy pequeña igual, no se entenderían en una lectura a simple
+vista"*. Those canvas diagrams are mockups and are not this task's deliverable, but they proved
+the failure mode is real at the sizes a diagram actually renders on the page. So every
+replacement asset must be **readable at the width it is published at, without zooming** — which
+in practice means a minimum effective label size rather than whatever the layout tool emits, and
+it means judging each asset in the page, not in the editor (`P-15`: fitness for the published
+use, never "it renders").
+
 **Acceptance**
 - [ ] No blanket acceptance — closes incrementally, per id, as each is replaced.
+- [ ] Each replaced asset is checked in the rendered page at its published width, both themes.
 
 ---
 
@@ -348,18 +359,298 @@ Order agreed with the author, by dependency rather than the numeric listing: sit
 
 ---
 
-## TASK 8 — Site work breakdown · `planning` · `TODO`
+## TASK 8 — Site work breakdown · `planning` · `DONE`
 
 **Unblocked 2026-08-19** — `TASK 7` closed, 6/6 ADRs accepted.
+
+**In progress 2026-08-20** — the design/UX item's input artifact exists: `docs/design/claude-design-brief.md`, carrying the screen inventory and the stack constraints the design cannot violate. Its **visual-direction section was rewritten** after the author rejected pass 0 v1 (three typeset documents, no nav/hero/motion) — see "History" in `docs/design/canvas/README.md`. **A direction is accepted** (`docs/design/decisions/2026-08-20-hero-direction.md`, since revised twice against real author feedback — the doc records both the original call and what changed): Direction A's structure, amended with Direction B's stacked-strata texture, now legible rather than heavily blurred, wine/burgundy accent, a gold/ochre `--label` tertiary color, and a visible seam line with traveling pulses in place of the original soft glow. **Pass 1 (screens 1–4, desktop) was APPROVED by the author on 2026-08-22**, after eleven revision rounds — home, the `otp-provider-decoupling` case study, the `/case-studies` index and the `mobile-banking-platform` anchor page. **The design deliverable is DONE — pass 2 approved 2026-08-23.** Eleven live artboards: home, the `otp-provider-decoupling` case study, the `/case-studies` index, the `mobile-banking-platform` anchor, About, Experience, the **bilingual 404**, the **`home.es` length stress test**, the **component sheet**, and two frozen **390px phone frames**. The **responsive contract** (three states, rail collapses below 820px) is on every screen and the **language switcher** is chrome on every page. The sheet carries fourteen component groups, each with its class name, its states and **what content it is handed** — plus the contact form's four states (idle/sending/sent/error), the only new design in it, since the form is the one place on the site where an action can fail. Three artboards are **derived, not authored** (`docs/design/canvas/derive.mjs`) and `verify.mjs` re-runs the derivation in memory, so a hand-edited copy cannot drift.
+**Closed 2026-08-23.** The backlog is written and sits immediately below this entry: `TASK 21`–`TASK 29`, cut against the page set in `docs/design/decisions/2026-08-22-site-structure.md` rather than the brief's nine-screen inventory. Four framing decisions were taken with the author before writing it — deploy in item one, sections omitted when their content is absent, `mailto:` before a Worker, `*.workers.dev` before a custom domain — and they are recorded at the head of the backlog so no later item re-litigates them. All four breakdown constraints below are discharged: the design/UX task produced eleven artboards and a component sheet; `INC-03`'s visual-QA checklist is `TASK 27`; rail position tracking is an acceptance criterion on `TASK 23`; and content-driven components, in both its markup and its copy halves, is one of three criteria applied to every implementation item rather than repeated in each. The `home.es` delta is **measured, not assumed** — +10% overall across 37 corresponding strings, and the one element that changes shape is the rail's timezone line (43→63 chars, two lines to three); nothing in the layout is sized to an English string. **Not yet verified by rendering** — no headless browser exists in the repo until `TASK 15` installs Playwright, so narrow-state overflow is reasoned from measured character counts. `docs/design/canvas/verify.mjs` now asserts the canvas's seven structural properties before every re-seed, derived from the artboards rather than a roster (`P-13`). Original pass-1 note follows: [design canvas](https://claude.ai/code/artifact/890abe00-2817-4bc8-bd8c-6fc9dc887f6b) — home, the `otp-provider-decoupling` case study, the `/case-studies` index, and the `mobile-banking-platform` anchor page, source in `docs/design/canvas/` (a `local-preview.mjs` fallback ships alongside it in case the Artifact link doesn't resolve). Mobile for these 4 screens, a `home.es` stress test, pass 2 (screens 5–9), and a couple of small flagged follow-ups (diagram text legibility; a proposed "Get in touch" copy change that needs its own content-task edit to `home.en.md`/`home.es.md` since `resources/**` is read-only for agents under `H-02`) remain. **The backlog itself is still unwritten** — this is a prerequisite, not the deliverable. See `progress/2026-08-20-01-task8-design-brief.md` (the brief) through `progress/2026-08-22-16-task8-design-pass2-about-experience.md` (pass 2 opens, current) for the full decision trail. **The site's structure is now decided and recorded** in `docs/design/decisions/2026-08-22-site-structure.md`: the home page *is* the work page — no `Home` nav item, no separate `/work` route, `Work` and `Contact` are sections of home (`#work`, `#contact`), `About` and `Experience` are their own pages, and the five case studies are their own pages. `/case-studies` is **designed and not routed**, deferred until the list outgrows the home section. The breakdown's page-level implementation items should be cut against that page set, not against the nine-screen inventory in the brief.
 
 Turn the site from one word into a backlog. Runs through the `work-item` procedure and produces new `TASK N` entries here — design items, implementation items, and evaluation items for both the site and the harness.
 
 **Done:** every entry has a type, one deliverable, and a done someone else could check. No entry reads "investigate X" without a concrete definition of done — if you cannot say when it ends, it is a note, not a work item.
 
-**Constraints — two items the breakdown must not omit:**
+**Constraints — four items the breakdown must not omit:**
 
 - **A design/UX task**, generating the actual per-page designs the implementation items build against. Raised by the author while reviewing `ADR-006`: nothing in the backlog yet owns "what each screen looks like" as its own deliverable.
 - **The `INC-03` visual-QA rigor checklist**, as its own evaluation item — a script/test comparing the real rendered site, both locally and once deployed (`ADR-004`: Cloudflare Workers), against each screen the design task produces. `docs/harness/architecture.md` §M already recorded this as deferred *"until the site has screens worth diffing"* — `TASK 8` is that trigger. `INC-03`'s own origin: a CSS-purge defect invisible in dev, seven element-level defects surviving two visual reviews against a dev build — the remedy has to diff dev, prod, and the design intent as three distinct things, not two reviews at a glance.
+- **Rail position tracking as an acceptance criterion on the item that builds the nav.** The author has raised it three times and it is the one interaction they have called indispensable: scrolling a case study must change which table-of-contents entry is marked current, without a click, and the same must hold for the home page's own nav items. It does **not** work in the design canvas and cannot — the Design runtime builds each artboard's DOM programmatically, so a plain `<script>` never executes — which is precisely why it is written down rather than left to be inferred from a mockup that appears to lack it. Full acceptance list, including the no-JavaScript fallback, in `docs/design/decisions/2026-08-22-site-structure.md`; a working ~30-line reference implementation is in the canvas source.
+- **Content-driven components as an acceptance criterion on every implementation item**, not a note in a design doc. Raised by the author on 2026-08-22 while reviewing the design canvas: every list on the site is expected to grow — case studies, stack entries, employers, testimonials — and every one of them must render from the content files rather than from markup written once per item. The same applies to the two design elements that read as one-offs but are not: the home hero's background composition, and the per-project motif on a work tile — both must be swappable per instance without editing a page. **The failure this prevents is concrete:** a sixth case study should be a new pair of `.md` files and nothing else, and if adding one means editing a page template, the implementation item did not meet its done.
+
+  **It applies to copy, not only to markup** — raised by the author on 2026-08-23 against the 404's *"Five case studies"* and *"Four employers"*. A count in visible copy is the quieter half of the same defect: markup that hardcodes a list breaks visibly, whereas `Five case studies` does not break when a sixth lands — it just starts lying, and nothing anywhere fails. Checking the property rather than fixing the two spots named found **nine**, across four screens, including Experience's `h1`, which counted employers and so expired the day the author changed job. Copy names what a destination *is*, never how much is in it. Enforced from now on by `docs/design/canvas/verify.mjs` check 5 (sentence-scoped, years excluded); the same criterion belongs on every implementation item that renders a list.
+
+---
+
+# The site implementation backlog
+
+`TASK 8`'s output. Eleven items, cut against the page set in `docs/design/decisions/2026-08-22-site-structure.md` — **not** the brief's nine-screen inventory, which the structure decision superseded.
+
+**Ids are stable and order is not the id** (`G-10`). Run them in this sequence:
+
+| # | Item | Why here |
+|---|---|---|
+| 1 | `TASK 30` — publish the repository to GitHub | Nothing else can be automated until the code has a remote |
+| 2 | `TASK 21` — Astro skeleton, deployed **by CI** | Proves the whole path — push → build → live — before anything is built on it |
+| 3 | `TASK 31` — reconcile the brief and the decision docs | The input artifact every item below reads is currently stale. Fixing it after the pages are built fixes nothing |
+| 4 | `TASK 22` — content layer | The reusable core; every page item depends on it |
+| 5 | `TASK 23` — tokens and the layout shell | Every page item depends on it |
+| 6 | `TASK 27` — design-fidelity harness | **Moved ahead of the pages.** It has to exist *before* the screens it checks, or the first three pages ship unverified and get retrofitted |
+| 7 | `TASK 24` — home | |
+| 8 | `TASK 25` — case study and platform templates | |
+| 9 | `TASK 26` — About, Experience and 404 | |
+| 10 | `TASK 28` — custom domain | Blocked on the domain existing; deliberately off the critical path |
+| 11 | `TASK 29` — contact form Worker | Deferred with a stated trigger |
+
+**Four decisions taken with the author on 2026-08-23**, so nothing below re-litigates them:
+
+| Decision | Consequence for the backlog |
+|---|---|
+| **Deploy early, iterate in production** | `TASK 21` is a walking skeleton that is live before any design exists. Every later item ships onto something already online, so deploy risk is discovered on day one instead of at the end |
+| **A section is omitted when its content is absent** | No `[NEEDS INPUT]` ever reaches production. Missing testimonials means no testimonials block; a missing photo means no figure. The site looks finished from the first deploy and fills in as content lands, with no code change — which is the content-driven constraint doing real work |
+| **`mailto:` now, a Worker later** | Zero backend, zero secrets, zero spam surface at launch. The stated cost: the form's designed `sending` / `sent` / `error` states are not exercised yet. `TASK 29` adds the Worker when the author wants it |
+| **`*.workers.dev` first, custom domain after** | Nothing blocks the first deploy. `TASK 28` connects the real domain once it exists |
+
+## Four criteria apply to every item and are not repeated in each one
+
+**1 · Content-driven.** A sixth case study is a new pair of `.md` files and nothing else. If adding an item means editing a template, the item's done was not met. This applies to copy as well as markup: no visible string states how many of a growing thing there are.
+
+**2 · Locale parity** (`C-09`). Both locales in the same change, always. No item ships English-only.
+
+**3 · Design fidelity — every item that renders a screen is diffed against its artboard, and is not done until that diff passes.** Named per item, and mechanized by `TASK 27` rather than left to a look. The design is *the specification*: `docs/design/canvas/src/*.dc.html` is the source of truth for markup and CSS, and `Components.dc.html` names every component, its states, and what content it takes. Implementation copies from it; it does not reinterpret it.
+
+**4 · One datum, one declaration site.** The single most important architectural constraint below, and the one the canvas itself violates — every `.dc.html` carries its own copy of the token block, which is correct for eleven independent mockups and would be a defect in a site. Copying from the canvas is precisely how it would get carried in, so the mapping is written down:
+
+| Datum | Declared once, here | Never |
+|---|---|---|
+| Copy, in either locale | `resources/**` | in a template, a component, or a translation object |
+| Design tokens (color, type ramp, spacing, breakpoints) | one token stylesheet | as a literal value anywhere else |
+| The route set | derived from the content collection | a hardcoded list in a route file, a sitemap, or a test |
+| Nav items, including the `soon` slots | one data module | in the rail markup |
+| A component's markup and states | the component | duplicated per page |
+| Diagram assets | `resources/diagrams/` | inline SVG in prose |
+| The alternate-locale URL of a page | the collection's `slug` join | a per-page constant |
+
+**The check that makes it real, not aspirational:** a build-time assertion that no color literal, breakpoint literal or route string appears outside its declaration site. Owned by `TASK 23` for tokens and `TASK 22` for routes — as a property, never a roster (`P-13`).
+
+
+---
+
+## TASK 30 — Publish the repository to GitHub · `maintenance` · `TODO` · **runs first**
+
+`ADR-005` accepted a public GitHub remote for the whole repository on 2026-08-19, and verified the history clean before deciding — no `private/`, no `evidence/`, no unsanitized original ever committed. **The push itself was left as the author's action and has not happened.** Everything automatable downstream is blocked on it.
+
+**Deliverable:** the repository public on GitHub, `main` tracking the remote.
+
+**Done:** `git remote -v` shows the origin; the GitHub page renders `README.md`; `private/` and `evidence/` are absent from the remote, confirmed by browsing the pushed tree rather than by trusting `.gitignore`.
+
+**Constraints**
+- **The author performs every git write** (`H-01`). An agent may prepare files and read history; it does not create the remote, commit or push.
+- Re-verify the history immediately before pushing, not once in August. `ADR-005`'s check was true when made; a push publishes whatever is there *now*.
+- The uncommitted working tree is large — the whole design canvas, the harness and this backlog. Review the diff before the first commit, which is the entire point of leaving commits to the human.
+
+---
+
+## TASK 31 — Reconcile the brief and the decision docs with what was built · `content` · `TODO`
+
+`docs/design/claude-design-brief.md` describes a design that no longer exists, and it is the **input artifact every implementation item reads**. A stale brief is what the next session takes as truth.
+
+Fifteen review rounds changed things the brief still states otherwise: the contact invite copy, the count-free rewrite across four screens, the logo slots, the confirmation message, Experience's `h1`, the language switcher, the responsive contract, and the bilingual 404 — none of which the brief mentions. The screen inventory is superseded by `docs/design/decisions/2026-08-22-site-structure.md`.
+
+**Deliverable:** the brief and the three decision docs reconciled with the eleven artboards, in one change.
+
+**Done:** every screen the brief names exists in `docs/design/canvas/src/`, and every artboard there is named by the brief — checked as a property in both directions, not by reading (`P-13`); no statement in the brief contradicts a shipped artboard.
+
+**Constraints**
+- **Reconcile, do not rewrite.** Where the brief was overruled, record what changed and why — the reasoning trail in `progress/` is the evidence and should be cited, not restated.
+- The copy changes that belong in `resources/**` are **not** this item — they are `TASK 20`, and `H-02` keeps agents out of published content. This item fixes the design documents only.
+- Runs **before** the page items, not after. Reconciling a brief once the pages exist reconciles nothing.
+
+---
+
+## TASK 21 — Astro skeleton, deployed by GitHub Actions · `feature` · `TODO` (needs TASK 30)
+
+An Astro project that builds, and a workflow that ships it to Cloudflare **on every push to `main`**. **One page saying nothing** — no design, no content, no components. The point is to prove the whole path end to end before anything is built on top of it.
+
+**Deliverable:** `site/` with `astro.config.mjs`, `package.json`, `wrangler.jsonc`, one route — plus `.github/workflows/deploy.yml`.
+
+**Done:** **a commit pushed to `main` appears at the live URL with no local command run**, and the URL returns HTTP 200 over HTTPS. Recorded here and in `docs/adr/ADR-004`.
+
+**Constraints**
+- **CI is the only deploy path, from the first deploy.** A manual `wrangler deploy` first and CI later means shipping one mechanism and then replacing it — and the manual one keeps working, so nobody notices when the automated one breaks. The workflow builds and deploys; nothing else does.
+- The workflow runs `node scripts/gate.mjs` **before** deploying. A gate that only runs locally is a gate that runs when someone remembers.
+- **The author creates `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repository secrets.** No Cloudflare credential enters the session environment (`G-08`); an agent writes the workflow, the author supplies the secrets. The token is scoped to Workers deploy on one account, never a global key.
+- Astro, static output, no adapter (`ADR-001`, `ADR-004`) — `wrangler deploy` serves `dist/` as static assets.
+- `site/node_modules` and `site/dist` are gitignored, and `guards.config.json` excludes them from `check-terms` — a `node_modules` tree will otherwise slow every gate run and produce term false-positives.
+
+---
+
+## TASK 22 — Content layer: collections, schema, locale join · `feature` · `TODO`
+
+The reusable core, and the item most of the site's value depends on. Astro content collections over `resources/`, with the minimal Zod schema and the `slug`-based locale join.
+
+**Deliverable:** `site/src/content.config.ts` plus a small query module — `getPage(slug, lang)`, `listCaseStudies(lang)`, `getAlternate(slug, lang)`.
+
+**Done:** every file in `resources/` loads and validates; both locales of every `slug` join; a query for a slug that exists in only one locale fails loudly at build rather than rendering a half-page; **an absent optional field returns `undefined` and the consuming component omits its block** — proven with a test, not by inspection; **the route set is derived from the collection and a test asserts no route string is hardcoded anywhere else** (criterion 4).
+
+**Constraints**
+- Five universal keys (`slug`, `lang`, `type`, `title`, `confidentiality`) plus per-type required keys, per `ADR-002` and `C-14`. **An unknown `type` is a build failure, not a pass** (`P-13`).
+- `resources/**` is read-only (`H-02`). The collection reads it; nothing writes back.
+- **Resolves `ADR-003`'s two open items**, which have had no owner since: the in-body link-rewriting mechanism (`/case-studies/x` → `/es/case-studies/x` inside Markdown prose), and whether Astro's built-in i18n fallback fires for collection-driven routes. Both get an answer in the ADR, not just in code.
+- Diagrams are pre-rendered SVG (`TASK 17`), so **no Mermaid at build time** (`ADR-002`).
+
+---
+
+## TASK 23 — Tokens and the layout shell · `feature` · `TODO`
+
+Everything every page shares: the `oklch` token set and its `data-theme` swap, the three-state responsive contract, the rail (wordmark, nav, language switcher, theme toggle, socials), and the footer.
+
+**Deliverable:** a base layout component plus one global stylesheet, lifted from the canvas.
+
+**Done:** the theme toggle persists across navigation; the language switcher points at the *same page* in the other locale; **the rail marks the current section on scroll, and with JavaScript disabled it is still a working list of links**; **tokens are declared in exactly one stylesheet, with a build-time assertion that no color or breakpoint literal appears outside it** (criterion 4).
+
+**Design fidelity:** the rail, footer and all three responsive states diffed against `Components.dc.html` §01–§05 and any page artboard. `TASK 27` is the mechanism.
+
+**Note:** the canvas repeats the token block in every `.dc.html`. That is correct for eleven independent mockups and would be a defect here — **do not carry it across.**
+
+**Constraints**
+- **Rail position tracking is an acceptance criterion, not a nice-to-have** — the author has raised it four times and it is the one interaction they called indispensable. The full acceptance list is in `docs/design/decisions/2026-08-22-site-structure.md`; a working ~30-line reference implementation is in the canvas source, generalized over `data-spy`.
+- Tracking is an island (`ADR-001`), never the mechanism. **No-JS is a supported state, not a degraded one.**
+- Three states: wide >1180, medium 820–1180, narrow <820 where the rail becomes a top bar. No fixed width floor.
+- The theme choice must not flash on load — set it before first paint, or accept a flash and say so.
+
+---
+
+## TASK 24 — Home · `feature` · `TODO`
+
+**Deliverable:** `/` and `/es/`, rendered from `home.{en,es}.md` and the case-study collection — hero, employers, work bento, stack strip, testimonials, contact.
+
+**Done:** every list renders from content; **adding a case study `.md` pair changes the bento with no template edit**, proven by actually adding a throwaway sixth and removing it; the testimonials block is absent while `TASK 19` is open; the hero background and the per-tile motifs are swappable per instance.
+
+**Design fidelity:** diffed against `Main.dc.html` (wide, medium) and `HomeMobile.dc.html` (390), both themes; the Spanish route against `HomeES.dc.html`, which is the length stress test and the reason it exists.
+
+**Constraints**
+- The hero composition and each tile motif are **props, not hardcoded children** — this is the specific pair the author called out as reading like one-offs when they are not.
+- Contact form is `mailto:` for now, with the designed `sent`/`error` states unused; do not build a fake success state that lies.
+- Logo slots render only when a logo file exists, and the wordmark stands alone otherwise (component sheet §14).
+
+---
+
+## TASK 25 — Case study and platform templates · `feature` · `TODO`
+
+The two article archetypes, and the five case studies routed through them.
+
+**Deliverable:** `/case-studies/[slug]` and `/es/case-studies/[slug]`, one template per `type` (`case-study`, `platform`), each with the rail table of contents.
+
+**Done:** every case study renders in both locales; the table of contents is generated from the article's own headings, never hand-written; scrolling marks the current heading; diagrams render as static SVG and scroll horizontally rather than overflowing at narrow.
+
+**Design fidelity:** the case-study template against `CaseStudyDetail.dc.html` and `CaseStudyMobile.dc.html`; the platform template against `PlatformPage.dc.html`. Both themes, all three widths.
+
+**Constraints**
+- `platform` gets the distinct treatment the design specifies — a scale figure instead of an outcome metric, a services grid, and Deep Dives styled as the card language its children use elsewhere.
+- **`/case-studies` (the index) is designed and deliberately not routed.** It ships when the list outgrows the home section, roughly eight items. Do not route it in this item.
+
+---
+
+## TASK 26 — About, Experience and 404 · `feature` · `TODO`
+
+**Deliverable:** `/about`, `/experience`, the bilingual 404, and their `/es/` counterparts.
+
+**Done:** About renders on one centred axis with photo figures omitted while `TASK 20` is open; Experience renders the chronology from `experience.{en,es}.md`; **the 404 is served with a real `404` status, never a `200` carrying error copy** — a soft 404 is indexed as a real page.
+
+**Design fidelity:** against `About.dc.html`, `Experience.dc.html` and `NotFound.dc.html`. About's rule is the one to assert explicitly — **one centred axis, exactly two widths** — because it is the constraint three earlier versions broke.
+
+**Constraints**
+- The 404's language switcher marks neither locale as current. That is a designed state.
+- Experience entries take an optional logo; absent is a supported value.
+
+---
+
+## TASK 27 — Design-fidelity harness: dev, prod and the design as three things · `harness` · `TODO` · **runs before the page items**
+
+`INC-03`'s remedy, deferred since `docs/harness/architecture.md` §M *"until the site has screens worth diffing"*. The site is that trigger — and this is the mechanism criterion 3 names, so **it is built before the screens it checks, not after them.** Built afterwards, the first three pages ship unverified and then get retrofitted, which is the more expensive order and the one that quietly never happens.
+
+**Deliverable:** a Playwright suite that captures every route at 1440 / 1024 / 390 in both themes and both locales, and diffs **three** things: the local dev build, the deployed build, and the design intent — the corresponding artboard, rendered from `docs/design/canvas/build/src/`.
+
+**Done:** the suite runs in `gate.mjs` **and in the deploy workflow**; a deliberately introduced CSS regression fails it (`P-14` — proven in red, never merely seen to pass); a page item can name its artboard and get a pass/fail without writing new harness code.
+
+**Constraints**
+- **Three comparisons, not two.** `INC-03`'s origin was a CSS-purge defect invisible in dev, with seven element-level defects surviving two visual reviews against a dev build. Dev-vs-design alone would have missed it exactly as it was missed then, and prod-vs-dev alone would not have known what correct looked like.
+- **Routes and artboards are both enumerated from their artifacts** — the content collection and `canvas.json` — never from a list in the test file (`P-13`). `docs/design/canvas/verify.mjs` already does exactly this and is the pattern to copy.
+- A pixel diff on a whole page is a test that fails for the wrong reasons. Diff at the **component** level against the sheet, with a tolerance, plus a small set of full-page structural assertions.
+- The artboards are mockups: content differs from the real content by design. **The comparison is structural and stylistic — layout, tokens, spacing, states — never text equality.** An item claiming otherwise would fail forever and be switched off.
+- Installs Playwright, which also unblocks the e2e half of `TASK 15`.
+
+---
+
+## TASK 28 — Custom domain · `feature` · `TODO` (blocked: the domain does not exist yet)
+
+**Deliverable:** the site served from the author's own domain over HTTPS, with `*.workers.dev` redirecting to it.
+
+**Done:** the apex and `www` both resolve; the certificate is valid; no route 404s that worked on the previous host.
+
+**Constraints**
+- **The author buys the domain and owns the Cloudflare account.** An agent prepares the DNS and route config; it does not purchase, authenticate or transfer anything.
+- A portfolio sent to recruiters wants a real domain, so this should not sit open long — but it was correctly kept off the critical path for the first deploy.
+
+---
+
+## TASK 29 — Contact form Worker · `feature` · `TODO` (deferred — trigger stated)
+
+Replaces `mailto:` with a real submission, which is what makes the form's four designed states real.
+
+**Deliverable:** a Cloudflare Worker accepting the form POST and sending mail, with the `sending` / `sent` / `error` states wired to it.
+
+**Done:** a submission arrives as email; a forced failure shows the error state **with the sender's text intact**; the success state echoes back the address the reply will go to.
+
+**Constraints**
+- **Returns when the author wants submissions without a mail client opening.** Until then `mailto:` is not a stopgap, it is the shipped answer.
+- The API key lives in Cloudflare, never locally (`G-08`).
+- Needs a spam answer — a Turnstile challenge or a rate limit. A public unprotected form is a mailbox someone else fills.
+
+---
+
+## TASK 20 — Split About and Experience, and source three photographs · `content` · `TODO`
+
+`about.{en,es}.md` and `experience.{en,es}.md` tell the same chronology twice. About walks the four employers in prose; Experience lists the same four employers with the same facts in a different register. The design work in `TASK 8` surfaced it — the author's words: *"ahorita las 2 páginas se ven muy parecidas"* — but no design can fix it, because the duplication is in the content.
+
+**The split, decided with the author:** Experience owns the employer story outright. About becomes a piece of writing about the person, not a second CV.
+
+**Done:** `about.{en,es}.md` contains no employer-by-employer chronology and `experience.{en,es}.md` carries the narrative that was moved out of it; the four `[NEEDS INPUT]` items below are resolved or explicitly dropped; `check-terms` and `check-content` pass.
+
+**What has to be written or found**
+
+| Item | Where it lands |
+|---|---|
+| A lead paragraph opening About as a person rather than a résumé | `about.{en,es}.md` |
+| Two or three sentences on working from Cochabamba for teams abroad — the site currently says nothing about it beyond a timezone | `about.{en,es}.md` |
+| Per-role narrative moved out of About | `experience.{en,es}.md` |
+| An `h1` and an intro line for Experience, plus a per-role `stack` field | `experience.{en,es}.md` frontmatter + body |
+| **Three photographs** — a 4:5 portrait, a 21:9 Huayna Potosí summit shot, a 1:1 Bolivia landscape or travel image | `resources/` (new), referenced from `about.{en,es}.md` |
+
+**Constraints**
+
+- **Both locales in the same change** (`C-09`). The Spanish is first-class content, not a translation artifact.
+- **Nothing invented** (`C-01`, `C-04`). The design carries `[NEEDS INPUT]` markers exactly where copy does not exist yet; they are resolved by the author writing it, never by an agent drafting something plausible about his own life.
+- **The photographs are the author's own.** No stock, no AI-generated stand-in — the portrait in particular is the one image on the site whose only job is to be him.
+- **Third parties in photographs need their consent**, or crop them out (`C-06`).
+- The design canvas is downstream: its placeholder frames are replaced once these land, not before.
+
+---
+
+## TASK 19 — LinkedIn recommendations as content · `content` · `TODO`
+
+The home page's contact section carries three testimonial cards, currently `[NEEDS INPUT]` placeholders in the design canvas. They cannot be filled from the design task: the quotes are real words written by real people about the author, so they are content, they belong in `resources/`, and `H-02` puts that outside any agent's reach.
+
+Three recommendations exist on the author's LinkedIn profile: a manager at NICE, a Product Owner at Banco Solidario, and a second manager at NICE.
+
+**Done:** `resources/testimonials.en.md` and `resources/testimonials.es.md` exist, both locales, each carrying for all three recommendations: the quote verbatim, the recommender's name, their title and company at the time of writing, and the permalink to the recommendation on LinkedIn. `check-terms` and `check-content` pass.
+
+**Constraints**
+
+- **Nothing is invented or paraphrased into existence** (`C-01`, `C-04`). A quote that cannot be copied exactly is a `[NEEDS INPUT]`, not an approximation.
+- **The recommenders are third parties.** Their names and public professional titles are fine; anything beyond that — contact details, anything they said privately — is not (`C-06`).
+- **Both locales in the same change** (`C-09`). The quotes were written in one language; the other locale carries a translation clearly marked as such, with the original preserved, rather than a silent restatement.
+- The design canvas's placeholder cards are updated to the real text once this lands — the canvas is downstream of the content, not the other way round.
 
 ---
 

@@ -1,0 +1,532 @@
+<!doctype html>
+<!-- GENERATED from CaseStudyDetail.dc.html by derive.mjs — do not edit.
+     Byte-identical to its source; only the artboard frame width differs (390px, set in
+     canvas.json). Edit CaseStudyDetail.dc.html and re-run: node docs/design/canvas/derive.mjs -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style data-fonts="space-grotesk,ibm-plex-sans,ibm-plex-mono-400,ibm-plex-mono-500"></style>
+  <style>
+    * { box-sizing: border-box; }
+    html, body, .scaler { scroll-behavior: smooth; }
+    .board {
+      --bg: #F8F7F4;
+      --bg-elevated: #FFFFFF;
+      --ink: #14140F;
+      --ink-muted: rgba(20, 20, 15, 0.64);
+      --ink-faint: rgba(20, 20, 15, 0.38);
+      --border: rgba(20, 20, 15, 0.12);
+      --border-strong: rgba(20, 20, 15, 0.28);
+      --accent: oklch(42% 0.15 15);
+      --accent-soft: oklch(42% 0.15 15 / 0.16);
+      --accent-line: oklch(42% 0.15 15 / 0.6);
+      --label: oklch(52% 0.1 75);
+      font-family: "IBM Plex Sans", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      width: 100%;
+      display: flex;
+      align-items: flex-start;
+    }
+    .board[data-theme="dark"] {
+      --bg: #131311; --bg-elevated: #1C1B17; --ink: #F4F3EE;
+      --ink-muted: rgba(244, 243, 238, 0.66); --ink-faint: rgba(244, 243, 238, 0.4);
+      --border: rgba(244, 243, 238, 0.14); --border-strong: rgba(244, 243, 238, 0.3);
+      --accent: oklch(70% 0.15 15); --accent-soft: oklch(70% 0.15 15 / 0.2); --accent-line: oklch(70% 0.15 15 / 0.65);
+      --label: oklch(75% 0.11 75);
+    }
+    .board a { color: inherit; text-decoration: none; }
+    .board a:hover { color: var(--accent); }
+
+    /* nav rail — shared with home */
+    .rail { position: sticky; top: 0; flex: 0 0 264px; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between; padding: 40px 32px; border-right: 1px solid var(--border); }
+    .wordmark { font-family: "IBM Plex Sans", sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -0.006em; }
+    .role { font-size: 14px; color: var(--ink-muted); margin-top: 7px; line-height: 1.5; }
+    .location { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-faint); margin-top: 14px; line-height: 1.5; }
+    .location .tz { display: block; margin-top: 5px; }
+    .rail-nav { list-style: none; margin: 40px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+    /* Every live nav item is a real link with a real href, so the route is declared in the
+       markup rather than described in a caption. The indicator extends on hover and focus,
+       not only on active — the hover affordance is what says "this is a button". */
+    .rail-nav li { display: flex; }
+    .rail-nav li a, .rail-nav li .item {
+      display: flex; align-items: center; gap: 10px; flex: 1 1 auto;
+      font-family: "IBM Plex Sans", sans-serif; font-size: 14px; font-weight: 600;
+      color: var(--ink-muted); padding: 9px 0; text-decoration: none;
+      transition: color .14s ease;
+    }
+    .rail-nav li a:hover { color: var(--ink); }
+    .rail-nav li a:hover .ind { width: 26px; background: var(--ink); }
+    .rail-nav li a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+    .rail-nav li.active a { color: var(--ink); }
+    .rail-nav li.soon .item { color: var(--ink-faint); cursor: default; }
+    .rail-nav .ind { width: 14px; height: 1px; background: var(--border-strong); flex: 0 0 auto; transition: width .16s ease, background .16s ease; }
+    .rail-nav li.active .ind { width: 26px; background: var(--accent); }
+    .rail-nav .tag { margin-left: auto; font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); }
+    .wordmark a { text-decoration: none; }
+    .wordmark a:hover { color: var(--accent); }
+    .rail-bottom { display: flex; flex-direction: column; gap: 22px; }
+
+    /* ---------- language switcher ----------
+       Two locales, so this is a two-state control and not a menu: a dropdown holding two
+       options always spends a click showing one row you did not want. The alternate href
+       points at THIS page in the other language, never at the other language's home —
+       being thrown back to the home page is the classic locale-switch defect. It survives
+       narrow (unlike the socials): on a phone, language outranks a GitHub link. */
+    .lang { display: flex; align-items: center; gap: 7px; font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.06em; }
+    .lang .cur { color: var(--ink); font-weight: 500; }
+    .lang .sep { color: var(--border-strong); }
+    .lang a { color: var(--ink-faint); }
+    .lang a:hover { color: var(--accent); }
+    .lang a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+    .theme-toggle { display: flex; align-items: center; gap: 10px; background: none; border: none; padding: 0; cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-muted); }
+    .switch { width: 34px; height: 18px; border-radius: 9px; border: 1px solid var(--border-strong); position: relative; background: var(--bg-elevated); }
+    .switch .thumb { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); transition: transform .18s ease, background .18s ease; }
+    .board[data-theme="dark"] .switch .thumb { transform: translateX(16px); background: var(--accent); }
+    .socials { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-faint); }
+
+    /* table of contents — lives in the rail, so it costs the article zero horizontal space
+       and stays visible for the whole read. The accent segment tracks the section in view.
+       Entries are shortened where a heading is long: a 200px rail cannot carry a full one. */
+    .toc { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
+    .toc-label { font-family: "IBM Plex Mono", monospace; font-size: 9.5px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px; }
+    .toc ol { list-style: none; margin: 0; padding: 0 0 0 12px; border-left: 1px solid var(--border); }
+    .toc li { position: relative; }
+    .toc li a {
+      display: block; padding: 5px 0;
+      font-family: "IBM Plex Sans", sans-serif; font-size: 12px; line-height: 1.35;
+      color: var(--ink-faint); text-decoration: none; transition: color .14s ease;
+    }
+    .toc li a:hover { color: var(--ink); }
+    .toc li a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+    .toc li.here a { color: var(--ink); font-weight: 600; }
+    .toc li.here::before { content: ""; position: absolute; left: -13px; top: 4px; bottom: 4px; width: 1px; background: var(--accent); }
+    /* the anchor target lands below the top edge rather than flush against it */
+    [id] { scroll-margin-top: 32px; }
+
+    /* article shell */
+    main { flex: 1 1 auto; min-width: 0; max-width: 1176px; margin-inline: auto; padding: 64px 72px 96px; }
+    .back-link { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-faint); display: inline-block; margin-bottom: 28px; }
+    .back-link:hover { color: var(--accent); }
+    .cat-tag { font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 15px; letter-spacing: 0.03em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+    .article-title { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 38px; line-height: 1.16; letter-spacing: -0.012em; max-width: 780px; margin: 0 0 12px; }
+    .article-subtitle { font-size: 17px; line-height: 1.5; color: var(--ink-muted); max-width: 660px; margin: 0 0 40px; }
+
+    .masthead {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      border-top: 1px solid var(--ink);
+      border-bottom: 1px solid var(--ink);
+      padding: 20px 0;
+      margin: 0 0 56px;
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 8px 24px;
+      max-width: 820px;
+    }
+    .masthead .lbl { color: var(--label); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; align-self: start; padding-top: 2px; }
+    .masthead .val { color: var(--ink); }
+    .masthead .val.outcome { line-height: 1.65; }
+
+    .prose { max-width: 700px; }
+    .prose h2 { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 24px; letter-spacing: -0.006em; margin: 56px 0 20px; }
+    .prose h2:first-child { margin-top: 0; }
+    .prose h3 { font-family: "IBM Plex Sans", sans-serif; font-weight: 700; font-size: 17px; margin: 36px 0 14px; }
+    .prose p { font-size: 16px; line-height: 1.72; color: var(--ink-muted); margin: 0 0 18px; }
+    .prose p b { color: var(--ink); font-weight: 650; }
+    .prose ul, .prose ol { font-size: 16px; line-height: 1.68; color: var(--ink-muted); padding-left: 22px; margin: 0 0 20px; }
+    .prose li { margin-bottom: 10px; }
+    .prose li b { color: var(--ink); font-weight: 650; }
+    .prose li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+
+    .pullquote {
+      font-family: "Space Grotesk", sans-serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: 26px;
+      line-height: 1.4;
+      color: var(--ink);
+      max-width: 620px;
+      margin: 44px 0;
+      padding-left: 22px;
+      border-left: 2px solid var(--accent);
+    }
+
+    .differently {
+      max-width: 780px;
+      margin: 56px 0 0;
+      padding: 30px 32px;
+      background: var(--accent-soft);
+      border-radius: 3px;
+    }
+    .differently h2 { font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 20px; font-weight: 500; }
+    .differently .item { margin-bottom: 20px; }
+    .differently .item:last-child { margin-bottom: 0; }
+    .differently p { font-size: 15.5px; line-height: 1.68; color: var(--ink-muted); margin: 0; }
+    .differently p b { color: var(--ink); font-weight: 650; }
+
+    /* full-bleed diagram figures */
+    figure.diagram { max-width: 1080px; margin: 44px 0; }
+    figure.diagram svg { width: 100%; height: auto; display: block; }
+    figcaption { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; line-height: 1.6; color: var(--ink-faint); margin-top: 14px; max-width: 760px; }
+    .pair-label { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--label); margin-bottom: 8px; }
+
+    /* breakeven table figure */
+    .breakeven { max-width: 700px; margin: 44px 0; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+    .breakeven table { width: 100%; border-collapse: collapse; font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+    .breakeven th, .breakeven td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    .breakeven th { color: var(--ink-faint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; font-size: 10px; }
+    .breakeven td.win { color: var(--accent); }
+    .breakeven td.lose { color: var(--ink-faint); }
+    .breakeven tr:last-child td { border-bottom: none; }
+
+    /* ---------- responsive: medium ---------- */
+    @media (max-width: 1180px) {
+      .rail { flex: 0 0 208px; padding: 32px 24px; }
+      .wordmark { font-size: 20px; }
+      .role { font-size: 13px; }
+      main { padding-left: 48px; padding-right: 48px; }
+      section { padding-left: 48px; padding-right: 48px; }
+    }
+
+    /* ---------- responsive: narrow — the rail stops being a rail ---------- */
+    @media (max-width: 820px) {
+      .board { flex-direction: column; align-items: stretch; }
+      .rail {
+        position: static; height: auto; flex: 0 0 auto; width: 100%;
+        flex-direction: row; align-items: center; gap: 20px; flex-wrap: wrap;
+        padding: 20px 24px; border-right: none; border-bottom: 1px solid var(--border);
+      }
+      .rail > div:first-child { flex: 0 0 auto; }
+      .role, .location { display: none; }
+      .rail-nav {
+        margin: 0; flex-direction: row; gap: 18px; flex: 1 1 auto;
+        overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+      }
+      .rail-nav::-webkit-scrollbar { display: none; }
+      .rail-nav li a, .rail-nav li .item { padding: 4px 0; white-space: nowrap; font-size: 13.5px; }
+      .rail-nav .ind, .rail-nav .tag { display: none; }
+      .rail-nav li.active a { color: var(--accent); }
+      .rail-bottom { flex-direction: row; align-items: center; gap: 16px; flex: 0 0 auto; }
+      .socials { display: none; }
+      .toc { display: none; }
+
+      main { padding: 36px 24px 64px; max-width: none; }
+      section { padding-left: 24px; padding-right: 24px; }
+      figure.diagram { overflow-x: auto; }
+    }
+
+    @media (max-width: 560px) {
+      main { padding-left: 18px; padding-right: 18px; }
+      section { padding-left: 18px; padding-right: 18px; }
+      .wordmark { font-size: 18px; }
+    }
+
+    @media (max-width: 820px) {
+      .article-title { font-size: 28px; }
+      .article-subtitle { font-size: 15.5px; }
+      .masthead { grid-template-columns: 1fr; gap: 2px 0; padding: 18px 0; }
+      .masthead .lbl { padding-top: 10px; }
+      .prose { max-width: none; }
+      .prose h2 { font-size: 21px; }
+      .prose p, .prose ul, .prose ol { font-size: 15.5px; }
+      .pullquote { font-size: 20px; margin: 32px 0; }
+      .differently { padding: 22px 20px; }
+      .breakeven { overflow-x: auto; }
+    }
+  </style>
+</helmet>
+
+<div class="board" data-theme="{{theme}}">
+  <nav class="rail">
+    <div>
+      <div class="wordmark"><a href="/">Luis Antelo</a></div>
+      <div class="role">Senior Software Engineer</div>
+      <div class="location">Cochabamba, Bolivia<span class="tz">GMT-4 &middot; full overlap with US business hours</span></div>
+    </div>
+    <div class="rail-mid">
+      <ul class="rail-nav">
+        <li class="active"><a href="/#work"><span class="ind"></span>Work</a></li>
+        <li><a href="/about"><span class="ind"></span>About</a></li>
+        <li><a href="/experience"><span class="ind"></span>Experience</a></li>
+        <li class="soon"><span class="item"><span class="ind"></span>Writing<span class="tag">soon</span></span></li>
+        <li class="soon"><span class="item"><span class="ind"></span>Architectures<span class="tag">soon</span></span></li>
+        <li class="soon"><span class="item"><span class="ind"></span>Search<span class="tag">soon</span></span></li>
+        <li><a href="/#contact"><span class="ind"></span>Contact</a></li>
+      </ul>
+      <div class="toc" data-spy="here">
+        <div class="toc-label">On this page</div>
+        <ol>
+          <li class="here"><a href="#context">Context</a></li>
+          <li><a href="#problem">Problem</a></li>
+          <li><a href="#constraints">Constraints</a></li>
+          <li><a href="#approach">Approach</a></li>
+          <li><a href="#result">Result</a></li>
+          <li><a href="#what-i-would-do-differently">What I would do differently</a></li>
+        </ol>
+      </div>
+    </div>
+    <div class="rail-bottom">
+      <div class="lang" role="group" aria-label="Language">
+        <span class="cur" lang="en" aria-current="true">EN</span>
+        <span class="sep" aria-hidden="true">/</span>
+        <a href="/es/case-studies/otp-provider-decoupling" hreflang="es" lang="es">ES</a>
+      </div>
+      <button class="theme-toggle" onClick="{{toggleTheme}}" aria-pressed="{{isDark}}">
+        <span class="switch"><span class="thumb"></span></span>{{themeLabel}}
+      </button>
+      <div class="socials"><a href="https://github.com/Jichimon">GitHub</a> &middot; <a href="https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/">LinkedIn</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <a class="back-link" href="/#work">&larr; Work</a>
+    <p class="cat-tag">Case study &middot; part of Rebuilding a bank's mobile platform in-house</p>
+    <h1 class="article-title">Taking second-factor authentication back from a vendor</h1>
+    <p class="article-subtitle">Decomposing an overloaded notification service and choosing the more expensive compute option on purpose</p>
+
+    <div class="masthead">
+      <div class="lbl">Role</div><div class="val">Solution Architect</div>
+      <div class="lbl">Context</div><div class="val">Regulated bank &middot; Latin America</div>
+      <div class="lbl">Period</div><div class="val">2025</div>
+      <div class="lbl">Outcome</div><div class="val outcome">Approved decomposition plan, execution begun; OTP cutover not completed before handover &mdash; ~70% reduction in monthly run cost was the target</div>
+      <div class="lbl">Stack</div><div class="val">.NET &middot; AWS Fargate &middot; AWS Lambda &middot; DynamoDB &middot; Aurora &middot; SNS/SQS</div>
+    </div>
+
+    <div class="prose">
+      <h2 id="context">Context</h2>
+      <p>One service in the bank's mobile platform had grown into a catch-all for everything outbound: push notifications, email, messaging, device token registration, and the generation and validation of one-time passwords used as a second authentication factor.</p>
+      <p>Five unrelated flows, one deployable, one relational database, one scaling curve. The volume spread across them covered three orders of magnitude &mdash; push notifications ran into the double-digit millions per month, while OTP operations ran in the hundreds of thousands. Everything scaled together, on the shape of the largest flow.</p>
+      <p>The OTP flow itself was not ours at all. Generation, validation and delivery were delegated to a third-party OTP-as-a-service product, billed at a premium per verification.</p>
+
+      <h2 id="problem">Problem</h2>
+      <p>Three problems, in the order they mattered to the business and the reverse order of how interesting they are technically.</p>
+      <p><b>Cost.</b> The vendor's verification product was the single largest line item in the entire notification stack &mdash; larger than every piece of compute and database combined, by more than an order of magnitude. At our volume the premium had stopped being worth what it bought.</p>
+      <p><b>Control.</b> Second-factor authentication is a critical path, and we did not own it. The audit trail lived in the vendor's console, not in our systems &mdash; which is an uncomfortable position for a regulated institution. And a roadmap item we knew was coming, TOTP for transaction signing, had no path forward inside a vendor product.</p>
+      <p><b>Coupling.</b> Unrelated flows sharing a deployable, a database and a scaling policy. Business logic had leaked into the database schema. An incident in one flow was an incident in all five.</p>
+
+      <div class="pair-label">Diagram 1 of 2 &middot; before</div>
+      <figure class="diagram">
+        <svg viewBox="0 0 1080 340" fill="none">
+          <g font-family="IBM Plex Mono, monospace">
+            <rect x="10" y="140" width="130" height="60" fill="none" stroke="var(--ink)" stroke-width="1"/>
+            <text x="75" y="175" text-anchor="middle" font-size="12" fill="var(--ink)">Client Apps</text>
+
+            <line x1="140" y1="170" x2="240" y2="170" stroke="var(--ink)" stroke-width="1"/>
+            <polygon points="240,170 231,166 231,174" fill="var(--ink)"/>
+
+            <rect x="240" y="90" width="260" height="200" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+            <text x="370" y="140" text-anchor="middle" font-size="13" fill="var(--ink)">Notification Service</text>
+            <text x="370" y="158" text-anchor="middle" font-size="11" fill="var(--ink-faint)">(monolith)</text>
+            <line x1="240" y1="180" x2="500" y2="180" stroke="var(--border-strong)" stroke-width="1"/>
+            <text x="370" y="215" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">shared relational DB</text>
+            <text x="370" y="232" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">push &middot; email &middot; messaging &middot;</text>
+            <text x="370" y="248" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">device tokens &middot; OTP challenge + audit</text>
+
+            <line x1="500" y1="115" x2="620" y2="55" stroke="var(--border-strong)" stroke-width="1"/>
+            <rect x="620" y="30" width="260" height="50" fill="none" stroke="var(--border-strong)" stroke-width="1"/>
+            <text x="750" y="52" text-anchor="middle" font-size="11.5" fill="var(--ink)">Push Notification Provider</text>
+            <text x="750" y="68" text-anchor="middle" font-size="10.5" fill="var(--ink-muted)">highest volume &middot; ~10&#8311;/mo</text>
+
+            <line x1="500" y1="145" x2="620" y2="115" stroke="var(--border-strong)" stroke-width="1"/>
+            <rect x="620" y="92" width="260" height="40" fill="none" stroke="var(--border-strong)" stroke-width="1"/>
+            <text x="750" y="116" text-anchor="middle" font-size="11.5" fill="var(--ink-muted)">Email Provider</text>
+
+            <line x1="500" y1="175" x2="620" y2="175" stroke="var(--border-strong)" stroke-width="1"/>
+            <rect x="620" y="150" width="260" height="40" fill="none" stroke="var(--border-strong)" stroke-width="1"/>
+            <text x="750" y="174" text-anchor="middle" font-size="11.5" fill="var(--ink-muted)">Messaging Provider (SMS/WhatsApp)</text>
+
+            <line x1="500" y1="220" x2="620" y2="255" stroke="var(--accent)" stroke-width="1.6"/>
+            <rect x="620" y="222" width="260" height="66" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+            <text x="750" y="248" text-anchor="middle" font-size="11.5" fill="var(--ink)">OTP-as-a-Service Vendor</text>
+            <text x="750" y="266" text-anchor="middle" font-size="11" fill="var(--accent)">generate + validate + deliver</text>
+            <text x="750" y="280" text-anchor="middle" font-size="10" fill="var(--ink-muted)">~10&#178;/mo &middot; 3 orders of magnitude below push</text>
+          </g>
+        </svg>
+        <figcaption>Fig. 1 &mdash; Before: one service, five unrelated outbound flows against a shared database. OTP generation, validation and delivery all run through the vendor.</figcaption>
+      </figure>
+
+      <h2 id="constraints">Constraints</h2>
+      <ul>
+        <li>Every generation and every validation attempt must be auditable, retained for roughly a year, in a regulated environment.</li>
+        <li>Authentication flows cannot take downtime during the transition.</li>
+        <li>Service boundaries must map to business capabilities under the bank's BIAN standard.</li>
+        <li>Small team. The number of things we could afford to <i>operate</i> was a real limit on the design.</li>
+      </ul>
+
+      <h2 id="approach">Approach</h2>
+      <h3>Decomposition</h3>
+      <p>The single service became a thin orchestrator plus three focused services:</p>
+      <ul>
+        <li><b>Verification</b> &mdash; the full OTP lifecycle: generation, validation, attempt tracking, and the audit record.</li>
+        <li><b>Contact handler</b> &mdash; the device token registry. Read-heavy, structurally different from everything else.</li>
+        <li><b>Push listener</b> &mdash; a queue consumer for the highest-volume flow.</li>
+      </ul>
+      <p>The orchestrator retains channel routing and delivery records. Each service now scales on its own curve, and the OTP path no longer inherits the push notification deployment.</p>
+      <p>For challenge storage I chose a key-value store with native time-based expiry, so records self-delete at the end of the retention window instead of requiring a scheduled cleanup job. Delivery records stayed relational, where they are queried.</p>
+
+      <div class="pair-label">Diagram 2 of 2 &middot; after &mdash; same layout as Fig. 1, deliberately, for side-by-side comparison</div>
+      <figure class="diagram">
+        <svg viewBox="0 0 1080 380" fill="none">
+          <g font-family="IBM Plex Mono, monospace">
+            <rect x="10" y="160" width="130" height="60" fill="none" stroke="var(--ink)" stroke-width="1"/>
+            <text x="75" y="195" text-anchor="middle" font-size="12" fill="var(--ink)">Client Apps</text>
+
+            <rect x="240" y="20" width="240" height="70" fill="none" stroke="var(--ink)" stroke-width="1.2"/>
+            <text x="360" y="48" text-anchor="middle" font-size="11.5" fill="var(--ink)">Orchestrator</text>
+            <text x="360" y="64" text-anchor="middle" font-size="9.5" fill="var(--ink-faint)">channel routing + delivery records</text>
+
+            <rect x="240" y="110" width="240" height="70" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+            <text x="360" y="138" text-anchor="middle" font-size="11.5" fill="var(--ink)">Verification</text>
+            <text x="360" y="154" text-anchor="middle" font-size="9.5" fill="var(--accent)">generate &middot; validate &middot; audit</text>
+
+            <rect x="240" y="200" width="240" height="60" fill="none" stroke="var(--border-strong)" stroke-width="1"/>
+            <text x="360" y="234" text-anchor="middle" font-size="11" fill="var(--ink-muted)">Push Listener (queue consumer)</text>
+
+            <rect x="240" y="280" width="240" height="60" fill="none" stroke="var(--border-strong)" stroke-width="1"/>
+            <text x="360" y="314" text-anchor="middle" font-size="11" fill="var(--ink-muted)">Contact Handler (device tokens)</text>
+
+            <line x1="140" y1="190" x2="240" y2="55" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="140" y1="190" x2="240" y2="310" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="480" y1="55" x2="600" y2="145" stroke="var(--border-strong)" stroke-width="1"/>
+            <line x1="480" y1="230" x2="600" y2="200" stroke="var(--border-strong)" stroke-width="1"/>
+
+            <rect x="600" y="20" width="260" height="46" fill="none" stroke="var(--border-strong)" stroke-width="1"/>
+            <text x="730" y="40" text-anchor="middle" font-size="10.5" fill="var(--ink-muted)">Push Notification Provider</text>
+            <text x="730" y="55" text-anchor="middle" font-size="9.5" fill="var(--ink-faint)">~10&#8311;/mo</text>
+
+            <rect x="600" y="80" width="260" height="36" fill="none" stroke="var(--border-strong)" stroke-width="1"/>
+            <text x="730" y="102" text-anchor="middle" font-size="10.5" fill="var(--ink-muted)">Email / Messaging Provider</text>
+
+            <rect x="600" y="170" width="260" height="56" fill="none" stroke="var(--border-strong)" stroke-width="1"/>
+            <text x="730" y="194" text-anchor="middle" font-size="10.5" fill="var(--ink-muted)">OTP-as-a-Service Vendor</text>
+            <text x="730" y="210" text-anchor="middle" font-size="9.5" fill="var(--ink-faint)">message delivery only &mdash; generation/validation now in-house</text>
+          </g>
+        </svg>
+        <figcaption>Fig. 2 &mdash; After: orchestrator plus three focused services, with the vendor reduced to message delivery only.</figcaption>
+      </figure>
+
+      <h3>The compute decision</h3>
+      <p>For the verification service, two viable options.</p>
+      <p><b>Serverless functions.</b> Roughly half the monthly cost at our volume, and faster to build and ship.</p>
+      <p><b>Always-on containers.</b> Roughly double the cost. Predictable P95, no cold starts, consistent with how everything else on the platform is operated.</p>
+      <p>I chose containers &mdash; the more expensive option &mdash; for reasons that had nothing to do with the monthly bill:</p>
+      <ol>
+        <li><b>Cold starts on a second factor.</b> A user who has already entered their password and is waiting for a code is at the least forgiving point in the entire session. Variable tail latency there is a product problem, not just a metric.</li>
+        <li><b>Two functions or one service.</b> The serverless design meant separate functions for generation and validation &mdash; two things to observe, two log streams to correlate during an incident, two places to change when TOTP arrives.</li>
+        <li><b>The absolute difference was small.</b> At this volume the gap between the two options was a rounding error next to the vendor cost we were removing. Optimising it would have been optimising the wrong number.</li>
+      </ol>
+
+      <h3>The number that actually mattered</h3>
+      <p>The same serverless-versus-containers analysis, applied to the push notification listener at double-digit millions of operations per month, came out the opposite way &mdash; and not marginally. Serverless would have cost roughly fifty times more.</p>
+      <p>So the useful output of the analysis was never &ldquo;use containers&rdquo;. It was the break-even point: around 430,000 operations per month, below which serverless wins and above which it does not.</p>
+
+      <p class="pullquote">&ldquo;That threshold is reusable. A recommendation is not.&rdquo;</p>
+
+      <div class="breakeven">
+        <table>
+          <tr><th></th><th>&lt; ~430,000 ops/mo</th><th>&ge; ~430,000 ops/mo</th></tr>
+          <tr><td>Serverless</td><td class="win">Wins &mdash; lower cost here</td><td class="lose">Loses &mdash; ~50&times; cost at push volume</td></tr>
+          <tr><td>Containers</td><td class="lose">Loses &mdash; gap is small</td><td class="win">Wins decisively</td></tr>
+          <tr><td>Flows at this volume</td><td>OTP &middot; ~10&#8309;/mo, near the boundary</td><td>Push &middot; ~10&#8311;/mo</td></tr>
+        </table>
+      </div>
+      <figcaption style="margin-bottom: 44px;">Fig. 3 &mdash; Cost curves for serverless vs. containers across operation volume, break-even marked. Contact handler volume not published in the source &mdash; omitted rather than estimated.</figcaption>
+
+      <h2 id="result">Result</h2>
+      <p>The compute decision and the service decomposition were approved, and execution began. I left the bank shortly after, before the OTP flow was actually cut over to the new in-house verification service &mdash; so what follows is the plan's targets, not measured outcomes.</p>
+      <ul>
+        <li><b>Projected ~70% reduction</b> in the monthly run cost of the notification stack, once OTP validation moves fully off the vendor.</li>
+        <li>Complete audit trail of generations and validation attempts inside the bank's own systems &mdash; the design target; the vendor was still in the critical path when I left.</li>
+        <li>Latency targets: validation P95 from 83&nbsp;ms to &le;70&nbsp;ms; generation P95 from 210&nbsp;ms to &le;200&nbsp;ms.</li>
+      </ul>
+      <p>An honest note on that last figure, still true as a target. Generation would improve only marginally, because it is dominated by the outbound message hop to the delivery provider &mdash; a hop the design kept. The intended win here was cost and control, not latency.</p>
+      <p>I don't have post-cutover numbers, and I won't: I left the bank before the OTP flow was actually moved off the vendor, so there is no measured P95 or real monthly cost to report &mdash; only the targets above, from the plan that was approved.</p>
+    </div>
+
+    <div class="differently">
+      <h2 id="what-i-would-do-differently">What I would do differently</h2>
+      <div class="item"><p><b>Choose the persistence engine against the reporting requirements, not just the access pattern.</b> I selected the key-value store for the write path and flagged the analytics question as open. That is backwards. Audit data in a regulated environment exists to be queried by people who are not engineers, and I should have gathered those query patterns before choosing the engine rather than after.</p></div>
+      <div class="item"><p><b>Lead with the financial case.</b> The engineering case for decomposition had been obvious for a while and had gone nowhere. The proposal moved the week it opened with the cost table. In a bank, the architecture argument is the second argument.</p></div>
+      <div class="item"><p><b>Plan a shadow period.</b> I would run in-house validation alongside the vendor, comparing results without acting on ours, before cutting over. On an authentication path the cost of that caution is very low and the cost of being wrong is very high.</p></div>
+    </div>
+  </main>
+  <!-- Scroll-spy for the rail. Any element carrying data-spy="<class>" has its in-page
+       anchors tracked, and that class is toggled on the matching <li> — so the home page
+       spies on its nav and the article pages spy on their table of contents, one
+       implementation. Scoped to its own board so the local preview, which puts every
+       artboard in one document, does not cross-wire them. Plain vanilla JS on purpose:
+       this is the shape the real island takes (ADR-001), not a mockup trick. If
+       currentScript is unavailable it bails and the rail stays a static list. -->
+  <script>
+  (function () {
+    var script = document.currentScript;
+    var board = script && script.closest ? script.closest(".board") : null;
+    if (!board) return;
+
+    var scroller = null;
+    for (var n = board.parentElement; n; n = n.parentElement) {
+      var oy = getComputedStyle(n).overflowY;
+      if (oy === "auto" || oy === "scroll") { scroller = n; break; }
+    }
+
+    var groups = Array.prototype.map.call(board.querySelectorAll("[data-spy]"), function (host) {
+      var links = Array.prototype.filter.call(host.querySelectorAll("a[href]"), function (a) {
+        return a.getAttribute("href").charAt(0) === "#";
+      });
+      return {
+        cls: host.getAttribute("data-spy"),
+        links: links,
+        targets: links.map(function (a) {
+          return board.querySelector("[id=\"" + a.getAttribute("href").slice(1) + "\"]");
+        }),
+      };
+    }).filter(function (g) { return g.links.length > 0; });
+    if (!groups.length) return;
+
+    function mark() {
+      var origin = scroller ? scroller.getBoundingClientRect().top : 0;
+      groups.forEach(function (g) {
+        var current = 0;
+        for (var i = 0; i < g.targets.length; i++) {
+          if (g.targets[i] && g.targets[i].getBoundingClientRect().top - origin <= 140) current = i;
+        }
+        for (var j = 0; j < g.links.length; j++) {
+          g.links[j].parentElement.classList.toggle(g.cls, j === current);
+        }
+      });
+    }
+
+    (scroller || window).addEventListener("scroll", mark, { passive: true });
+    window.addEventListener("resize", mark);
+    mark();
+  })();
+  </script>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","section":"Preview"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { theme: props.theme ?? "light" };
+  }
+  renderVals() {
+    const theme = this.state.theme;
+    return {
+      theme,
+      isDark: theme === "dark",
+      themeLabel: theme === "light" ? "Dark mode" : "Light mode",
+      toggleTheme: () => this.setState({ theme: this.state.theme === "light" ? "dark" : "light" }),
+    };
+  }
+}
+</script>
+</body>
+</html>

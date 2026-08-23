@@ -25,6 +25,13 @@ resources/site/intake.md
 .DS_Store
 node_modules/
 
+# Design canvas build intermediates (TASK 8). `.fonts/` is a cache of public OFL
+# webfont files, re-downloaded by build.mjs; `build/` is the fonts-expanded copy of
+# `src/*.dc.html` that seed-canvas.mjs consumes — both regenerate from `src/` on demand.
+# `src/` (the authored .dc.html/canvas.json) is real content and stays tracked.
+docs/design/canvas/.fonts/
+docs/design/canvas/build/
+
 # Runtime trace. Machine-written operational output, not knowledge: it would dirty
 # every diff, and this repository may yet be published. The schema is documented in
 # docs/harness/evidence.md, which IS committed.
