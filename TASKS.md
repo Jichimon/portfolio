@@ -283,11 +283,13 @@ From `EVAL-000` (`GAP-01`), which downgraded `EC-001` to `Partial` on exactly th
 
 ---
 
-## TASK 34 — The gate reports every step, not just the first failure · `bugfix` · `TODO`
+## TASK 34 — The gate reports every step, not just the first failure · `bugfix` · `DONE`
+
+**Closed 2026-08-24.** The run loop moved to `scripts/guards/lib/gate.mjs` as `runGate(steps, run)` with the runner injected, so it is testable without spawning fourteen processes. 12 tests written red before the module existed; 7 hand-applied mutants, 7 killed; guard suite 378 → 390. Red path proven at the CLI, not only in unit tests: step 2 replaced with `process.exit(1)`, steps 3–14 still ran and reported, exit code 1, guard restored. **`dependsOn` exists and no step uses it** — all fourteen were checked and none consumes another step's output, so the mechanism has zero users rather than the list carrying an unstated ordering assumption (`P-13`, `P-16`). **The gate now passes end to end, 14/14, for the first time.** Two claims in this entry had expired before it ran and are corrected below. Detail: `progress/2026-08-24-01-task34-gate-reports-every-step.md`.
 
 **Found 2026-08-23**, while re-cutting the backlog local-first. `scripts/gate.mjs` stops at the first failing step. `check-trace` (step 9) has failed on `TASK 12`'s known correlation gap since 2026-08-19, so **steps 10–13 have not run in any gate invocation since** — `check-docs`, `check-context-budget`, `check-content`, `check-evals`.
 
-`check-docs` turned out to be **red behind it**, with three findings that predate this session: `site/src/content.config.ts`, `resources/testimonials.en.md` and `resources/testimonials.es.md`. Nobody saw them, and "the gate passes up to the known failure" had been reading as "the gate passes".
+`check-docs` turned out to be **red behind it**, with three findings that predate this session: `site/src/content.config.ts`, `resources/testimonials.en.md` and `resources/testimonials.es.md`. Nobody saw them, and "the gate passes up to the known failure" had been reading as "the gate passes". *(**Expired by the time this item ran.** `TASK 31` closed all three on 2026-08-23; run directly on 2026-08-24, `check-docs` passes — 50 documents, 159 references resolved. The claim was true when written. Kept rather than deleted, because a finding that quietly disappears teaches nobody that findings expire.)*
 
 That is `INC-08`'s shape in a new place. `INC-08` was two path-filtered workflows meaning a repo-root guard ran in CI exactly zero times, invisibly; this is one long-lived failure meaning four guards run locally exactly zero times, invisibly. Both are *a check that exists and does not check*, and `T-09` says the gate is one command and is CI parity — a gate that silently verifies nine steps out of thirteen is not parity with anything.
 
@@ -404,27 +406,30 @@ Turn the site from one word into a backlog. Runs through the `work-item` procedu
 
 `TASK 8`'s output, **re-cut local-first on 2026-08-23**. Cut against the page set in `docs/design/decisions/2026-08-22-site-structure.md` — **not** the brief's nine-screen inventory, which the structure decision superseded.
 
-Fourteen items run in the sequence below. Eleven are `TASK 8`'s own (`TASK 21`–`TASK 31`). Three are not, and are named rather than quietly absorbed: **`TASK 15`** is a pre-existing harness item pulled in because `npm test` is incomplete without it; **`TASK 32`** is the deploy half split out of `TASK 21`; **`TASK 33`** was opened by the re-cut itself.
+Seventeen items run in the sequence below. Eleven are `TASK 8`'s own (`TASK 21`–`TASK 31`). Six are not, and are named rather than quietly absorbed: **`TASK 15`** is a pre-existing harness item pulled in because `npm test` is incomplete without it; **`TASK 34`** is a pre-existing gate defect pulled in on 2026-08-24 because three items below add a gate step; **`TASK 32`** is the deploy half split out of the skeleton item; **`TASK 33`** was opened by the re-cut itself; and **`TASK 35`** and **`TASK 36`** were opened on 2026-08-24 by the session that took the five implementation constraints below.
 
 **Ids are stable and order is not the id** (`G-10`). Run them in this sequence:
 
 | # | Item | Type | Spec? | Why here |
 |---|---|---|---|---|
-| 1 | `TASK 31` — reconcile the brief and the decision docs | `content` | no | The input artifact every item below reads is currently stale. Fixing it after the pages are built fixes nothing |
+| 1 | ~~`TASK 31`~~ — reconcile the brief and the decision docs | `content` | no | **DONE 2026-08-23.** The input artifact every item below reads was stale. Fixing it after the pages are built fixes nothing |
 | 2 | ~~`TASK 33`~~ — UI component model + component test tier | `research` | no | **DONE 2026-08-23.** `ADR-007` + `ADR-006`'s amendment. Every spec below cites them in `governed_by` |
-| 3 | `TASK 21` — Astro skeleton + the two root commands | `feature` | yes | The first line of code, and the two commands every later item is judged by |
-| 4 | `TASK 15` — mutation gate wired into `gate.mjs` | `harness` | no | **Pulled in.** `npm test` is incomplete without it, and running it before any site code lands means `site/lib/content/**` is covered by the config's glob rather than retrofitted |
-| 5 | `TASK 22` — content layer | `feature` | yes | The reusable core; every page item depends on it |
-| 6 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |
-| 7 | `TASK 27` — design-fidelity harness | `harness` | no | **Ahead of the pages.** It has to exist *before* the screens it checks, or the first three pages ship unverified and get retrofitted |
-| 8 | `TASK 24` — home | `feature` | yes | |
-| 9 | `TASK 25` — case study and platform templates | `feature` | yes | |
-| 10 | `TASK 26` — About, Experience and 404 | `feature` | yes | |
+| 3 | ~~`TASK 34`~~ — the gate reports every step | `bugfix` | no | **DONE 2026-08-24. Pulled in.** Three of the items below add a gate step, and a step added behind a long-lived failure runs exactly zero times. Fixing this after they land means they were never verified |
+| 4 | ~~`TASK 35`~~ — implementation architecture: `ADR-008` + the `S-*` rule surface | `research` | no | **DONE 2026-08-24.** The author's five implementation constraints became an ADR and a loaded rule file. Every `feature` spec below cites `ADR-008` in `governed_by` |
+| 5 | `TASK 21` — Astro skeleton + the two root commands | `feature` | yes | The first line of code, and the two commands every later item is judged by |
+| 6 | `TASK 15` — mutation gate wired into `gate.mjs` | `harness` | no | **Pulled in.** `npm test` is incomplete without it, and running it before any site code lands means `site/lib/content/**` is covered by the config's glob rather than retrofitted |
+| 7 | `TASK 22` — content layer | `feature` | yes | The reusable core; every page item depends on it |
+| 8 | `TASK 36` — interface strings as content | `content` | no | The chrome copy does not exist in `resources/` and `H-02` means only the author can write it. It blocks the shell item, not the skeleton — so it runs here, with room to be applied before it is needed |
+| 9 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |
+| 10 | `TASK 27` — design-fidelity harness | `harness` | no | **Ahead of the pages.** It has to exist *before* the screens it checks, or the first three pages ship unverified and get retrofitted |
+| 11 | `TASK 24` — home | `feature` | yes | |
+| 12 | `TASK 25` — case study and platform templates | `feature` | yes | |
+| 13 | `TASK 26` — About, Experience and 404 | `feature` | yes | |
 | — | **THE LOCALHOST MILESTONE** — the author judges the site; `harness-evaluator` scores the harness | | | |
-| 11 | `TASK 30` — publish the repository to GitHub | `maintenance` | no | Nothing else can be automated until the code has a remote |
-| 12 | `TASK 32` — CI deploy pipeline, GitHub Actions → Cloudflare | `feature` | yes | Proves the whole path — push → build → live — and switches on `TASK 27`'s third comparison |
-| 13 | `TASK 28` — custom domain | `feature` | yes | Blocked on the domain existing; deliberately off the critical path |
-| 14 | `TASK 29` — contact form Worker | `feature` | yes | Deferred with a stated trigger |
+| 14 | `TASK 30` — publish the repository to GitHub | `maintenance` | no | Nothing else can be automated until the code has a remote |
+| 15 | `TASK 32` — CI deploy pipeline, GitHub Actions → Cloudflare | `feature` | yes | Proves the whole path — push → build → live — and switches on `TASK 27`'s third comparison |
+| 16 | `TASK 28` — custom domain | `feature` | yes | Blocked on the domain existing; deliberately off the critical path |
+| 17 | `TASK 29` — contact form Worker | `feature` | yes | Deferred with a stated trigger |
 
 ## The localhost milestone
 
@@ -480,7 +485,8 @@ This is not a defect to route around. Reading the brief instead of a field the o
 | Copy, in either locale | `resources/**` | in a template, a component, or a translation object |
 | Design tokens (color, type ramp, spacing, breakpoints) | one token stylesheet | as a literal value anywhere else |
 | The route set | derived from the content collection | a hardcoded list in a route file, a sitemap, or a test |
-| Nav items, including the `soon` slots | one data module | in the rail markup |
+| Nav **structure** — which items exist, their order, their target, their `soon` flag | one data module | in the rail markup |
+| Nav **labels**, and every other visible chrome string | `resources/site/ui.{en,es}.md` (`TASK 36`) | in a data module, a template, or a translation object |
 | A component's markup and states | the component | duplicated per page |
 | Diagram assets | `resources/diagrams/` | inline SVG in prose |
 | The alternate-locale URL of a page | the collection's `slug` join | a per-page constant |
@@ -491,6 +497,71 @@ This is not a defect to route around. Reading the brief instead of a field the o
 
 **6 · The work is delegated, and the delegation is enumerated before it starts.** The role is named in this register; **the files it owns are enumerated in the item's spec**, which is the artifact the author approves and the only thing `H-05` will let a write-capable role run against. Ownership is disjoint across files and behaviors (`G-12`) — two roles never own the same object — and slices are sized by object, never by surface (`P-09`): *these six files*, never *the components*. An agent cut off mid-run delivers zero, not half, so when a slice will not fit, the scope gets cut rather than hoped through. The orchestrator then verifies the artifact, not the report (`P-11`).
 
+
+---
+
+## TASK 35 — Implementation architecture: `ADR-008` and the `S-*` rule surface · `research` · `DONE` · **ran fourth**
+
+**Closed 2026-08-24.** `ADR-008` accepted by the author, six sub-decisions. `.claude/rules/50-implementation.md` carries `S-01`–`S-07`, path-scoped to `site/**` — the always-loaded budget moved 274 → 275 lines, because the file's 49 lines do not count and only the registry row does. `check-site` is the gate's fifteenth step, skipped with a named reason until `site/` exists; 21 tests, 12 hand-applied mutants, **one survived on the first run** — a bare side-effect import of `astro:content` — reported as a finding, covered, then killed (`T-03`). Proven in red against a real violating tree, not only against fixtures. Detail: `progress/2026-08-24-02-task35-implementation-architecture.md`.
+
+**Opened 2026-08-24**, when the author set five constraints on how the site is built and asked that they become precedent for the whole project rather than instructions repeated per item. A constraint that lives only in a conversation is one the next delegated agent never hears: briefs carry the task and never the rules (`P-08`), and rules load themselves.
+
+The five, in the author's terms: every visible string comes from `resources/`; a dedicated layer fetches the content and no component reads it directly; no implementation folder reaches seven files; CSS classes are specified for reuse and none exists without a purpose; and the architecture is decided and written rather than improvised per item.
+
+Three of the five collide with something already decided, and the collisions are the work:
+
+- **`site/lib/content/**` is already committed** by `30-testing.md` and `ADR-006` as the mutation-covered surface. The tree has to accommodate that path, not replace it.
+- **The chrome copy does not exist anywhere in `resources/`** — checked, not assumed. That is `TASK 36`.
+- **The design canvas uses mockup-grade class names** (`hd`, `grp`, `lbl`, `k`, `v`, `sw`), and criterion 3 says implementation copies from the canvas rather than reinterpreting it. Resolved by reading criterion 3 for what it says: the fidelity diff is structural and stylistic, **never class-name equality**.
+
+**Deliverable:** `docs/adr/ADR-008-site-implementation-architecture.md`; `.claude/rules/50-implementation.md`, path-scoped to `site/**`; `scripts/guards/lib/site-structure.mjs` + `scripts/guards/gate/check-site.mjs` with a red-path battery; the registry table in `.claude/rules/00-hard-rules.md`, `docs/harness/contracts.md` and `docs/adr/README.md` reconciled.
+
+**Done:** `ADR-008` is `Accepted` and indexed; `50-implementation.md` carries the `S-*` rules with `ADR-008` as their origin and a rung each that matches what is actually enforced (`G-11`); `check-site` is a gate step and fails, in a red test, both on a directory at the file cap and on a page importing the content collection directly.
+
+**Constraints**
+
+- **Path-scoped, or the budget breaks.** Always-loaded instructions sit at 274/320 lines. A sixth always-loaded rules file would spend most of the remaining headroom on rules that only matter inside `site/**`. `paths: ["site/**"]` costs nothing until someone works there.
+- **Every rule carries an origin and an honest rung** (`G-10`, `G-11`). Two of the five are judgment and stay at rung 4 with the mechanization owned by a named later item. Claiming rung 2 for a rule nothing enforces is the defect step 12 of `TASK 5` found in `C-09` and `C-14`.
+- **The file cap has no external sourcing**, and the ADR says so plainly rather than dressing it as industry practice. Its known failure mode — a split that invents categories to absorb overflow — becomes part of the rule, not a footnote.
+- Does not reopen `ADR-001` through `ADR-007`. `ADR-008` sits on them.
+
+---
+
+## TASK 36 — Interface strings as content · `content` · `TODO`
+
+The site's chrome has copy, and none of it exists. Verified against `resources/` on 2026-08-24 rather than assumed: every content file carries the five universal keys and prose, and **nothing anywhere holds a nav label.** `Work`, `About`, `Experience`, `Contact`, the three `soon` slots, `On this page`, `← Work`, the language switcher, the theme toggle's labels, the footer and the 404's copy are all currently strings that would have to be typed into a template — which is exactly what the first implementation constraint forbids.
+
+Astro's own i18n recipe uses a hand-written dictionary module, so the constraint puts this project off the documented path. The precedent that makes it reasonable is Astro's own: **Starlight sources its interface strings from a content collection**, one file per locale, rather than from a module.
+
+**Deliverable:** `resources/site/ui.{en,es}.md` — both locales — plus the `ui` type registered in `guards.config.json`'s `byType` map so `check-content` validates the pair instead of waving through an unknown type (`C-14`).
+
+**Done:** both files exist and `check-content` validates them as a locale pair of a known type; every string in them is traceable to an artboard in `docs/design/canvas/src/`; `check-terms` passes.
+
+**Constraints**
+
+- **The author writes the files; an agent writes the draft.** `H-02` is rung 1 and there is no reopening mechanism. The item produces both files complete, word for word, in the work log, and the author pastes them — the path `TASK 16` and `TASK 17` already took.
+- **Nothing is invented** (`C-01`, `C-04`). Every string is lifted from an artboard. Where the Spanish does not already exist in `HomeES.dc.html` or `NotFound.dc.html`, the draft **marks which strings are newly written**, so the author reviews those with judgment rather than approving the file in bulk.
+- **Both locales in the same change** (`C-09`). The Spanish is first-class content, not a translation artifact.
+- **Structure is not copy.** Which nav items exist, their order, their target and their `soon` flag are structure and live in one data module under `site/lib/nav/`. Their labels are copy and live here. The criterion 4 table below is reconciled to say so.
+- This item does not touch `about`, `experience` or the photographs — that is `TASK 20`.
+
+---
+
+## TASK 37 — `check-terms` false-positives on generated opaque values · `bugfix` · `DONE`
+
+**Found and closed 2026-08-24**, by the first `npm install` this repository has ever run. `check-terms` substring-matches every banned term against every line of every scanned file. A `sha512` integrity hash in a lockfile is base64 of a digest, so **every short character sequence is reachable by chance** — and two of them, in `site/package-lock.json`, contained a banned term. A true string match, carrying zero confidentiality risk, failing the gate and taking `guard tests` down with it through the scanner's own liveness test.
+
+This is `INC-15`'s family in a second place. `INC-15` was the same collision inside a `tool_use_id` in the trace; `TASK 18` owns that half and is unaffected by this fix. Both are *an opaque, machine-generated token that happens to contain a term someone banned*. **No new incident id was minted**: `C-05`'s origin is unchanged, no rule cites this, and adding an incident to the architecture document would oblige an eval case (`check-evals`) for a defect the existing `INC-15` already describes.
+
+**The fix is precise, not a general loosening.** Values of fields named in `guards.config.json`'s `terms.opaqueFields` are blanked **before matching only** — by field name, never by a "looks like a hash" heuristic, which is the shape that widens itself silently over time. The value is replaced with same-length filler, so a finding elsewhere on the same line still reports the column it actually occupies, and the **context printed in a finding is the real line**, masked as always. Package names, resolved URLs, versions and everything else on the line are scanned exactly as before.
+
+**Done:** a red test proves a banned term inside an `integrity` value is no longer a finding; a second proves the same term in a non-opaque field on the same line still is; a third proves nothing is skipped when no opaque field is configured. `check-terms` passes over 247 files. 7 hand-applied mutants, 7 killed — **two survived the first run** and both were real gaps: the exported function's own default was untested, and nothing asserted that the printed context is the unblanked line.
+
+**Constraints**
+
+- **The exclusion is opt-in from config and empty by default.** A scanner that blanks something by default blinds a repository nobody configured, which is `INC-07`'s shape.
+- Do not exclude `site/package-lock.json` wholesale. A lockfile can carry a private registry URL naming an internal system, and that is exactly what `C-05` exists to catch — the exclusion is scoped to the digest field, not to the file.
+- `private/banned-terms.txt` was not read, edited or reasoned about (`H-04`). The finding names a line number; nothing here needs the term itself.
 
 ---
 
@@ -511,7 +582,9 @@ This is not a defect to route around. Reading the brief instead of a field the o
 
 ---
 
-## TASK 31 — Reconcile the brief and the decision docs with what was built · `content` · `TODO` · **runs first**
+## TASK 31 — Reconcile the brief and the decision docs with what was built · `content` · `DONE` · **ran first**
+
+**Closed 2026-08-23**, with the full `done` block and `iterations: 3` in `progress/2026-08-23-21-task31-design-docs-reconciled.md`. The status line here said `TODO` until 2026-08-24, when the session opening the site backlog checked it against the log rather than reading it (`P-04`). The work was finished; only the register was stale — which is exactly the half of `P-07` that gets skipped.
 
 `docs/design/claude-design-brief.md` describes a design that no longer exists, and it is the **input artifact every implementation item reads**. A stale brief is what the next session takes as truth.
 

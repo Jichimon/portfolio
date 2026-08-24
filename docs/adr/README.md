@@ -4,7 +4,7 @@
 
 TASK 7 writes the founding set: site stack, hosting and deploy, i18n strategy, content pipeline, testing toolchain, publication. **6 of 6 accepted — TASK 7 closed 2026-08-19.**
 
-`TASK 33` adds the seventh on 2026-08-23 — the UI component model — and amends the testing toolchain in the same change. **The level-2 table below stopped being empty on that date**, so the three-part discipline it describes is now load-bearing rather than theoretical.
+`TASK 33` adds the seventh on 2026-08-23 — the UI component model — and amends the testing toolchain in the same change. `TASK 35` adds the eighth on 2026-08-24 — how the implementation tree is arranged. It was the first ADR to sit in this index **before** being accepted, so it was findable while it was still a proposal rather than only after; accepted the same day. **The level-2 table below stopped being empty on that date**, so the three-part discipline it describes is now load-bearing rather than theoretical.
 
 ## Level 1 — status of each ADR
 
@@ -19,6 +19,7 @@ TASK 7 writes the founding set: site stack, hosting and deploy, i18n strategy, c
 | [ADR-005](ADR-005-publication.md) | Publication — public GitHub remote, now, whole repository | 2026-08-19 | `Current` |
 | [ADR-006](ADR-006-testing-toolchain.md) | Testing toolchain — `node:test`, Stryker (`tap-runner`), Playwright | 2026-08-19 · amended 2026-08-23 | `Current-with-amendments` |
 | [ADR-007](ADR-007-ui-component-model.md) | UI component model — `.astro` by default, Preact for islands, zero islands today | 2026-08-23 | `Current` |
+| [ADR-008](ADR-008-site-implementation-architecture.md) | Site implementation architecture — framework-free core, Astro gateway, content as the only source of copy | 2026-08-24 | `Current` |
 
 ## Level 2 — amendments, point by point
 

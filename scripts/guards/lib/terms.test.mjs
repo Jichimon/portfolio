@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTerms, isExcluded, isBinary, scanText, formatFinding } from './terms.mjs';
+import { parseTerms, isExcluded, isBinary, scanText, formatFinding, blankOpaqueValues } from './terms.mjs';
 
 const TERMS = parseTerms('# a comment\n\nAcmeCore\n  Vault-Prod  \n\n# trailing comment\nledger_tx\n');
 const EXCL = [{ path: '.git' }, { path: 'node_modules' }, { path: 'private' }, { path: 'evidence/runs' }];
@@ -99,4 +99,62 @@ test('a NUL byte marks a file as binary and it is skipped', () => {
   assert.equal(isBinary(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x00])), true);
   assert.equal(isBinary(Buffer.from([0x89, 0x50, 0x4e, 0x47])), false);
   assert.equal(isBinary(Buffer.from('plain text, even with émojis 🎯')), false);
+});
+
+// ── Opaque generated values (INC-15's family, found 2026-08-24 in a lockfile) ────
+// A sha512 integrity hash is base64 of a digest: every 4-character sequence is
+// reachable by chance, so a short banned term appears in one eventually. Two did,
+// in site/package-lock.json, and failed the gate on a true string match carrying
+// zero confidentiality risk. Fixed by field name, never by a "looks opaque" guess.
+
+test('RED: a term inside an opaque field value is not a finding', () => {
+  const line = '      "integrity": "sha512-vLNsecretF2Uwc8AufkNXPmB4Vli==",';
+  const hits = scanText(line, [{ term: 'secret', line: 24 }], { opaqueFields: ['integrity'] });
+  assert.deepEqual(hits, []);
+});
+
+test('RED: the same term in a NON-opaque field on the same line is still caught', () => {
+  const line = '      "resolved": "https://r.example/secret/-/x.tgz", "integrity": "sha512-secretAA==",';
+  const hits = scanText(line, [{ term: 'secret', line: 24 }], { opaqueFields: ['integrity'] });
+  assert.equal(hits.length, 1);
+});
+
+test('RED: a field not on the opaque list is scanned exactly as before', () => {
+  const line = '      "name": "secret-internal-thing",';
+  const hits = scanText(line, [{ term: 'secret', line: 24 }], { opaqueFields: ['integrity'] });
+  assert.equal(hits.length, 1);
+});
+
+test('RED: with no opaque fields configured, nothing is skipped', () => {
+  // The exclusion must be opt-in from config. A default that blanks something is a
+  // default that blinds a repository nobody configured (INC-07).
+  const line = '      "integrity": "sha512-secretAA==",';
+  assert.equal(scanText(line, [{ term: 'secret', line: 24 }]).length, 1);
+});
+
+test('blanking preserves column positions, so a finding still points at the right place', () => {
+  const line = '"integrity": "sha512-AA==", "name": "secret"';
+  const hits = scanText(line, [{ term: 'secret', line: 24 }], { opaqueFields: ['integrity'] });
+  assert.equal(hits[0].column, line.indexOf('secret') + 1);
+});
+
+test('an opaque field name is matched as a whole key, not as a substring of one', () => {
+  const line = '      "integrity_note": "secret",';
+  const hits = scanText(line, [{ term: 'secret', line: 24 }], { opaqueFields: ['integrity'] });
+  assert.equal(hits.length, 1);
+});
+
+test('blankOpaqueValues blanks nothing when handed no fields', () => {
+  // Its own default matters independently of scanText's: an exported function that
+  // blanks by default is one a future caller silently blinds itself with.
+  const line = '"integrity": "sha512-secretAA=="';
+  assert.equal(blankOpaqueValues(line), line);
+});
+
+test('the finding context is the REAL line, not the blanked one', () => {
+  // Blanking exists to stop a false match, never to hide the line from the human who
+  // has to act on it. A finding showing an empty integrity value would be unreadable.
+  const line = '"integrity": "sha512-AA==", "name": "secret"';
+  const hits = scanText(line, [{ term: 'secret', line: 24 }], { opaqueFields: ['integrity'] });
+  assert.match(hits[0].context, /sha512-AA==/);
 });

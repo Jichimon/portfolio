@@ -3,13 +3,15 @@
 // (T-09): a step added to a sub-gate must not be silently absent here, or the local
 // run quietly verifies less than CI does.
 //
-// Fails loudly and names the failing step (V-01 / INC-08). A step that did nothing
+// Fails loudly and names EVERY failing step (V-01 / INC-08). A step that did nothing
 // says so — a silent no-op is indistinguishable from success.
 
 import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
+
+import { runGate, formatSummary } from './guards/lib/gate.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -86,43 +88,44 @@ const STEPS = [
     cmd: ['node', 'docs/design/canvas/verify.mjs'],
   },
   {
+    name: 'site structure',
+    protects: 'the file cap, the gateway boundary and the framework-free core (S-02, S-03, ADR-008)',
+    cmd: ['node', 'scripts/guards/gate/check-site.mjs'],
+    // Until the skeleton item lands there is no tree to shape. A PASS here would be
+    // a guard reporting coverage it does not have (P-03).
+    skipIf: () => !existsSync(join(ROOT, 'site')),
+    skipNote: 'site/ does not exist yet',
+  },  {
     name: 'eval suite',
     protects: 'every incident has a case, every case a resolvable proof, and no unproven case claims Caught (A15, A16)',
     cmd: ['node', 'scripts/guards/gate/check-evals.mjs'],
   },
 ];
 
-let failed = null;
-const results = [];
-
-for (const step of STEPS) {
-  if (step.skipIf?.()) {
-    results.push({ step, status: 'SKIP', note: 'target does not exist yet' });
-    continue;
-  }
+// The run loop lives in guards/lib/gate.mjs so it can be tested without spawning
+// fourteen processes. This file owns the step list and the reporting, nothing else.
+const { results, failures, exitCode } = runGate(STEPS, (step) => {
   const [bin, ...args] = step.cmd;
   const exe = bin === 'node' ? process.execPath : bin;
-  const r = spawnSync(exe, args, { cwd: ROOT, stdio: 'inherit' });
-  if (r.status !== 0) {
-    results.push({ step, status: 'FAIL' });
-    failed = step;
-    break; // fail fast
-  }
-  results.push({ step, status: 'PASS' });
-}
+  return spawnSync(exe, args, { cwd: ROOT, stdio: 'inherit' }).status ?? 1;
+});
 
 console.log('\n' + '-'.repeat(60));
-for (const { step, status, note } of results) {
-  console.log(`  ${status.padEnd(5)} ${step.name}${note ? `  (${note})` : ''}`);
-}
+for (const line of formatSummary(results)) console.log(line);
 console.log('-'.repeat(60));
-
-if (failed) {
-  console.error(`\nGATE FAILED at: ${failed.name}`);
-  console.error(`  protects: ${failed.protects}`);
-  process.exit(1);
-}
 
 const skipped = results.filter((r) => r.status === 'SKIP');
 if (skipped.length) console.log(`\n${skipped.length} step(s) skipped — declared, not silent.`);
+
+if (failures.length) {
+  // Reporting every step is not the same as burying the failure: the summary above
+  // is scannable, and this block is the thing you cannot scroll past.
+  console.error(`\nGATE FAILED — ${failures.length} of ${results.length} step(s) did not pass:`);
+  for (const { step, status, note } of failures) {
+    console.error(`\n  ${status}  ${step.name}${note ? ` (${note})` : ''}`);
+    console.error(`    protects: ${step.protects}`);
+  }
+  process.exit(exitCode);
+}
+
 console.log('\nGATE PASSED');

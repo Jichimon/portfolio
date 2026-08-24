@@ -56,18 +56,42 @@ export function mask(line, terms) {
 }
 
 /**
+ * Values of generated, opaque fields are blanked before matching — by FIELD NAME, read
+ * from config, never by a "looks like a hash" heuristic that would widen itself over time.
+ *
+ * INC-15's family, in a second place. A sha512 integrity hash is base64 of a digest, so
+ * every short character sequence is reachable by chance and a short banned term turns up
+ * in one eventually. Two did, in a lockfile, on 2026-08-24 — a true string match carrying
+ * no confidentiality risk. A check people learn to dismiss is a check that stops being read.
+ *
+ * The value is replaced with same-length filler, so a finding elsewhere on the line still
+ * reports the column it actually occupies.
+ */
+export function blankOpaqueValues(line, fields = []) {
+  let out = line;
+  for (const field of fields) {
+    const re = new RegExp(`("${escapeRe(field)}"\\s*:\\s*")([^"]*)(")`, 'g');
+    out = out.replace(re, (_, open, value, close) => open + ' '.repeat(value.length) + close);
+  }
+  return out;
+}
+
+/**
  * Every occurrence of every term, with enough context to act and none to leak.
  *
  * The context is masked against EVERY term at scan time, not against the one that matched.
  * Masking per finding leaves a second term on the same line printed in the clear — found by
  * the test, and the reason an unmasked context never exists on the returned object at all.
  */
-export function scanText(text, terms) {
+export function scanText(text, terms, { opaqueFields = [] } = {}) {
   const hits = [];
   text.split(/\r?\n/).forEach((line, i) => {
+    // Blanked for MATCHING only. The context printed in a finding is the real line,
+    // masked against every term, so a human still sees where they are.
+    const searchable = blankOpaqueValues(line, opaqueFields);
     for (const term of terms) {
       const re = new RegExp(escapeRe(term.term), 'gi');
-      for (const m of line.matchAll(re)) {
+      for (const m of searchable.matchAll(re)) {
         hits.push({ line: i + 1, column: m.index + 1, term, context: mask(line, terms) });
       }
     }

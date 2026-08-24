@@ -36,3 +36,8 @@ docs/design/canvas/build/
 # every diff, and this repository may yet be published. The schema is documented in
 # docs/harness/evidence.md, which IS committed.
 evidence/
+
+# the site build
+site/node_modules/
+site/dist/
+site/.astro/

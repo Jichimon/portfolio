@@ -1,0 +1,22 @@
+---
+// SKEL-004 + SKEL-006 spike route — throwaway. Mounts the Preact counter island
+// (SKEL-004) and renders the glob-loader collection's entry count and one real
+// entry's title (SKEL-006), so the build's own output is the evidence.
+import SpikeCounter from '../components/SpikeCounter';
+import { getSpikeEntries } from '../content.config';
+
+const entries = await getSpikeEntries();
+const first = entries[0];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spike</title>
+  </head>
+  <body>
+    <SpikeCounter client:load />
+    <p id="entry-count">Entry count: {entries.length}</p>
+    <p id="entry-title">First title: {first?.data.title}</p>
+  </body>
+</html>

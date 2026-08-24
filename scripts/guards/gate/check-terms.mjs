@@ -32,7 +32,10 @@ if (!existsSync(termsPath)) {
 const terms = parseTerms(readFileSync(termsPath, 'utf8'));
 if (terms.length === 0) fail(`${TERMS_FILE} defines no terms. An empty list makes every scan pass, which is worse than no scan at all.`);
 
-const exclusions = JSON.parse(readFileSync(join(ROOT, 'scripts/guards/guards.config.json'), 'utf8')).exclusions.paths;
+const cfg = JSON.parse(readFileSync(join(ROOT, 'scripts/guards/guards.config.json'), 'utf8'));
+const exclusions = cfg.exclusions.paths;
+// Opaque generated values are blanked before matching, by field name and from config only.
+const scanOptions = { opaqueFields: cfg.terms?.opaqueFields ?? [] };
 
 /** Head of the file only — enough for the binary heuristic, cheap for large assets. */
 function head(path, n = 8192) {
@@ -57,7 +60,7 @@ function walk(dir) {
     if (statSync(abs).size === 0) continue;
     if (isBinary(head(abs))) { skippedBinary++; continue; }
     scanned++;
-    for (const hit of scanText(readFileSync(abs, 'utf8'), terms)) findings.push(formatFinding(rel, hit));
+    for (const hit of scanText(readFileSync(abs, 'utf8'), terms, scanOptions)) findings.push(formatFinding(rel, hit));
   }
 }
 walk(ROOT);

@@ -1,0 +1,11 @@
+{
+  "name": "portfolio",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Two commands, and only two. Root is where a newcomer looks, so it is where the commands live.",
+  "scripts": {
+    "start": "npm --prefix site run start",
+    "test": "node scripts/gate.mjs"
+  }
+}

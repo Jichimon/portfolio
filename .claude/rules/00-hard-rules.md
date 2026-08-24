@@ -16,11 +16,11 @@ Every one is enforced at **rung 1** — a `deny` rule or a `PreToolUse` guard de
 
 The list is short on purpose. Each entry costs a guard, and a guard costs a red-path battery (`P-14`). A rule that lands here without being deniable at rung 1 would be claiming an enforcement level it has not earned — and a false 🔒 is worse than an honest 🔧, because it retires a human eye that is still needed.
 
-Everything else that matters lives in [10-process](10-process.md), [20-content](20-content.md), [30-testing](30-testing.md) or [40-agent-policy](40-agent-policy.md), at the rung it actually reaches.
+Everything else that matters lives in [10-process](10-process.md), [20-content](20-content.md), [30-testing](30-testing.md), [40-agent-policy](40-agent-policy.md) or [50-implementation](50-implementation.md), at the rung it actually reaches.
 
 ## The registry
 
-One id space across five files. **No id appears in two files.** Ids never change once published, and a retired id is never reused — `progress/` and the specs cite them.
+One id space across six files. **No id appears in two files.** Ids never change once published, and a retired id is never reused — `progress/` and the specs cite them.
 
 | Surface | File | Loaded | Owns |
 |---|---|---|---|
@@ -29,6 +29,7 @@ One id space across five files. **No id appears in two files.** Ids never change
 | `C-*` Content | [20-content.md](20-content.md) | always | confidentiality, factual integrity, locale parity |
 | `T-*` Testing | [30-testing.md](30-testing.md) | on `paths:` match | TDD, mutation, e2e, guard testing |
 | `G-*` Governance | [40-agent-policy.md](40-agent-policy.md) | always | trust ladders, permissions, budgets, registry meta-rules |
+| `S-*` Implementation | [50-implementation.md](50-implementation.md) | on `paths:` match | the site tree, the content gateway, class naming, the file cap |
 
 Rule origins are the incidents in `docs/harness/architecture.md` §C (`INC-01`…`INC-11`), the locked decisions in §N (`D1`…`D10`), the amendments (`A1`…`A23`), or **existing practice** — which is a real origin, and the one that makes a rule describe reality rather than aspiration.
 
