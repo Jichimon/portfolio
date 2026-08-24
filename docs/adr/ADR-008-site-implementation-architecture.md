@@ -20,7 +20,8 @@ The five, as the author stated them on 2026-08-24: every visible string comes fr
 
 ```text
 portfolio/
-  package.json                 root — "start" and "test" only, and no dependencies
+  package.json                 root — "start" and "test", plus tooling that spans BOTH
+                               packages (amended 2026-08-24; see the note under sub-decision 6)
   site/
     package.json  astro.config.mjs  tsconfig.json
     lib/                       the core: Node ESM, no Astro import, no Vite
@@ -116,6 +117,20 @@ The researcher's approximate `7.2.1` was four patch releases behind by the time 
 **One property of registering the integration, recorded because it looks like a defect and is not:** the build emits Preact's runtime chunks into `dist/_astro/` even with zero islands. The built page references none of them — no `<script>`, no `_astro` reference, zero bytes of JavaScript reaching a visitor. They are unreferenced files in the deploy artifact, and the direct consequence of `ADR-007`'s decision to install and prove the integration before the first island needs it.
 
 The fact that *is* confirmed and that matters more: **the legacy Content Collections API was removed entirely in v6.** Astro's v6 upgrade guide states *"Astro v6.0 removes this previously deprecated Content Collections API support entirely."* Any example using the old collection type or slug-based lookups does not compile, and most examples reachable by search are of that vintage.
+
+### ✏️ Amended 2026-08-24 — the root is not dependency-free, and could not be
+
+This ADR wrote *"root — `start` and `test` only, and no dependencies"*, and `S-07` carried it as a rule. The mutation-gate item hit it on its first day and the constraint did not survive contact, for a reason this document could not have known when it was written.
+
+**Stryker's sandbox is rooted at the working directory.** It copies the project into `.stryker-tmp` and mutates the copy, so a configuration living in `site/` cannot reach `../scripts/guards/lib/**` — the files simply are not in the sandbox. `ADR-006` committed to *one* config and *one* invocation over both mutation-covered surfaces, and the only directory that contains both is the repository root. This is forced by the tool's architecture, not chosen for convenience.
+
+**What the rule becomes**, rather than being dropped: the root carries the two commands plus **only tools whose configuration must live at the repository root to function**.
+
+*Narrowed within hours of being written, by an audit of this paragraph.* The first attempt said "tooling that **spans both packages**" — and that is unfalsifiable. "Spans" is a claim about what the person adding a dependency intended it to do, and no reader of `package.json` can check it: ESLint added at the root because "it lints both packages" satisfies it, while nothing about ESLint requires it to be there. The old rule it replaced (*"no dependencies"*) was at least binary. The criterion that actually forced Stryker to the root is a property of **Stryker**, not of anyone's intent — its sandbox is rooted at the working directory, so a config under `site/` cannot reach `scripts/guards/lib/`. That is the thing to write down, because a future tool enters or leaves the set on its own requirements rather than on an argument. Today that is `@stryker-mutator/core` and `@stryker-mutator/tap-runner`, both 10.0.0, both read from disk on 2026-08-24 (`C-01`). Anything belonging to one package is still installed in that package — `site/`'s five dependencies did not move and will not.
+
+**S-07's first clause is untouched and still binds:** nothing is installed before the item that needs it. That clause is what was doing the real work; *"no dependencies"* was a prediction about how it would turn out, and predictions in a rule row get corrected rather than defended.
+
+The root lockfile is committed for the same reason `site/`'s is: CI runs `npm ci`.
 
 ## Consequences
 

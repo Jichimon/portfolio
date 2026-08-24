@@ -7,5 +7,9 @@
   "scripts": {
     "start": "npm --prefix site run start",
     "test": "node scripts/gate.mjs"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/tap-runner": "^10.0.0"
   }
 }

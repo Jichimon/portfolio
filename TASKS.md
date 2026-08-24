@@ -249,6 +249,19 @@ From `EVAL-000` (`GAP-03`, `GAP-04`, `GAP-05`, `GAP-07`, `GAP-08`, `GAP-09`, `GA
 
 The one that matters most: **a run stopped by `maxTurns` is recorded as `COMPLETE`.** `G-06` promises `FAILED` with `budget_exhausted`; no footer on disk has ever said that. A failed delegation is currently indistinguishable from a successful one, which is `INC-06`'s lesson inverted — the agent delivers zero and the trace reports success.
 
+**Live specimen, 2026-08-24 — four of this item's open criteria now have a real trace behind them, not a hypothesis.** `TASK 15` delegated an `adversarial-auditor` run that stopped without delivering a report and had to be resumed by message. Its trace (`adversarial-auditor-aab270189d54aa26a.jsonl`, read not written — `H-03`) records:
+
+| Observed | What this item promises |
+|---|---|
+| `termination: { state: COMPLETE, reason: objective_reported }` | `FAILED` with `budget_exhausted` and the budget named |
+| **One** `run.footer`, written at the end of the *resume* — the first stop left none at all | a terminating run writes its own footer |
+| **Two** `run.header` events in one file (seq 1, seq 86) | `check-trace` asserts once-per-run *or* once-per-resume, and fails a fixture violating it |
+| `permission_mode: "unknown"`, `model: null` | at least one header carries a real `permission_mode` |
+
+**The shape is worse than this entry originally described.** The headline defect was *"a run stopped by `maxTurns` is recorded as `COMPLETE`"*. What the specimen shows is that **the failed segment is not recorded at all** — a later resume's footer covers for it, so the failure is not merely mislabelled, it is unrecoverable from the trace. Set beside the same session's `implementer` run, which genuinely succeeded and whose footer reads `COMPLETE / objective_reported` **byte-identically**, the two are indistinguishable. That is `INC-06`'s lesson inverted, exactly as this entry says, now with a specimen.
+
+**Budget datum, for the `GAP-13` re-measurement this item already owns.** `adversarial-auditor` carries `maxTurns: 20` and its trace shows **28 `tool.requested`** before the resume — consistent with hitting 20 turns using parallel calls, so this is not evidence that `maxTurns` went unenforced. What it *is* evidence of: 20 turns is not enough for an audit of any breadth. The same session's `implementer` used **30 of its 30**, right at its cap, and delivered a complete report — which may mean it fit exactly, or may mean it was cut off after the work happened to be done. Neither can be told apart from the trace either, which is the same defect from the other end.
+
 **Done:** a delegated run stopped by its budget writes `run.footer` with `termination.state: FAILED` and the budget named · at least one `run.header` carries a real `permission_mode` rather than the literal `"unknown"` · a delegated run's trace contains `instructions.loaded`, **or** `evidence.md` and `contracts.md` §6 both record that L is orchestrator-only and why · no trace file exists whose only event is a footer, none carries `agent: ""`, and none reuses a `tool_use_id` across two tool calls · `check-trace` asserts whether `run.header` is once-per-run or once-per-resume and fails a fixture violating it.
 
 **Constraints**
@@ -256,6 +269,12 @@ The one that matters most: **a run stopped by `maxTurns` is recorded as `COMPLET
 - `H-03` still holds: only hooks write `evidence/`. Fixing the writers is in scope; editing a trace is not.
 - The `permission_mode` capture may turn out to be unavailable from the hook payload. If so, the honest outcome is a recorded finding plus a correction to `G-04`'s claim — not a fabricated value.
 - Re-measure `harness-evaluator`'s turn budget while here (`GAP-13`): it was raised 20 → 60 after a run was cut off mid-analysis, and one completed run is now available as a data point.
+
+**`adversarial-auditor`'s budget belongs in this re-measurement too, and it now has two specimens on one day.** It carries `maxTurns: 20` — the **lowest of the five roles**, against `implementer` and `test-engineer` at 30, `researcher` at 25 and `harness-evaluator` at 60. It is also the only role whose job is running red paths, and a red path is never one call: back the file up, modify it, run the suite, restore it, verify the restore. Five calls to establish one finding.
+
+Both `TASK 15` audits on 2026-08-24 stopped without reporting and had to be resumed by message — the first at 28 `tool.requested`, the second at 29. **The second one is the informative one:** it was deliberately cut to a single question about a single object, precisely because the first had been given six attack categories, and it blew the budget anyway. So this is not only the brief-slicing problem the `work-item` procedure now records; 20 turns does not fit an audit that runs anything.
+
+The precedent for the fix is in this repository already: `harness-evaluator` went 20 → 60 after being cut off mid-analysis, which is the same failure in a different role. Raising this one is deliberately **not** done as a side edit here — a budget is agent policy, it is what `G-06` promises to enforce, and changing it in the same breath as measuring it would leave nobody able to say which number was ever tested.
 
 ---
 
@@ -302,7 +321,15 @@ That is `INC-08`'s shape in a new place. `INC-08` was two path-filtered workflow
 - **Do not fix `check-trace`'s underlying failure here.** That is `TASK 12`, and `H-03` keeps every agent out of `evidence/` regardless.
 
 ---
-## TASK 15 — Mutation gate, or an honest rung · `harness` · `TODO` · **runs sixth, in the site sequence**
+## TASK 15 — Mutation gate, or an honest rung · `harness` · `DONE` · **ran sixth**
+
+**Closed 2026-08-24.** The gate has a mutation step. `stryker.config.mjs` at the repository root, one config over `scripts/guards/lib/**` and `site/lib/content/**` — the second glob written before that directory exists, which is the whole reason this item ran ahead of the content-layer item. Stryker warns on the empty half rather than erroring, so the premise held.
+
+**The first automated run scored 74.35%, not 100%** — 3,532 mutants, 2,605 killed, 21 timed out, **771 survived**, 135 with no coverage at all, in 2m32s. Every hand-applied battery in `progress/` really was 100%; each was applied to the code its session was changing, and none was ever a measurement of the surface. Nothing in the harness could tell those two apart until something ran over all of it. **316 of the 771 survivors sit in `shell.mjs` (66%), `git-write.mjs` (54%) and `evidence.mjs` (69%)** — the three modules behind the rung-1 boundaries. The guards this repository trusts most have its weakest batteries.
+
+So `break` is the **measured floor, 74**, a ratchet rather than a goal, and `T-03` now reads honestly in both directions (`G-11`): rung 2 for *the score may not fall*, rung 4 for *a surviving mutant is a finding*. `TASK 38` owns the burn-down. `dependsOn` gained its first user — measured against a deliberately red suite, Stryker fails cleanly in seconds, so the dependency is about the gate reporting one root cause instead of two, not about protecting Stryker. `S-07` amended: Stryker's sandbox is rooted at the working directory, so a config in `site/` cannot reach `scripts/`, and the root is not dependency-free. Detail: `progress/2026-08-24-05-task15-mutation-gate.md`.
+
+**Superseded framing follows, kept for the trail.**
 
 **Pulled into the site backlog on 2026-08-23.** *(It ran at position 4 when the sequence held fourteen items; it is position 6 since 2026-08-24 added three. The id never moved — the order is not the id, `G-10`.)* The author asked for *one* command covering every test, and `ADR-006` names mutation as a sub-gate that `gate.mjs` does not yet run. Leaving this out would ship an `npm test` that claims to run all the tests and does not — which is `T-09`'s failure mode arriving through the front door. It runs **before any real site code lands**, so `site/lib/content/**` is covered by the Stryker config's glob the moment `TASK 22` writes it, rather than retrofitted afterwards.
 
@@ -311,6 +338,61 @@ From `EVAL-000` (`GAP-02`). `T-03` places the mutation gate at **rung 2**; `scri
 **Unblocked 2026-08-19** — `TASK 7`'s decision 5 (`ADR-006`) fixed the tool: Stryker Mutator + `@stryker-mutator/tap-runner`, `break: 100`, one config over `scripts/guards/**` (and, once it exists, `site/lib/content/**`). **Either outcome closes this:** the gate runs mutation over `scripts/guards/**` and a surviving mutant fails it, **or** `T-03` reads rung 4 with the reason recorded. `G-11` requires the honest claim, including downward.
 
 **Done:** `T-03`'s rung matches what the gate actually enforces, and if it stays at 2, the gate enforces it.
+
+---
+
+## TASK 38 — Ratchet the mutation score toward 100 · `harness` · `TODO`
+
+**Where these two run, agreed with the author 2026-08-24 so nobody re-derives it.** Neither is site work and neither blocks the localhost milestone, so both sit outside the seventeen-item sequence — but "outside the sequence" is how an item quietly becomes never, and that is what this note prevents.
+
+- **`TASK 39` runs immediately before the design-fidelity item**, not before the first page. The tempting argument — *a step added to a blind gate is never verified*, which is what pulled `TASK 34` in at position 3 — is weaker than it looks here: every item that adds a step must already prove it in red (`T-04`, `P-14`), so a dead step is caught the day it is written. The blindness is about later decay, not day one. What makes the fidelity item the right neighbour is that its entire value is a diff that actually runs.
+- **`TASK 38` never runs as a block.** One scoped pass on `git-write.mjs` alone — one file, 73 survivors, 54%, the guard behind `H-01` — which fits in a session. The rest runs on a **trigger, not a slot**: a session that touches a module under `scripts/guards/lib/**` kills that module's survivors before it closes. The ratchet then rises on its own and never competes with the site.
+
+Opened 2026-08-24 by `TASK 15`, the moment the mutation gate produced its first real number. **780 mutants survive** across `scripts/guards/lib/**` (measured at TASK 15's close; 771 at its first run, before that item's own module existed), and the gate's `break` sits at the measured floor of 74 rather than at the 100 `ADR-006` specified. That is honest, and it is not where this should stay: `T-03` says a surviving mutant is a finding, and 780 findings that nothing acts on are 780 statistics.
+
+**Not site work, and deliberately off the site sequence** — it does not block the localhost milestone, and it is sized to be picked up between items rather than in one run.
+
+**Start here, and the order is not arbitrary.** 316 of them sit in three files, and those three are the rung-1 boundaries:
+
+| File | Score | Survivors | The boundary it enforces |
+|---|---|---|---|
+| `git-write.mjs` | 54.38% | 73 | `H-01` — no agent invokes a git write |
+| `shell.mjs` | 66.21% | 146 | the quote-aware tokenizer every path guard is built on |
+| `evidence.mjs` | 68.77% | 97 | `H-03` — the trace only hooks may write |
+
+`P-14` says a guard is not trusted until it has been proven in red. A 54% mutation score on the guard behind `H-01` is a measured statement that nearly half its battery proves nothing — and `INC-14` already found two rung-1 boundaries broken, one failing *open*, which is what this number looks like from the inside.
+
+**Done:** `break` in `stryker.config.mjs` is raised at least once against a re-measured score, with the new floor recorded and the survivors it represents named — and the three modules above are no longer the three worst. Closing at 100 is the eventual goal; **this item closes on a ratchet, not on perfection**, and re-opens as often as the floor can move.
+
+**Constraints**
+
+- **A survivor is killed by a test or excluded at the mutant, never by lowering the floor** (`ADR-006`). `mutation-suppressions.test.mjs` fails a suppression with no written reason, so an exclusion cannot be quiet.
+- **Do not exclude the `Regex` or `StringLiteral` mutators to buy back score.** Together they are 433 of the 771 measured at first run, and it is the obvious move; `TASK 15` rejected it, and the reasoning is in `ADR-006`'s 2026-08-24 amendment. `INC-13` was a guard whose regex could never match.
+- **A percentage floor can be gamed by adding well-tested code.** Stryker offers no absolute-count threshold, so the mitigation is frequency: ratchet often enough that the slack stays small.
+- **`shell.mjs` has no colocated test file at all**, which is most of why it is second-worst (66.21%, 146 survivors). It is exercised only indirectly, through `path-boundary.test.mjs` and `git-write.test.mjs` — and it is the quote-aware tokenizer both of those guards are built on. A `shell.test.mjs` is likely the single highest-value file this item can add, and `T-08` puts it beside the code.
+- Every test added here is judged by `T-07` — assert what the caller observes. A test written only to kill a mutant, asserting an internal, is `INC-02`'s shape arriving through the fix rather than the defect.
+
+---
+
+## TASK 39 — A gate step that never ran must not report PASS · `bugfix` · `TODO`
+
+Opened 2026-08-24 by `TASK 15`'s adversarial audit. Two findings, one shape, and neither belongs to the item that found them — they are properties of `gate.mjs` and predate it.
+
+**1 · A step can exit 0 without running anything.** Measured: `node --test "scripts/guards/**/*.nosuchtest.mjs"` exits **0**. `scripts/gate.mjs` reads `spawnSync(...).status ?? 1` and nothing else — no output assertion, no test-count floor, no liveness check on any of the sixteen steps. So if a test file is deleted or renamed, `guard tests` still passes and the check it carried vanishes with no signal. `TASK 15` put the Stryker-suppression check in a *test file* precisely because `sources.test.mjs` set that precedent — which means that check inherits this hole.
+
+`TASK 15` hit the loud half of the same coin and survived it: `spawnSync('npx', …)` returns `status: null` on Windows, `?? 1` turned it into a FAIL, and the defect was found in minutes. Had the spawn returned 0 instead, the step would have reported `PASS` forever.
+
+**2 · A skipped step still exits 0 and prints `GATE PASSED`.** `runGate` filters failures to `FAIL` and `BLOCKED`, so a `SKIP` leaves `exitCode: 0`. The skip is announced — *"N step(s) skipped — declared, not silent"* — but the headline and the exit code both say the gate passed. Realistic triggers now that the root carries dependencies for the first time: a clone where someone installed only in `site/`; `npm ci` under `NODE_ENV=production`, which omits devDependencies entirely.
+
+That is `INC-08` in the gate itself: *a check that exists and does not check*, invisibly. `T-09` calls the gate CI parity, and a gate that reports PASS while a step did nothing is parity with nothing.
+
+**Done:** a step that produced no work is distinguishable from one that passed — a red test proving that a step whose command runs zero tests does not report `PASS`; and the gate's exit code and headline reflect skipped steps rather than reporting `GATE PASSED` over them.
+
+**Constraints**
+
+- **`SKIP` is a legitimate verdict and must stay one.** `check-site` skipped honestly for weeks before `site/` existed, and the mutation step must skip on a fresh clone rather than fail confusingly. What is wrong is the *headline*, not the mechanism — do not fix this by deleting `skipIf` (`P-03`: silence reads as coverage, but so does a green summary over a skip).
+- **Derive liveness, never enumerate it** (`P-13`). "Each step declares the minimum work it must have done" is a roster in disguise if it becomes a hardcoded per-step count. A test-count floor read from the runner's own output is a property; `expect 433 tests` is a number that rots the next time someone adds a test.
+- Do not widen this into re-plumbing `runGate`. `TASK 34` extracted it so it is testable without spawning sixteen processes; that is the seam to use.
 
 ---
 
@@ -406,7 +488,7 @@ Turn the site from one word into a backlog. Runs through the `work-item` procedu
 
 `TASK 8`'s output, **re-cut local-first on 2026-08-23**. Cut against the page set in `docs/design/decisions/2026-08-22-site-structure.md` — **not** the brief's nine-screen inventory, which the structure decision superseded.
 
-Seventeen items run in the sequence below. Eleven are `TASK 8`'s own (`TASK 21`–`TASK 31`). Six are not, and are named rather than quietly absorbed: **`TASK 15`** is a pre-existing harness item pulled in because `npm test` is incomplete without it; **`TASK 34`** is a pre-existing gate defect pulled in on 2026-08-24 because three items below add a gate step; **`TASK 32`** is the deploy half split out of the skeleton item; **`TASK 33`** was opened by the re-cut itself; and **`TASK 35`** and **`TASK 36`** were opened on 2026-08-24 by the session that took the five implementation constraints below.
+Seventeen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-08-24, is **not** one of them — it is harness debt, not site work, and it does not block the milestone). Eleven are `TASK 8`'s own (`TASK 21`–`TASK 31`). Six are not, and are named rather than quietly absorbed: **`TASK 15`** is a pre-existing harness item pulled in because `npm test` is incomplete without it; **`TASK 34`** is a pre-existing gate defect pulled in on 2026-08-24 because three items below add a gate step; **`TASK 32`** is the deploy half split out of the skeleton item; **`TASK 33`** was opened by the re-cut itself; and **`TASK 35`** and **`TASK 36`** were opened on 2026-08-24 by the session that took the five implementation constraints below.
 
 **Ids are stable and order is not the id** (`G-10`). Run them in this sequence:
 
@@ -417,7 +499,7 @@ Seventeen items run in the sequence below. Eleven are `TASK 8`'s own (`TASK 21`�
 | 3 | ~~`TASK 34`~~ — the gate reports every step | `bugfix` | no | **DONE 2026-08-24. Pulled in.** Three of the items below add a gate step, and a step added behind a long-lived failure runs exactly zero times. Fixing this after they land means they were never verified |
 | 4 | ~~`TASK 35`~~ — implementation architecture: `ADR-008` + the `S-*` rule surface | `research` | no | **DONE 2026-08-24.** The author's five implementation constraints became an ADR and a loaded rule file. Every `feature` spec below cites `ADR-008` in `governed_by` |
 | 5 | ~~`TASK 21`~~ — Astro skeleton + the two root commands | `feature` | yes | **DONE 2026-08-24.** The first line of code, and the two commands every later item is judged by |
-| 6 | `TASK 15` — mutation gate wired into `gate.mjs` | `harness` | no | **Pulled in.** `npm test` is incomplete without it, and running it before any site code lands means `site/lib/content/**` is covered by the config's glob rather than retrofitted |
+| 6 | ~~`TASK 15`~~ — mutation gate wired into `gate.mjs` | `harness` | no | **DONE 2026-08-24. Pulled in.** `npm test` was incomplete without it. Ran before any site code landed, so `site/lib/content/**` is in the config's glob rather than retrofitted. Scored 74.35% on its first real run and opened `TASK 38` |
 | 7 | `TASK 22` — content layer | `feature` | yes | The reusable core; every page item depends on it |
 | 8 | `TASK 36` — interface strings as content | `content` | no | The chrome copy does not exist in `resources/` and `H-02` means only the author can write it. It blocks the shell item, not the skeleton — so it runs here, with room to be applied before it is needed |
 | 9 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |

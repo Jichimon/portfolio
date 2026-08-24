@@ -28,6 +28,36 @@ const STEPS = [
     skipIf: () => !existsSync(join(ROOT, 'scripts/guards/lib')),
   },
   {
+    name: 'mutation',
+    protects: 'a surviving mutant is observable proof that a test proves nothing (T-03, D3)',
+    // Stryker's own bin through node, NOT `npx stryker run`. ADR-006 names the npx form and
+    // that is still the command to type by hand — but spawnSync has no shell, and on Windows
+    // `npx` is a .cmd shim, so spawnSync('npx', ...) returns { status: null, error: ENOENT }.
+    // gate.mjs's `?? 1` then turns that into an ordinary FAIL. Measured 2026-08-24: the step
+    // reported FAIL in six seconds while `npx stryker run` in the same tree passed at 74.54.
+    // A gate step that fails because it never ran is worse than one that fails loudly, so
+    // every step here resolves a real file rather than a shim.
+    cmd: ['node', 'node_modules/@stryker-mutator/core/bin/stryker.js', 'run'],
+    // dependsOn's first real user. TASK 34 built the mechanism and closed with zero, having
+    // checked all fourteen steps and found none that consumes a predecessor's output.
+    //
+    // DERIVED, not assumed (P-13). Measured 2026-08-24 against a deliberately red suite:
+    // Stryker does NOT report garbage — it exits 1 in seconds with `ConfigError: There were
+    // failed tests in the initial test run.` So this is not protecting Stryker from bad input.
+    // It is about the REPORT: without it, one broken guard test produces two failures, and the
+    // second one tells you a mutant survived, which is not what happened. BLOCKED names the
+    // root cause once.
+    dependsOn: 'guard tests',
+    // A fresh clone has no root node_modules, and without this `npx` would go to the network
+    // and download Stryker mid-gate. The cost is a step that can vanish quietly, which is
+    // INC-08's shape — so CI installs at the root and the summary prints every skip out loud.
+    // The BINARY, not the package directory: an interrupted install leaves the directory
+    // present and bin/stryker.js absent, and existsSync on the directory would then report a
+    // tool that is not there. Same path the cmd above resolves, so the check cannot drift.
+    skipIf: () => !existsSync(join(ROOT, 'node_modules/@stryker-mutator/core/bin/stryker.js')),
+    skipNote: 'stryker not installed — run npm install at the repository root',
+  },
+  {
     name: 'rules registry',
     protects: 'unique ids, every rule has an origin and a rung, no dangling citations (G-10)',
     cmd: ['node', 'scripts/guards/gate/check-rules-registry.mjs'],
@@ -103,7 +133,7 @@ const STEPS = [
 ];
 
 // The run loop lives in guards/lib/gate.mjs so it can be tested without spawning
-// fourteen processes. This file owns the step list and the reporting, nothing else.
+// sixteen processes. This file owns the step list and the reporting, nothing else.
 const { results, failures, exitCode } = runGate(STEPS, (step) => {
   const [bin, ...args] = step.cmd;
   const exe = bin === 'node' ? process.execPath : bin;

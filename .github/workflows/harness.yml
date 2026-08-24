@@ -31,6 +31,13 @@ jobs:
         with:
           node-version: '24'
 
+      # The mutation step (TASK 15) runs Stryker from the root node_modules. Without an install
+      # here its skipIf fires and the step is skipped — and a SKIP still exits 0, which
+      # is INC-08's shape: a check that exists in CI and runs exactly zero times, invisibly.
+      # `npm ci` rather than `npm install`, because the root lockfile is committed for exactly
+      # this. It costs ~30s and the mutation run costs ~2.5min; that is the price of CI parity.
+      - run: npm ci
+
       # One command, matching exactly what a human runs locally (T-09). CI must not re-list
       # the gate's steps: a step added to the gate would then be silently absent from CI,
       # and the local run would verify more than CI does.

@@ -44,6 +44,8 @@ A brief carries the task and **never the rules** (`P-08`). Rules load themselves
 
 Ownership is disjoint across files, behaviors, contracts, schemas and resources — semantic collisions, not only git conflicts (`G-12`).
 
+**An audit brief is sliced the same way, and this is the one everybody forgets.** Found 2026-08-24: an `adversarial-auditor` brief listing six attack categories is a *surface*, not enumerated objects — `P-09` applies to it exactly as it applies to an implementer. That run found a critical defect, exhausted its budget, and never reached the work item's central claim; the second attempt asked one question about one object and fit easily. The failure is quiet in a way an implementer's is not: an implementer that runs out delivers no code and you notice, whereas an auditor that runs out delivers *some findings*, which read as the audit rather than as a fragment of one.
+
 Where TDD applies, the implementer reports the **failing test message before the implementation that satisfies it**. That is the deliverable, not a formality.
 
 ## 5 · Verify

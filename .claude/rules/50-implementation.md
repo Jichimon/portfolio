@@ -15,6 +15,8 @@ Origin for every row: **`ADR-008`**, which records the reasoning, the rejected o
 ```text
 site/
   lib/        the core — Node ESM, no Astro, no Vite. node:test runs it, Stryker mutates it
+              (the Stryker config lives at the REPOSITORY root, not here — its sandbox is
+               rooted at the working directory and has to reach scripts/guards/lib/ too)
   src/        Astro only
     gateway/  the sole caller of getCollection
 ```
@@ -35,7 +37,7 @@ The dependency runs one way: `src/` imports `lib/`, never the reverse.
 | **S-04** | **Class names are block, element, variant, state** — `.case-tile`, `.case-tile__metric`, `.case-tile--wide`, `.case-tile.is-current`. A class names what the thing *is*, in the site's own vocabulary, never where it sits. **A class with no stated purpose is a finding.** The canvas's mockup shorthand (`hd`, `grp`, `lbl`, `k`, `v`, `sw`) is not carried across — the fidelity diff is structural and stylistic, never name equality. | 4 | `ADR-008` sub-decision 5 |
 | **S-05** | **Design tokens are declared in one stylesheet, and no colour or breakpoint literal appears outside it.** Composition and utility layers live there too; component styles stay scoped to their component. | 4 today · **2** once the layout-shell item builds the Stylelint assertion it already owes (`G-11` — the claim moves when the mechanism does, not before) | `ADR-008` sub-decision 5 |
 | **S-06** | **`site/lib/**` is framework-free and imports nothing from `site/src/**`.** That is the only reason it can sit outside `src/`: it is the surface `node:test` runs and Stryker mutates (`ADR-006`), and an Astro import takes it out of both. | 2 · `check-site` | `ADR-008` sub-decision 1 |
-| **S-07** | **Nothing is installed before the item that needs it**, and no version is written down that has not been installed and read (`C-01`). The root `package.json` carries the two commands and **no dependencies**. | 4 | `ADR-008` sub-decision 6 |
+| **S-07** | **Nothing is installed before the item that needs it**, and no version is written down that has not been installed and read (`C-01`). The root `package.json` carries the two commands and **only tools whose configuration must live at the repository root to function** — today Stryker, and nothing else. Anything belonging to one package is installed in that package. | 4 | `ADR-008` sub-decision 6 · **amended 2026-08-24 by TASK 15**, then narrowed the same day: the first amendment read *"tooling that spans both packages"*, which is a claim about the intent of whoever adds a dependency and is therefore decidable by nobody but them. This version is a property of the tool, checkable against its own documentation |
 
 ## What is decided and not yet built
 
