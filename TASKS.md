@@ -396,6 +396,49 @@ That is `INC-08` in the gate itself: *a check that exists and does not check*, i
 
 ---
 
+## TASK 40 — Code readability: names and comments · `research` · `DONE` · **ran seventh**
+
+**Closed 2026-08-24.** `ADR-008` sub-decision 7 accepted, three options weighed. `S-08`, `S-09`, `S-10` in `.claude/rules/50-implementation.md`, path-scoped to `site/**` so the always-loaded budget is untouched. `checkCommentsCarryNoExternalReference` added to `site-structure.mjs`: **13 tests written red before the function existed**, guard suite 440 → 453. Proven in red at the CLI against the real tree, not only in unit tests — a planted `<!-- tracked in TASKS.md, see progress/ -->` failed `check-site`, and the restore was verified byte-identical.
+
+**The guard found a real violation on its first run**, in the only source file the site had: `site/astro.config.mjs` carried three references in two comment lines — `ADR-001`, `ADR-004`, `SKEL-004`. Rewritten to one line naming the single thing the code cannot say, which is what `compat` does.
+
+**Two things this item ran into, both worth keeping.** `G-13` fired against the session that wrote it: a bad backslash escape left `guards.config.json` as invalid JSON, the `PreToolUse` hook could not parse its own config, and **every tool call was denied** — Bash, Edit, Write and Read alike — until the author fixed one line by hand. That is `INC-12` inverted and the exact cost `G-13`'s row already declared in writing: *loud, correct and recoverable, against a failure that was silent and total.* It is the first time that rule has been exercised by a real case rather than by a fixture. No new incident id was minted: `G-13` already describes this, and the rule behaved as specified.
+
+And `check-docs` rejected the ADR for citing a module path under the content core that does not exist yet — the mechanism sub-decision 7 leans on, proving itself against the paragraph that describes it. Recorded in the ADR rather than quietly fixed.
+
+**Also reconciled while here (`P-07`):** `TASK 15` amended `ADR-008` inline on 2026-08-24 and never added the level-2 row or flipped the level-1 status. That is `P-07`'s characteristic failure — doing the obvious half — and it was found by the next session rather than by the one that caused it. Both are now in `docs/adr/README.md`.
+
+**The three constraints, in the author's terms:** comments short and concise, unrelated to any document outside `site/`, used only where the code cannot speak for itself; and names verbose enough that what each variable, class, function and file is for — and what state it holds — reads without leaving the file.
+
+**Done:** `ADR-008` carries the sub-decision, accepted and indexed; `50-implementation.md` carries the three rules with `ADR-008` as their origin and a rung matching what is actually enforced (`G-11`); `check-site` fails, in a red test, on a `site/` file whose comment references an external document.
+
+**Constraints**
+
+- **Only the reference ban is mechanizable, and the split is stated rather than blurred.** Comment density and name quality stay rung 4. A comment-per-line ratio and a minimum identifier length are numbers that rot, and the second produces `i` → `indexValue`, which is noise wearing compliance.
+- **The reference set is derived, never listed** (`P-13`): the repository's own top-level entries, read from disk, plus an id pattern in config. A directory added next month is covered with no edit.
+- **`scripts/` is untouched.** The harness cites rule ids inline on purpose. `50-implementation.md` is path-scoped to `site/**`, so the line between the two trees already existed.
+- **Quoted text is data** (`TASK 10`). A `base: '../resources/site'` in a string is the code doing its job; the scanner is quote-aware or it becomes a guard people route around.
+
+---
+
+## TASK 41 — Playwright smoke tier · `harness` · `TODO`
+
+Split from `TASK 27` on 2026-08-24, with the author. `TASK 27` bundled two things of very different cost: verifying that the site actually works, and building a three-way component-level diffing framework. The first belongs beside the pages; the second does not block the milestone and now runs after it.
+
+**Deliverable:** Playwright installed in `site/`, `site/playwright.config.ts`, specs under `site/tests/e2e/` (`T-08`), and a gate step.
+
+**Done:** every route derived from the content collection returns 200 in both locales; **the 404 returns a real `404` status, never a `200` carrying error copy**; no page logs a console error; screenshots are captured at 1440 / 1024 / 390 in both themes for the author to judge; and a deliberately broken route fails the step, proven in red before the step is declared done.
+
+**Constraints**
+
+- **Routes are enumerated from the collection, never from a list in the test file** (`P-13`). `docs/design/canvas/verify.mjs` already does exactly this and is the pattern to copy.
+- **A gate step proven only in green is a step that never ran** — which is `TASK 39`'s finding, still open. Do not add a seventeenth step without a red path (`P-14`, `T-04`).
+- **This is not the fidelity diff.** No artboard comparison, no tolerance, no prod target. Claiming otherwise would make `TASK 27` look done when it is not.
+- `npm start` is the production build; the suite runs against the built output, never a dev server (`INC-03`, `T-02`).
+- **The file cap is 6 and `site/` already holds four.** `playwright.config.ts` takes it to five (`S-03`).
+
+---
+
 ## TASK 11 — Case-folded boundary comparison · `bugfix` · `TODO`
 
 `isInside` compares a path to a boundary case-sensitively. On a case-insensitive filesystem — which is the one this repository lives on — a protected directory spelled in a different case reaches the same real files and matches no boundary. `INC-14` fixed the *resolver* (`repoRelative` now folds the root prefix) but not the *comparison*, and the two are separate halves.
@@ -488,7 +531,7 @@ Turn the site from one word into a backlog. Runs through the `work-item` procedu
 
 `TASK 8`'s output, **re-cut local-first on 2026-08-23**. Cut against the page set in `docs/design/decisions/2026-08-22-site-structure.md` — **not** the brief's nine-screen inventory, which the structure decision superseded.
 
-Seventeen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-08-24, is **not** one of them — it is harness debt, not site work, and it does not block the milestone). Eleven are `TASK 8`'s own (`TASK 21`–`TASK 31`). Six are not, and are named rather than quietly absorbed: **`TASK 15`** is a pre-existing harness item pulled in because `npm test` is incomplete without it; **`TASK 34`** is a pre-existing gate defect pulled in on 2026-08-24 because three items below add a gate step; **`TASK 32`** is the deploy half split out of the skeleton item; **`TASK 33`** was opened by the re-cut itself; and **`TASK 35`** and **`TASK 36`** were opened on 2026-08-24 by the session that took the five implementation constraints below.
+Nineteen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-08-24, is **not** one of them — it is harness debt, not site work, and it does not block the milestone). Eleven are `TASK 8`'s own (`TASK 21`–`TASK 31`). Six are not, and are named rather than quietly absorbed: **`TASK 15`** is a pre-existing harness item pulled in because `npm test` is incomplete without it; **`TASK 34`** is a pre-existing gate defect pulled in on 2026-08-24 because three items below add a gate step; **`TASK 32`** is the deploy half split out of the skeleton item; **`TASK 33`** was opened by the re-cut itself; and **`TASK 35`** and **`TASK 36`** were opened on 2026-08-24 by the session that took the five implementation constraints below.
 
 **Ids are stable and order is not the id** (`G-10`). Run them in this sequence:
 
@@ -500,18 +543,20 @@ Seventeen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-0
 | 4 | ~~`TASK 35`~~ — implementation architecture: `ADR-008` + the `S-*` rule surface | `research` | no | **DONE 2026-08-24.** The author's five implementation constraints became an ADR and a loaded rule file. Every `feature` spec below cites `ADR-008` in `governed_by` |
 | 5 | ~~`TASK 21`~~ — Astro skeleton + the two root commands | `feature` | yes | **DONE 2026-08-24.** The first line of code, and the two commands every later item is judged by |
 | 6 | ~~`TASK 15`~~ — mutation gate wired into `gate.mjs` | `harness` | no | **DONE 2026-08-24. Pulled in.** `npm test` was incomplete without it. Ran before any site code landed, so `site/lib/content/**` is in the config's glob rather than retrofitted. Scored 74.35% on its first real run and opened `TASK 38` |
-| 7 | `TASK 22` — content layer | `feature` | yes | The reusable core; every page item depends on it |
-| 8 | `TASK 36` — interface strings as content | `content` | no | The chrome copy does not exist in `resources/` and `H-02` means only the author can write it. It blocks the shell item, not the skeleton — so it runs here, with room to be applied before it is needed |
-| 9 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |
-| 10 | `TASK 27` — design-fidelity harness | `harness` | no | **Ahead of the pages.** It has to exist *before* the screens it checks, or the first three pages ship unverified and get retrofitted |
-| 11 | `TASK 24` — home | `feature` | yes | |
-| 12 | `TASK 25` — case study and platform templates | `feature` | yes | |
-| 13 | `TASK 26` — About, Experience and 404 | `feature` | yes | |
+| 7 | ~~`TASK 40`~~ — code readability: names and comments | `research` | no | **DONE 2026-08-24.** The author set three constraints on how the code reads. Ran before the first real source file for the same reason the fidelity harness was placed ahead of the pages: landing it after means three items write in the old style and get retrofitted |
+| 8 | ~~`TASK 36`~~ — interface strings as content | `content` | no | **DONE 2026-08-24.** 63 chrome strings per locale, in frontmatter, nine groups one per template. Scope derived from criterion 4 rather than from the item body's enumeration, which pulled in the article masthead labels and the page labels the later items would otherwise have typed into a template |
+| 9 | `TASK 22` — content layer | `feature` | yes | The reusable core; every page item depends on it |
+| 10 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |
+| 11 | `TASK 41` — Playwright smoke tier | `harness` | no | The half of the fidelity harness that verifies the site rather than building diffing infrastructure. Runs with the pages, not before them |
+| 12 | `TASK 24` — home | `feature` | yes | |
+| 13 | `TASK 25` — case study and platform templates | `feature` | yes | |
+| 14 | `TASK 26` — About, Experience and 404 | `feature` | yes | |
 | — | **THE LOCALHOST MILESTONE** — the author judges the site; `harness-evaluator` scores the harness | | | |
-| 14 | `TASK 30` — publish the repository to GitHub | `maintenance` | no | Nothing else can be automated until the code has a remote |
-| 15 | `TASK 32` — CI deploy pipeline, GitHub Actions → Cloudflare | `feature` | yes | Proves the whole path — push → build → live — and switches on `TASK 27`'s third comparison |
-| 16 | `TASK 28` — custom domain | `feature` | yes | Blocked on the domain existing; deliberately off the critical path |
-| 17 | `TASK 29` — contact form Worker | `feature` | yes | Deferred with a stated trigger |
+| 15 | `TASK 30` — publish the repository to GitHub | `maintenance` | no | Nothing else can be automated until the code has a remote |
+| 16 | `TASK 32` — CI deploy pipeline, GitHub Actions → Cloudflare | `feature` | yes | Proves the whole path — push → build → live — and switches on `TASK 27`'s third comparison |
+| 17 | `TASK 27` — design-fidelity harness, the three-way diff | `harness` | no | **Moved behind the milestone 2026-08-24**, split from `TASK 41`. Its prod comparison needs a deploy to exist, which is the item directly above |
+| 18 | `TASK 28` — custom domain | `feature` | yes | Blocked on the domain existing; deliberately off the critical path |
+| 19 | `TASK 29` — contact form Worker | `feature` | yes | Deferred with a stated trigger |
 
 ## The localhost milestone
 
@@ -609,7 +654,13 @@ Three of the five collide with something already decided, and the collisions are
 
 ---
 
-## TASK 36 — Interface strings as content · `content` · `TODO`
+## TASK 36 — Interface strings as content · `content` · `DONE` · **ran eighth**
+
+**Closed 2026-08-24.** `resources/site/ui.{en,es}.md`, **63 leaf strings each, identical key shapes**, in frontmatter across nine groups — one group per template. `check-content` moved from 20 files / 9 pairs to **22 files / 10 pairs**; `check-terms` clean over 257 files.
+
+**Scope was derived, not taken from the list below.** That list is a roster, and `P-13` says derive the property instead — which criterion 4 already states: *"Nav labels, and every other visible chrome string"*. The rule applied was **a string belongs there when a template prints it regardless of which content file is loaded**, which pulled in the article masthead labels, the two page labels, the About byline labels, the home section headings and the contact form. None were in the enumeration; all would otherwise have been typed into a template by whichever item needed them first.
+
+**Sixteen Spanish strings existed in no artboard** and are listed individually in `ui.es.md`'s own body with their English reference, so they are reviewed one by one rather than approved in bulk. Two are flagged as decisions rather than reviews: whether *Deep dives* is translated, and the phrase that carries it. Verified before the paste, not after: the real guard functions, a real YAML parser proving both locales carry identical key shapes, and `check-terms` over the repository with the drafts temporarily inside it. Detail: `progress/2026-08-24-07-task36-interface-strings.md`.
 
 The site's chrome has copy, and none of it exists. Verified against `resources/` on 2026-08-24 rather than assumed: every content file carries the five universal keys and prose, and **nothing anywhere holds a nav label.** `Work`, `About`, `Experience`, `Contact`, the three `soon` slots, `On this page`, `← Work`, the language switcher, the theme toggle's labels, the footer and the 404's copy are all currently strings that would have to be typed into a template — which is exactly what the first implementation constraint forbids.
 
@@ -802,6 +853,8 @@ Everything every page shares: the `oklch` token set and its `data-theme` swap, t
 - The hero composition and each tile motif are **props, not hardcoded children** — this is the specific pair the author called out as reading like one-offs when they are not.
 - Contact form is `mailto:` for now, with the designed `sent`/`error` states unused; do not build a fake success state that lies.
 - Logo slots render only when a logo file exists, and the wordmark stands alone otherwise (component sheet §14).
+- **The technology strip is derived from the case studies' `stack` arrays, and needs a normalisation rule decided rather than discovered.** Measured 2026-08-24: all fifteen artboard chips are in the union of the five case studies, so derivation works — but that union holds twenty distinct values with real overlaps (`AWS` beside `AWS Fargate` and `AWS Lambda`; `SQL Server` beside `SQL Server 2012 → 2022`; `BIAN` beside `BIAN microservices`) plus two the design dropped. The artboard's fifteen are a curated subset, so a naive union renders twenty chips.
+- **The employer strip has no structured source until `TASK 20` lands.** Its four entries live as prose in `experience.{en,es}.md`. Omit the section rather than hardcode it — a section is omitted when its content is absent.
 
 ---
 
@@ -818,6 +871,8 @@ The two article archetypes, and the five case studies routed through them.
 **Constraints**
 - `platform` gets the distinct treatment the design specifies — a scale figure instead of an outcome metric, a services grid, and Deep Dives styled as the card language its children use elsewhere.
 - **`/case-studies` (the index) is designed and deliberately not routed.** It ships when the list outgrows the home section, roughly eight items. Do not route it in this item.
+- **`scale` is one content string and the artboard prints it as two.** The platform page shows a large figure over a small caption; the frontmatter carries `"Hundreds of thousands of active users"`. No number is invented either way — it is already in the content, in words. Choose: split the field in two keys, or render the string whole and accept that the artboard's typographic split is not reproduced. State which.
+- **`skills` has no label in any artboard.** The five case studies carry the field and none of the eleven artboards shows it. Render it unlabelled or do not render it; **inventing a label the design does not have is what criterion 3 forbids.** Say which was chosen.
 
 ---
 
@@ -899,6 +954,8 @@ Replaces `mailto:` with a real submission, which is what makes the form's four d
 | Per-role narrative moved out of About | `experience.{en,es}.md` |
 | An `h1` and an intro line for Experience, plus a per-role `stack` field | `experience.{en,es}.md` frontmatter + body |
 | **Three photographs** — a 4:5 portrait, a 21:9 Huayna Potosí summit shot, a 1:1 Bolivia landscape or travel image | `resources/` (new), referenced from `about.{en,es}.md` |
+| **The four employers as structured entries** — `company`, `period`, optional `logo` — because the home page's employer strip and the Experience page both render them as data and the file is prose today. Found 2026-08-24 while drafting the chrome strings: nothing in `resources/` holds that list as structure, so the home item cannot render the strip without hardcoding four names, which criterion 1 forbids | `experience.{en,es}.md` frontmatter |
+| **An `h1` for About** — the artboard carries one and no content file does. Found in the same pass; the row above it names the lead paragraph but not the headline | `about.{en,es}.md` |
 
 **Constraints**
 

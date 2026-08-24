@@ -33,7 +33,23 @@ if (!existsSync(siteRoot)) {
   process.exit(0);
 }
 
-const r = checkSite(walk(siteRoot), cfg);
+/**
+ * S-08's reference set, DERIVED from the repository's own top level rather than listed
+ * (P-13): every sibling directory of site/, plus the Markdown documents beside it. A
+ * directory added next month is covered without anyone remembering to edit a roster.
+ */
+function externalDocumentReferences() {
+  return readdirSync(ROOT, { withFileTypes: true })
+    .filter((e) => e.name !== cfg.root)
+    .filter((e) => e.isDirectory() || extname(e.name) === '.md')
+    .map((e) => (e.isDirectory() ? `${e.name}/` : e.name));
+}
+
+const r = checkSite(walk(siteRoot), {
+  ...cfg,
+  externalDocumentReferences: externalDocumentReferences(),
+  recordIdPattern: cfg.commentRecordIdPattern,
+});
 
 console.log(
   `      ${r.scanned} file(s) across ${r.dirs} director(ies) · cap ${cfg.maxFilesPerDir} · gateway ${cfg.gateway} · core ${cfg.core}`,

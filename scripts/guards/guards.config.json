@@ -234,6 +234,10 @@
         "reason": "TASK 32's Deliverable. Same class. Note the sibling .github/workflows/harness.yml DOES exist and is checked normally, so this entry hides nothing that is currently checkable."
       },
       {
+        "ref": "site/playwright.config.ts",
+        "reason": "TASK 41's Deliverable. Same class as the other forward-looking entries: a TODO work item naming the file it will create, which is what a deliverable IS rather than a pointer that has gone stale. Self-clearing - reported as stale the day that item creates it."
+      },
+      {
         "ref": "resources/testimonials.en.md",
         "reason": "TASK 19's Deliverable. Blocked on the author copying three real LinkedIn recommendations into resources/, which H-02 puts outside every agent's reach — so the file cannot be created here to satisfy the check."
       },
@@ -316,9 +320,20 @@
         "stack",
         "skills",
         "featured"
+      ],
+      "ui": [
+        "nav",
+        "rail",
+        "home",
+        "article",
+        "about",
+        "experience",
+        "contact_form",
+        "footer",
+        "not_found"
       ]
     },
-    "_byTypeRationale": "Required keys are keyed on the declared type, and an UNKNOWN type is a finding rather than a pass - it is either a typo or a content shape nobody has specified the keys for, and both need a human (P-13). Note outcome is NOT required: mobile-banking-platform carries none in either locale, and resources/ is read-only input, so demanding it would fail the gate on frozen content that cannot be edited.",
+    "_byTypeRationale": "Required keys are keyed on the declared type, and an UNKNOWN type is a finding rather than a pass - it is either a typo or a content shape nobody has specified the keys for, and both need a human (P-13). Note outcome is NOT required: mobile-banking-platform carries none in either locale, and resources/ is read-only input, so demanding it would fail the gate on frozen content that cannot be edited. The `ui` entry is the chrome file: its nine required keys are GROUPS, one per template, and check-content asserts only that each group is present - parseFrontmatter is a key scanner rather than a YAML parser, deliberately. Leaf-by-leaf validation belongs to the collection schema at build time, so each level claims exactly what it covers (G-11).",
     "noFrontmatter": [
       {
         "path": "resources/github/profile-README.md",
@@ -351,6 +366,8 @@
       ".wrangler"
     ],
     "_exclusionsRationale": "Generated or third-party trees. Counting them toward the cap would fail every directory forever and say nothing about the code anyone wrote.",
+       "commentRecordIdPattern": "\\b(?:ADR|INC|EC|EVAL|SPEC)-\\d+\\b|\\bTASK[\\s-]\\d+\\b|\\b[HPCTGS]-\\d{2}\\b",
+    "_commentRecordIdRationale": "S-08. The id shapes this repository actually mints: ADR/INC/EC/EVAL/SPEC records, work items, and the six rule surfaces of the registry. A PATTERN rather than a list of ids, so a rule written next month is caught without editing this. The sibling half of the reference set is not here at all - check-site derives it from the repository's own top-level entries, so a new directory needs no edit either (P-13).",
     "sourceExtensions": [
       ".astro",
       ".ts",

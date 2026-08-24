@@ -1,0 +1,137 @@
+---
+slug: ui
+lang: es
+type: ui
+title: "Cadenas de interfaz"
+confidentiality: sanitized
+
+nav:
+  work: "Trabajo"
+  about: "Sobre mí"
+  experience: "Experiencia"
+  contact: "Contacto"
+  writing: "Escritos"
+  architectures: "Arquitecturas"
+  search: "Búsqueda"
+  soon_tag: "pronto"
+
+rail:
+  role: "Senior Software Engineer"
+  location: "Cochabamba, Bolivia"
+  timezone: "GMT-4 · solapamiento completo con el horario laboral de EE. UU."
+  language_group: "Idioma"
+  theme_to_dark: "Modo oscuro"
+  theme_to_light: "Modo claro"
+  menu: "Menú"
+
+home:
+  employers_heading: "Dónde he trabajado"
+  work_heading: "Lo que he construido"
+  stack_heading: "Tecnologías con las que trabajé"
+  contact_heading: "Hablemos"
+  contact_invite: "¿Tenés un sistema que cuesta hasta explicar? ¿O una idea que todavía no sabés cómo bajar a tierra? Veámoslo juntos."
+  contact_note: "Abierto a remoto o híbrido/relocation."
+  seam_legacy: "Legacy, denso"
+  seam_modern: "Moderno, abierto"
+
+article:
+  toc_heading: "En esta página"
+  back_to_work: "← Trabajo"
+  role: "Rol"
+  context: "Contexto"
+  period: "Período"
+  outcome: "Resultado"
+  stack: "Stack"
+  platform_tag: "Plataforma · raíz de los deep dives"
+  case_study_tag: "Caso de estudio"
+  deep_dives: "Deep dives"
+
+about:
+  label: "Sobre mí"
+  based_in: "Radicado en"
+  since: "Desde"
+  reads_as: "Se lee como"
+
+experience:
+  label: "Experiencia"
+
+contact_form:
+  email_label: "Tu email"
+  email_placeholder: "vos@empresa.com"
+  subject_label: "Asunto"
+  subject_placeholder: "Una línea"
+  message_label: "Descripción"
+  message_placeholder: "¿Cuál es el problema?"
+  submit: "Enviar"
+
+footer:
+  metrics_slot: "Métricas de visitas — lugar reservado, todavía sin construir"
+
+not_found:
+  status_code: "HTTP 404"
+  status_word: "no encontrado"
+  heading: "Este enlace no conecta con nada."
+  body: "Que es, más o menos, para lo que me contratan. La dirección quedó vieja o tiene un error de tipeo — acá abajo está todo lo que sí existe."
+  destinations:
+    - name: "Trabajo"
+      what: "Qué construí, y qué costó"
+    - name: "Sobre mí"
+      what: "La persona, no el CV"
+    - name: "Experiencia"
+      what: "De dónde salió cada problema"
+    - name: "Contacto"
+      what: "Email, GitHub, LinkedIn"
+---
+
+Todo string que el chrome del sitio imprime, en español. Nada de acá es copy de página: un string vive en este archivo cuando un template lo imprime sin importar qué contenido cargue, y en el `.md` de su propia página cuando no.
+
+**Nada renderiza este cuerpo.** Es el registro de trazabilidad — de dónde salió cada string — y es lo que permite revisar este archivo en vez de confiar en él.
+
+## Lo que ya existía en el diseño
+
+Se levanta tal cual del artboard, sin tocar una coma.
+
+| Grupo | Origen |
+|---|---|
+| `nav` completo, incluido `pronto` | `HomeES.dc.html` 430–436 |
+| `rail.location`, `rail.timezone`, `rail.theme_to_dark`, `rail.theme_to_light` | `HomeES.dc.html` 427, 783 |
+| `home` — los cuatro títulos, `contact_invite`, `contact_note` | `HomeES.dc.html` 532, 542, 655, 667, 668, 687 |
+| `contact_form` — los siete | `HomeES.dc.html` 672–683 |
+| `footer.metrics_slot` | `HomeES.dc.html` 716 |
+| `not_found` — `status_word`, `heading`, `body` y las cuatro destinaciones | `NotFound.dc.html` 228, 275–286 |
+
+`rail.role` queda en inglés a propósito: *Senior Software Engineer* es el título del puesto, y así aparece en el artboard español.
+
+## Lo que se escribió acá y no existe en ningún artboard — **revisar uno por uno**
+
+Ningún artboard tiene la mitad española de las páginas de artículo, About ni Experience, así que estos dieciséis se escribieron para este archivo. No los apruebes en bloque (`C-01`, `C-04`).
+
+| Clave | Propuesto | Inglés de referencia |
+|---|---|---|
+| `rail.language_group` | Idioma | Language (etiqueta de accesibilidad, no visible) |
+| `rail.menu` | Menú | Menu (etiqueta de accesibilidad, estado narrow) |
+| `home.seam_legacy` | Legacy, denso | Legacy, dense |
+| `home.seam_modern` | Moderno, abierto | Modern, open |
+| `article.toc_heading` | En esta página | On this page |
+| `article.back_to_work` | ← Trabajo | ← Work |
+| `article.role` | Rol | Role |
+| `article.context` | Contexto | Context |
+| `article.period` | Período | Period |
+| `article.outcome` | Resultado | Outcome |
+| `article.case_study_tag` | Caso de estudio | Case study |
+| `about.label` | Sobre mí | About |
+| `about.based_in` | Radicado en | Based in |
+| `about.since` | Desde | Since |
+| `about.reads_as` | Se lee como | Reads as |
+| `experience.label` | Experiencia | Experience |
+
+**Dos que necesitan una decisión tuya, no solo una revisión:**
+
+- **`article.deep_dives` — se dejó en inglés.** *Deep dives* es término de oficio y la traducción literal (*En profundidad*, *A fondo*) pierde el sentido de "los hijos de esta plataforma". Si preferís traducirlo, el candidato es **En profundidad**.
+- **`article.platform_tag` — se dejó mezclado:** *Plataforma · raíz de los deep dives*. Arrastra el mismo término dentro de una frase en español. La alternativa consistente es *Plataforma · de la que cuelgan los casos en profundidad*, más larga y sin el término de oficio.
+
+`article.stack` se dejó como **Stack**: es la palabra que la industria usa en español y traducirla a *Tecnologías* chocaría con `home.stack_heading`, que ya dice *Tecnologías con las que trabajé*.
+
+## Un detalle tipográfico
+
+El artboard escribe `EE.&nbsp;UU.` con espacio duro. Acá va con espacio normal, igual que en `home.es.md`, para que las dos fuentes de esa misma línea digan lo mismo.

@@ -19,7 +19,7 @@ TASK 7 writes the founding set: site stack, hosting and deploy, i18n strategy, c
 | [ADR-005](ADR-005-publication.md) | Publication — public GitHub remote, now, whole repository | 2026-08-19 | `Current` |
 | [ADR-006](ADR-006-testing-toolchain.md) | Testing toolchain — `node:test`, Stryker (`tap-runner`), Playwright | 2026-08-19 · amended 2026-08-23 | `Current-with-amendments` |
 | [ADR-007](ADR-007-ui-component-model.md) | UI component model — `.astro` by default, Preact for islands, zero islands today | 2026-08-23 | `Current` |
-| [ADR-008](ADR-008-site-implementation-architecture.md) | Site implementation architecture — framework-free core, Astro gateway, content as the only source of copy | 2026-08-24 | `Current` |
+| [ADR-008](ADR-008-site-implementation-architecture.md) | Site implementation architecture — framework-free core, Astro gateway, content as the only source of copy, and how the code reads | 2026-08-24 · amended 2026-08-24 | `Current-with-amendments` |
 
 ## Level 2 — amendments, point by point
 
@@ -35,6 +35,7 @@ An amended point does **not** invalidate the whole ADR — only that point.
 | ADR · § | What the point said | Verb | Superseded by | Date |
 |---|---|---|---|---|
 | [ADR-006](ADR-006-testing-toolchain.md) · Decision, Review trigger | Two tiers: `node:test` for content logic, Playwright for e2e. Vitest enters only if `site/lib/content/**` turns out to need Vite. Nothing decided about testing a component | ✏️ **Amended** | [ADR-006 § Amendment · 2026-08-23](ADR-006-testing-toolchain.md#amendment--2026-08-23--the-component-test-tier) — a third tier, Vitest + `@testing-library/preact` in `jsdom`, for DOM-requiring behaviour modules and Preact islands. The named trigger has **not** fired; its *policy* is what governs. Mutation coverage unchanged | 2026-08-23 |
+| [ADR-008](ADR-008-site-implementation-architecture.md) · Sub-decision 6 | *"root — `start` and `test` only, and no dependencies"*, carried into `S-07` as a rule | ✏️ **Amended** | [ADR-008 § Amended 2026-08-24](ADR-008-site-implementation-architecture.md) — Stryker's sandbox is rooted at the working directory, so one config covering both mutation surfaces can only live at the root. The rule becomes *only tools whose configuration must live at the repository root to function*. **This row was missing until 2026-08-24**: the amendment was written inline and the index was never reconciled — `P-07`'s characteristic failure, found by the next session rather than by the one that caused it | 2026-08-24 |
 | [ADR-001](ADR-001-site-stack.md) · Decision | *"whether any specific piece of the site's UI should be a React island, plain CSS/JS, or a View Transition — that is a design decision for TASK 8"* | ↪️ **Extended** | [ADR-007](ADR-007-ui-component-model.md) — the deferral is answered, not overturned. `TASK 8` closed without recording it; `TASK 33` did. No inline mark and no status change: the point deferred a decision rather than asserting something now false | 2026-08-23 |
 
 ## How to keep this alive

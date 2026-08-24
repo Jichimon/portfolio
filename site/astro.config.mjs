@@ -1,8 +1,7 @@
 import { defineConfig } from 'astro/config';
 import preact from '@astrojs/preact';
 
-// Static output, no adapter (ADR-001, ADR-004). Preact is registered with compat
-// enabled because the next slice (SKEL-004) needs it present.
+// compat maps React imports onto Preact, so an island is written as plain React.
 export default defineConfig({
   output: 'static',
   integrations: [preact({ compat: true })],

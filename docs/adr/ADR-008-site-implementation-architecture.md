@@ -132,10 +132,41 @@ This ADR wrote *"root — `start` and `test` only, and no dependencies"*, and `S
 
 The root lockfile is committed for the same reason `site/`'s is: CI runs `npm ci`.
 
+## Sub-decision 7 — How the code reads: naming and comments
+
+**Added 2026-08-24**, when the author set three further constraints on implementation and asked, as with the first five, that they become precedent rather than an instruction repeated per item. Their words: comments short and concise, unrelated to any document outside `site/`, used only where something needs explaining because the code cannot say it — *"mejor es que el código hable por sí mismo"*; and names verbose enough that what each variable, class, function and file is for, and what state it holds, is readable without leaving the file.
+
+### Options considered
+
+| Option | Pros | Cons |
+|---|---|---|
+| **A. Carry the harness's own convention into `site/`** | Consistency across one repository. `scripts/` cites rule ids, incidents and ADRs inline, and it works there | The harness is read by people auditing the harness; the site is read by people reading a site. A comment citing `ADR-003` is a pointer that decays silently the day the ADR is superseded, and nothing checks it |
+| **B. Ban comments outright** | No decay, nothing to maintain | Throws away the one case a comment genuinely earns: a *why* the code structurally cannot express — the theme toggle resolving before first paint being the live example |
+| **C. Comments only where the code cannot speak, and never carrying a reference** | Keeps the earned case, removes the decaying one. The reference obligation inverts onto documents, where `check-docs` already resolves every cited path | The reason a piece of code exists is no longer findable *from* the code. Someone has to search the documents to find the decision behind it |
+
+### Decision — Option C, with the reference obligation inverted
+
+**A comment explains what the code could not say by itself, and stops there.** No path, no document name, no rule, ADR, incident or work-item id.
+
+**References run from the document to the code, never the other way.** That direction is already mechanized and needed no new machinery: `check-docs` resolves every path cited in every living document — 184 references across 53 documents on the day this was written — and fails the gate on one that does not resolve. A document citing a module by its path stays correct or the gate says so. A comment citing `ADR-003` stays whatever it was when someone typed it — nothing reads it, so nothing can find it wrong.
+
+> Demonstrated the moment this paragraph was written: its first draft cited a module path that does not exist yet, and `check-docs` rejected the document. The mechanism this sub-decision leans on proved itself against the paragraph describing it.
+
+**Names carry the load the comments no longer do.** `S-10` is `S-04` generalized: that rule already said a CSS class names what the thing *is* and that a class with no stated purpose is a finding. The same standard applied to every identifier is what makes a scarce-comment policy survivable rather than merely terse.
+
+**The cost, stated in both directions (`C-11`).** When code exists *because* of a decision, the decision becomes unfindable from the code — a reader who wants to know why the theme toggle is not an island has to search the documents. That is a real loss and the mitigation is the inverted reference, not a denial that it costs something. It was accepted because the alternative decays: an inline citation is correct on the day it is typed and nothing ever checks it again.
+
+**Enforcement is split, and the split is honest (`G-11`).** The reference ban is a property — a comment either contains one of the repository's own top-level names or an id matching the registry's shapes, or it does not — so it sits at rung 2 behind `check-site`. Comment density and name quality are judgment and stay at rung 4. A comment-per-line ratio and a minimum identifier length are both numbers that rot, and enforcing the second produces `i` → `indexValue`, which is noise wearing compliance.
+
+**`scripts/` is untouched.** The harness comments the opposite way on purpose, and that convention stays. `.claude/rules/50-implementation.md` is path-scoped to `site/**`, so the line between the two trees already existed; this uses it rather than drawing a new one.
+
+**Found on the guard's first run against the real tree:** `site/astro.config.mjs` carried `// Static output, no adapter (ADR-001, ADR-004). Preact is registered with compat enabled because the next slice (SKEL-004) needs it present.` — three references in two lines, in the only source file the site had. Rewritten to one line naming the single thing the code cannot say: what `compat` does.
+
 ## Consequences
 
 - **We gain:** one place where content is fetched and one place where it is interpreted, both testable without a browser or a bundler; a copy surface that already has a locale-parity guard over it; class names that mean something to a reader six months from now; and five constraints that load themselves into a delegated agent's session instead of depending on an orchestrator remembering to paste them.
 - **We accept losing:** Astro's documented i18n path, which is a dictionary module — we are off it deliberately, and the cost is that a newcomer's first search returns advice this project does not follow. We accept a tree with two source roots inside one package. We accept that the class names in the canvas and the class names in the site differ, so reading an artboard beside its component needs one mental translation. And we accept a file cap with no external sourcing, which will occasionally force a split that a reasonable person would not have made.
+- **Sub-decision 7 adds:** a comment surface that cannot decay, at the price of a decision trail that is findable only from the documents; and a naming standard strict enough to carry the explanatory weight comments no longer do.
 - **This creates a dependency on:** `TASK 36` for the chrome copy, which only the author can write (`H-02`) and which the layout shell item cannot ship without; the skeleton item's spike for sub-decision 3; and `check-site`, without which sub-decisions 1, 2 and 5 are prose rather than boundaries.
 
 ## Review trigger
