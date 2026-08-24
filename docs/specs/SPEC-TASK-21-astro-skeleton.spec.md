@@ -3,7 +3,7 @@
 ```yaml
 spec_id: SPEC-TASK-21
 title: Astro skeleton and the two root commands
-status: active
+status: shipped
 version: 1.0
 date: 2026-08-24
 approved_version: 1.0
@@ -35,7 +35,7 @@ behaviors:
     when: "`npm start` is run from the repository root"
     then: "the site is built with `astro build` and the production output in `site/dist/` is served on localhost, reachable in a browser"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "the dev server is NOT what this command runs — INC-03 was a defect invisible in a dev build"
       - "run from the repository root, not from inside site/"
@@ -48,7 +48,7 @@ behaviors:
     when: "`npm test` is run from the repository root"
     then: "`node scripts/gate.mjs` runs and its exit code is the command's exit code"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "the alias must not re-list any gate step (T-09) — a step added to gate.mjs appears without editing package.json"
       - "a failing gate must make `npm test` exit non-zero"
@@ -60,7 +60,7 @@ behaviors:
     when: "the site is built"
     then: "output is static, no adapter is configured, and exactly one route is emitted as HTML"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "no wrangler config, no deploy config — that belongs to the deploy item"
       - "the page carries no design, no content and no component; it says nothing on purpose"
@@ -72,7 +72,7 @@ behaviors:
     when: "a throwaway island is rendered with a client directive and interacted with in a browser"
     then: "the island hydrates and responds, proving the path works before the first real island needs it"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "hydration is confirmed in a browser, never inferred from the presence of a script tag"
       - "the island and its route are REMOVED once proven — the island count at the milestone is zero (ADR-007)"
@@ -84,7 +84,7 @@ behaviors:
     when: "`node scripts/guards/gate/check-site.mjs` runs"
     then: "it reports PASS rather than SKIP, and every directory, the gateway boundary and the framework-free core hold"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "no directory reaches seven files, from the first commit (S-03)"
       - "nothing outside site/src/gateway/** imports astro:content (S-02)"
@@ -97,7 +97,7 @@ behaviors:
     when: "a throwaway collection is defined with a glob loader whose `base` points outside the project root"
     then: "at least one real entry from resources/ loads during the build, and the observed result — pass or fail — is recorded verbatim in the work log"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "if it FAILS, that is a successful outcome for this behaviour: the finding is recorded and ADR-008's fallback ladder is entered by the content-layer item"
       - "the spike is REMOVED once its result is recorded — this item ships no content layer"
@@ -184,15 +184,15 @@ The content layer, tokens and the shell, any page, deploy configuration, and the
 
 | Test (file::name) | Type | Scenario covered | Behavior(s) | Status |
 |---|---|---|---|---|
-| `manual::npm-start-serves-built-output` | e2e | `npm start` from root builds and serves `dist/`; the route returns 200 in a browser | SKEL-001 | planned |
-| `manual::npm-start-is-not-the-dev-server` | e2e | the served bytes come from the build, not from a dev server | SKEL-001 | planned |
-| `manual::npm-test-is-the-gate` | e2e | `npm test` output matches `node scripts/gate.mjs`; exit code passes through | SKEL-002 | planned |
-| `manual::npm-test-fails-when-the-gate-fails` | e2e | a deliberately broken gate step makes `npm test` exit non-zero | SKEL-002 | planned |
-| `manual::build-emits-one-static-route` | e2e | `dist/` contains one HTML route; no adapter in the config | SKEL-003 | planned |
-| `manual::preact-island-hydrates-then-removed` | e2e | the island responds to interaction in a browser; the island and its route are gone afterwards | SKEL-004 | planned |
-| `scripts/guards/gate/check-site.mjs` | integration | the created tree reports PASS, not SKIP | SKEL-005 | planned |
+| `manual::npm-start-serves-built-output` | e2e | `npm start` from root builds and serves `dist/`; the route returns 200 in a browser | SKEL-001 | green |
+| `manual::npm-start-is-not-the-dev-server` | e2e | the served bytes come from the build, not from a dev server | SKEL-001 | green |
+| `manual::npm-test-is-the-gate` | e2e | `npm test` output matches `node scripts/gate.mjs`; exit code passes through | SKEL-002 | green |
+| `manual::npm-test-fails-when-the-gate-fails` | e2e | a deliberately broken gate step makes `npm test` exit non-zero | SKEL-002 | green |
+| `manual::build-emits-one-static-route` | e2e | `dist/` contains one HTML route; no adapter in the config | SKEL-003 | green |
+| `manual::preact-island-hydrates-then-removed` | e2e | the island responds to interaction in a browser; the island and its route are gone afterwards | SKEL-004 | green |
+| `scripts/guards/gate/check-site.mjs` | integration | the created tree reports PASS, not SKIP | SKEL-005 | green |
 | `scripts/guards/lib/site-structure.test.mjs` | unit | the three properties, 21 tests, 12/12 mutants | SKEL-005 | green |
-| `manual::glob-base-outside-project-root` | e2e | a real `resources/` entry loads during the build, or the failure is recorded verbatim | SKEL-006 | planned |
+| `manual::glob-base-outside-project-root` | e2e | a real `resources/` entry loads during the build, or the failure is recorded verbatim | SKEL-006 | green |
 
 **Coverage gaps:** none claimed. The `manual::` rows are browser and command-line verification because there is no test runner in `site/` yet and this item does not add one — Playwright arrives with the fidelity-harness item, which is where these become automated. Recorded as a gap with a named owner rather than as coverage.
 
@@ -200,12 +200,12 @@ The content layer, tokens and the shell, any page, deploy configuration, and the
 
 | Behavior | Priority | Status | Test(s) | Test written first? | ADR |
 |---|---|---|---|---|---|
-| SKEL-001 | critical | planned | `manual::npm-start-serves-built-output`, `manual::npm-start-is-not-the-dev-server` | n/a — `tdd: not_applicable` | ADR-001, ADR-004 |
-| SKEL-002 | critical | planned | `manual::npm-test-is-the-gate`, `manual::npm-test-fails-when-the-gate-fails` | n/a | — (T-09) |
-| SKEL-003 | critical | planned | `manual::build-emits-one-static-route` | n/a | ADR-001, ADR-004 |
-| SKEL-004 | critical | planned | `manual::preact-island-hydrates-then-removed` | n/a | ADR-007 |
-| SKEL-005 | critical | planned | `check-site`, `site-structure.test.mjs` | yes — the guard's tests were written red before the guard, in the architecture item | ADR-008 |
-| SKEL-006 | critical | planned | `manual::glob-base-outside-project-root` | n/a | ADR-008 |
+| SKEL-001 | critical | green | `manual::npm-start-serves-built-output`, `manual::npm-start-is-not-the-dev-server` | n/a — `tdd: not_applicable` | ADR-001, ADR-004 |
+| SKEL-002 | critical | green | `manual::npm-test-is-the-gate`, `manual::npm-test-fails-when-the-gate-fails` | n/a | — (T-09) |
+| SKEL-003 | critical | green | `manual::build-emits-one-static-route` | n/a | ADR-001, ADR-004 |
+| SKEL-004 | critical | green | `manual::preact-island-hydrates-then-removed` | n/a | ADR-007 |
+| SKEL-005 | critical | green | `check-site`, `site-structure.test.mjs` | yes — the guard's tests were written red before the guard, in the architecture item | ADR-008 |
+| SKEL-006 | critical | green | `manual::glob-base-outside-project-root` | n/a | ADR-008 |
 
 ## Drift log
 

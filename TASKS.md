@@ -283,7 +283,7 @@ From `EVAL-000` (`GAP-01`), which downgraded `EC-001` to `Partial` on exactly th
 
 ---
 
-## TASK 34 — The gate reports every step, not just the first failure · `bugfix` · `DONE`
+## TASK 34 — The gate reports every step, not just the first failure · `bugfix` · `DONE` · **ran third**
 
 **Closed 2026-08-24.** The run loop moved to `scripts/guards/lib/gate.mjs` as `runGate(steps, run)` with the runner injected, so it is testable without spawning fourteen processes. 12 tests written red before the module existed; 7 hand-applied mutants, 7 killed; guard suite 378 → 390. Red path proven at the CLI, not only in unit tests: step 2 replaced with `process.exit(1)`, steps 3–14 still ran and reported, exit code 1, guard restored. **`dependsOn` exists and no step uses it** — all fourteen were checked and none consumes another step's output, so the mechanism has zero users rather than the list carrying an unstated ordering assumption (`P-13`, `P-16`). **The gate now passes end to end, 14/14, for the first time.** Two claims in this entry had expired before it ran and are corrected below. Detail: `progress/2026-08-24-01-task34-gate-reports-every-step.md`.
 
@@ -302,9 +302,9 @@ That is `INC-08`'s shape in a new place. `INC-08` was two path-filtered workflow
 - **Do not fix `check-trace`'s underlying failure here.** That is `TASK 12`, and `H-03` keeps every agent out of `evidence/` regardless.
 
 ---
-## TASK 15 — Mutation gate, or an honest rung · `harness` · `TODO` · **runs fourth, in the site sequence**
+## TASK 15 — Mutation gate, or an honest rung · `harness` · `TODO` · **runs sixth, in the site sequence**
 
-**Pulled into the site backlog on 2026-08-23.** The author asked for *one* command covering every test, and `ADR-006` names mutation as a sub-gate that `gate.mjs` does not yet run. Leaving this out would ship an `npm test` that claims to run all the tests and does not — which is `T-09`'s failure mode arriving through the front door. It runs at position 4, **before any site code lands**, so `site/lib/content/**` is covered by the Stryker config's glob the moment `TASK 22` writes it, rather than retrofitted afterwards.
+**Pulled into the site backlog on 2026-08-23.** *(It ran at position 4 when the sequence held fourteen items; it is position 6 since 2026-08-24 added three. The id never moved — the order is not the id, `G-10`.)* The author asked for *one* command covering every test, and `ADR-006` names mutation as a sub-gate that `gate.mjs` does not yet run. Leaving this out would ship an `npm test` that claims to run all the tests and does not — which is `T-09`'s failure mode arriving through the front door. It runs **before any real site code lands**, so `site/lib/content/**` is covered by the Stryker config's glob the moment `TASK 22` writes it, rather than retrofitted afterwards.
 
 From `EVAL-000` (`GAP-02`). `T-03` places the mutation gate at **rung 2**; `scripts/gate.mjs` has thirteen steps and none is a mutation run. Every mutation result in `progress/` was produced by hand. The rung claim is therefore ahead of reality, which is the same defect step 12 found in `C-09` and `C-14`.
 
@@ -416,7 +416,7 @@ Seventeen items run in the sequence below. Eleven are `TASK 8`'s own (`TASK 21`�
 | 2 | ~~`TASK 33`~~ — UI component model + component test tier | `research` | no | **DONE 2026-08-23.** `ADR-007` + `ADR-006`'s amendment. Every spec below cites them in `governed_by` |
 | 3 | ~~`TASK 34`~~ — the gate reports every step | `bugfix` | no | **DONE 2026-08-24. Pulled in.** Three of the items below add a gate step, and a step added behind a long-lived failure runs exactly zero times. Fixing this after they land means they were never verified |
 | 4 | ~~`TASK 35`~~ — implementation architecture: `ADR-008` + the `S-*` rule surface | `research` | no | **DONE 2026-08-24.** The author's five implementation constraints became an ADR and a loaded rule file. Every `feature` spec below cites `ADR-008` in `governed_by` |
-| 5 | `TASK 21` — Astro skeleton + the two root commands | `feature` | yes | The first line of code, and the two commands every later item is judged by |
+| 5 | ~~`TASK 21`~~ — Astro skeleton + the two root commands | `feature` | yes | **DONE 2026-08-24.** The first line of code, and the two commands every later item is judged by |
 | 6 | `TASK 15` — mutation gate wired into `gate.mjs` | `harness` | no | **Pulled in.** `npm test` is incomplete without it, and running it before any site code lands means `site/lib/content/**` is covered by the config's glob rather than retrofitted |
 | 7 | `TASK 22` — content layer | `feature` | yes | The reusable core; every page item depends on it |
 | 8 | `TASK 36` — interface strings as content | `content` | no | The chrome copy does not exist in `resources/` and `H-02` means only the author can write it. It blocks the shell item, not the skeleton — so it runs here, with room to be applied before it is needed |
@@ -631,7 +631,11 @@ Two decisions that were left open by name and are now needed, because **every sp
 
 ---
 
-## TASK 21 — Astro skeleton and the two root commands · `feature` · `TODO` · **runs third**
+## TASK 21 — Astro skeleton and the two root commands · `feature` · `DONE` · **ran fifth**
+
+**Closed 2026-08-24.** `SPEC-TASK-21` approved and implemented in two delegated slices, both first-pass clean. `astro@7.2.5`, static output, no adapter; the built page ships **zero bytes of JavaScript** — no script tag, no asset reference. **Both spikes answered and deleted.** The Preact island hydrated in the author's browser, which is what closed `SKEL-004` — no headless browser exists in this repository until the fidelity-harness item, and an agent inspecting markup is not a hydration check. And the loader read `../resources/site` from outside the project root: 4 entries at build time, a real frontmatter value in the built HTML. **`ADR-008`'s fallback ladder is not entered** — the assumption with no vendor sentence under it turned out to hold. The `site structure` gate step moved from SKIP to PASS, which is `SKEL-005`. Two things broke along the way and both became their own items or fixes: the first `npm install` in this repo's history took the gate down (`TASK 37`), and `check-site` would have denied the collection config Astro itself requires — found and fixed before an agent hit it. Detail: `progress/2026-08-24-04-task21-astro-skeleton.md`.
+
+**The one dimension that is not green:** `check-trace` reports 2 findings in this session's own trace — `TASK 12`'s known writer defect, which `H-03` forbids every agent from touching. Closed with `gate: partial` naming the step and its owner, the same call `TASK 31` made on the same step. **Every item closing before `TASK 12` lands will have to make it too**, which is an argument for pulling that item forward.
 
 An Astro project that builds and serves locally, plus the two commands the whole backlog is judged by. **One page saying nothing** — no design, no content, no components. The point is to prove the local path end to end before anything is built on top of it.
 

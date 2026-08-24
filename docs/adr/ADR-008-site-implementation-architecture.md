@@ -65,6 +65,10 @@ resources/**  →  content.config.ts  →  src/gateway/*  →  lib/content/*  �
 
 **The fallback ladder, in order, so nothing gets improvised later:** `glob()` with `base` → a hand-written loader → a prebuild copy of `resources/` into `site/`, whose cost is a generated duplicate inside the tree, a step someone can forget, and every repository-wide scan suddenly seeing two copies of each file.
 
+> **Result — 2026-08-24. It works.** A throwaway collection with `loader: glob({ pattern: '*.en.md', base: '../resources/site' })` loaded **4 entries** during `astro build` on `astro@7.2.5`, and the built HTML carried a real frontmatter value read out of `resources/site/about.en.md`. The evidence is the build's own printed output, not a reading of the loader's source, and the spike was deleted once recorded.
+>
+> **The ladder is not entered, and this is not an amendment** — the decision said prove it in the cheapest item, and the cheapest item proved it. The ladder stays written down because the reason it was written has not changed: the documentation still does not say this is supported, so a future Astro major could take it away without breaking a documented promise. That is the trigger to reach for rung two, and nothing else is.
+
 **Moving `resources/` into `site/` is rejected outright.** `H-02` is a rung-1 boundary anchored to that literal path — a `deny` rule on writes into `resources/**` and a guard comparing against a boundary of that name. Relocating it means rewriting a rung-1 boundary for a build convenience, dragging `guards.config.json`, four guards, seven ADRs and fifty living documents with it, and putting frozen content inside the only tree agents write to. A symlink or junction is rejected too: it does not survive a CI checkout reliably and does not behave the same on both platforms this repository already has to support.
 
 ## Sub-decision 4 — Where visible strings come from
@@ -95,7 +99,21 @@ The researcher's recommendation was CUBE CSS over BEM, on the grounds that Astro
 
 ## Sub-decision 6 — The Astro major
 
-`^7`, latest stable at install time, with the lockfile committed because CI deploy will run `npm ci`. **No version number is asserted in this document until one is installed and read** — the researcher's `7.2.1 / 2026-08-11` came from a search-result summary and was flagged approximate, and `C-01` does not allow an unmeasured figure to be published as measured. The skeleton item records the output of `npm ls astro` here.
+`^7`, latest stable at install time, with the lockfile committed because CI deploy will run `npm ci`. **No version number was asserted in this document until one was installed and read** — the researcher's `7.2.1 / 2026-08-11` came from a search-result summary and was flagged approximate, and `C-01` does not allow an unmeasured figure to be published as measured.
+
+**Installed and read on 2026-08-24**, from the packages on disk rather than from a registry page:
+
+| Package | Version |
+|---|---|
+| `astro` | 7.2.5 |
+| `@astrojs/preact` | 6.0.4 |
+| `preact` | 10.29.8 |
+| `typescript` | 7.0.2 |
+| `@astrojs/check` | 0.9.10 |
+
+The researcher's approximate `7.2.1` was four patch releases behind by the time it was installed, which is the ordinary reason a version read from a search summary is not a measurement.
+
+**One property of registering the integration, recorded because it looks like a defect and is not:** the build emits Preact's runtime chunks into `dist/_astro/` even with zero islands. The built page references none of them — no `<script>`, no `_astro` reference, zero bytes of JavaScript reaching a visitor. They are unreferenced files in the deploy artifact, and the direct consequence of `ADR-007`'s decision to install and prove the integration before the first island needs it.
 
 The fact that *is* confirmed and that matters more: **the legacy Content Collections API was removed entirely in v6.** Astro's v6 upgrade guide states *"Astro v6.0 removes this previously deprecated Content Collections API support entirely."* Any example using the old collection type or slug-based lookups does not compile, and most examples reachable by search are of that vintage.
 
