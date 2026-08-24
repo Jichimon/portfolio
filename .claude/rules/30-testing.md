@@ -19,8 +19,13 @@ TDD + MUTATION      scripts/guards/**          the guards, incl. red paths
                     site/lib/content/**        frontmatter parsing, the i18n slug join,
                                                :::diagram resolution, locale parity,
                                                term checking
+COMPONENT + DOM     site behaviour modules     scroll-spy tracking, theme persistence;
+                    Preact islands             any island, once one exists.
+                                               NOT mutation-covered - see the row below
 E2E + BUILD         rendered pages             both locales, links, metadata
 ```
+
+The component tier is the newest and the one whose boundary is easiest to get wrong. It exists because that code needs a **DOM**, which `node:test` does not provide and a full-page e2e run is the wrong instrument for. `.astro` components are **not** in it: the build renders them, and the design-fidelity diff and Playwright already assert them against a real build.
 
 ## TDD is policy by work-item type, not a universal invariant
 
@@ -50,16 +55,20 @@ Stated as a universal rule it would be disbelieved on its first content item —
 | **T-09** | **The gate is one command and is CI parity.** It **delegates** to sub-gates rather than re-listing their steps — otherwise a step added to a sub-gate is silently absent from the gate, and the local run verifies less than CI does. | 2 | INC-08 |
 | **T-10** | **A green local gate is not evidence that CI fired.** Read the real run result from the provider. | 4 | **INC-08** · two path-filtered workflows meant a repo-root guard ran in CI exactly zero times, invisibly |
 
-## Stack-dependent rows — decided by `ADR-006`
+## Stack-dependent rows — decided by `ADR-006`, extended by its 2026-08-23 amendment
 
 | Question the stack must answer | Answer |
 |---|---|
 | Unit test runner and invocation | `node:test`, for both `scripts/guards/**` (already true) and `site/lib/content/**`. `node --test "scripts/guards/**/*.test.mjs"` · `node --test "site/lib/content/**/*.test.mjs"` |
-| Mutation tool, threshold, and the `_threshold_rationale` if it differs from the tool's default | Stryker Mutator (`@stryker-mutator/core`) with `@stryker-mutator/tap-runner` (drives `node:test` via TAP, one config for the whole mutation-covered surface). `break: 100` — Stryker's own default (`high: 80, low: 60, break: null`, non-enforcing) is looser than this project's established by-hand convention: every mutation result reported in `progress/` since TASK 5 is 100% mutant-kill, matching `T-04`'s "the battery must fail when the guard is neutered" |
+| Mutation tool, threshold, and the `_threshold_rationale` if it differs from the tool's default | Stryker Mutator (`@stryker-mutator/core`) with `@stryker-mutator/tap-runner` (drives `node:test` via TAP, one config for the whole mutation-covered surface). `break: 100` — Stryker's own default (`high: 80, low: 60, break: null`, non-enforcing) is looser than this project's established by-hand convention: every mutation result reported in `progress/` since TASK 5 is 100% mutant-kill, matching `T-04`'s "the battery must fail when the guard is neutered". **The component tier is deliberately outside this surface** — `D3` scoped mutation to parsing, joining and validating, and covering a Vitest surface needs a second Stryker config and a second invocation, the cost `ADR-006` priced and declined. A reasoned answer, not a blank |
+| Component test runner and invocation | **Vitest** with **`@testing-library/preact`** in a **`jsdom`** environment, configured through `getViteConfig()` from `astro/config`. `npx vitest run`. Covers DOM-requiring behaviour modules (the scroll-spy, the theme toggle) and Preact islands once one exists; **not** `.astro` components. `@testing-library/preact` rather than `@testing-library/react` through `compat`, because that is what Preact's own testing guide installs. `jsdom` because Preact's guide names it for non-Jest runners — Astro's docs are silent on the choice |
+| **Both unit runners are explicitly scoped; neither uses default discovery** | Node's auto-discovery matches `**/*.test.{cjs,mjs,js}` and Vitest's default `include` is `['**/*.{test,spec}.?(c\|m)[jt]s?(x)']`. **They overlap**, and neither project's docs mention the other. Each runner is handed an explicit, disjoint scope. The extension alone cannot separate them, since Vitest's default matches `.test.` and `.spec.` equally |
 | E2E runner, and what "real" means for this stack (real browser, real build, real filesystem) | Playwright. "Real" is Astro's own documented pattern: `npm run build` then `webServer` serves the actual output via `npm run preview` — never a mock, matching `T-02` by construction. Three real browser engines (Chromium, Firefox, WebKit) |
-| The gate's sub-gate commands | `node --test "site/lib/content/**/*.test.mjs"` · `npx stryker run` (`testRunner: "tap"`, one config, both surfaces) · `npm run build && npx playwright test` |
+| The gate's sub-gate commands | `node --test "site/lib/content/**/*.test.mjs"` · **`npx vitest run`** · `npx stryker run` (`testRunner: "tap"`, one config, both `node:test` surfaces — **not** the Vitest tier) · `npm run build && npx playwright test` |
 | Integration test strategy, if any | None — declared, not blank. Playwright's e2e tier already runs against a real build, exercising the full pipeline (validation, diagram resolution, i18n routing) wired together exactly as production does; a separate tier would duplicate that coverage without a named gap |
 
-**Open, not blank:** whether `site/lib/content/**`'s eventual code needs Astro's Vite-powered runtime to test meaningfully — unknowable until `TASK 8` writes it. `ADR-006`'s review trigger: if it does, Vitest is introduced for that specific module, accepting a second Stryker config only then, not preemptively.
+**Still open, and narrower than it was:** whether `site/lib/content/**`'s eventual code needs Astro's Vite-powered runtime to test meaningfully. That code still does not exist, so `ADR-006`'s review trigger has **not** fired and this row stays open exactly as written — the 2026-08-23 amendment introduced Vitest for a *different* surface (components, which need a DOM), not for this one. If `site/lib/content/**` does turn out to need Vite, it moves to the Vitest tier and a second Stryker config gets priced then, not now.
 
-Full reasoning, options considered and sources: [docs/adr/ADR-006-testing-toolchain.md](../../docs/adr/ADR-006-testing-toolchain.md).
+**Answered by not answering, each with its reason stated:** the integration tier, above — none, because the e2e tier already exercises the same wiring against a real build. And component-tier mutation coverage — none, because of `D3`'s scoping and the two-config cost. A blank row with a reason is a legitimate answer; a speculative one is worse than nothing.
+
+Full reasoning, options considered and sources: [docs/adr/ADR-006-testing-toolchain.md](../../docs/adr/ADR-006-testing-toolchain.md), whose 2026-08-23 amendment adds the component tier, and [docs/adr/ADR-007-ui-component-model.md](../../docs/adr/ADR-007-ui-component-model.md), which decides what the site is built from.

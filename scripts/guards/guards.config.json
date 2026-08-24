@@ -204,9 +204,26 @@
       {
         "ref": "docs/harness-rules.md",
         "reason": "the registry's PRE-MOVE location, named in the KEEP/MODIFY matrix precisely to say that it moved to .claude/rules/. The reference is correct because the file is absent."
+      },
+      {
+        "ref": "site/src/content.config.ts",
+        "reason": "TASK 22's Deliverable in the work item register. A TODO item names the file it will create; that is what a deliverable IS, not a pointer that has gone stale. Self-clearing: the entry is reported as stale the day TASK 22 creates it."
+      },
+      {
+        "ref": ".github/workflows/deploy.yml",
+        "reason": "TASK 32's Deliverable. Same class. Note the sibling .github/workflows/harness.yml DOES exist and is checked normally, so this entry hides nothing that is currently checkable."
+      },
+      {
+        "ref": "resources/testimonials.en.md",
+        "reason": "TASK 19's Deliverable. Blocked on the author copying three real LinkedIn recommendations into resources/, which H-02 puts outside every agent's reach — so the file cannot be created here to satisfy the check."
+      },
+      {
+        "ref": "resources/testimonials.es.md",
+        "reason": "TASK 19's Deliverable, Spanish half. Same blocker as its English pair; C-09 requires both locales in the same change, so they arrive together or not at all."
       }
     ],
-    "_ignoreRationale": "An EXCLUSION list, so forgetting an entry makes the check noisier and never blinder (INC-07). Every entry carries a reason, a reasonless one fails, and an entry whose target starts resolving is reported as stale so the list shrinks on its own."
+    "_ignoreRationale": "An EXCLUSION list, so forgetting an entry makes the check noisier and never blinder (INC-07). Every entry carries a reason, a reasonless one fails, and an entry whose target starts resolving is reported as stale so the list shrinks on its own.",
+    "_forwardLookingPathsNote": "Four of these five are one class: a `TODO` work item's Deliverable naming a file that does not exist YET. check-docs cannot distinguish 'planned' from 'stale' — both are a path that does not resolve — and teaching it to would mean parsing the register's entry shape inside a rung-2 guard, which is a work item with its own red-path battery (T-04), not a side edit. Until then this list carries them, and the self-staling property is what keeps that honest: every entry announces itself the moment its target appears. Added 2026-08-23, when the local-first re-cut found check-docs had been red behind check-trace's short-circuit for an unknown number of runs — three of these predate that session's edits. The ADR-007 entry was removed on 2026-08-23 the moment TASK 33 created its target — the self-staling property doing exactly what it was built to do, reported by check-docs rather than remembered."
   },
   "evals": {
     "caseDir": "evaluation-cases",

@@ -4,6 +4,8 @@
 
 TASK 7 writes the founding set: site stack, hosting and deploy, i18n strategy, content pipeline, testing toolchain, publication. **6 of 6 accepted — TASK 7 closed 2026-08-19.**
 
+`TASK 33` adds the seventh on 2026-08-23 — the UI component model — and amends the testing toolchain in the same change. **The level-2 table below stopped being empty on that date**, so the three-part discipline it describes is now load-bearing rather than theoretical.
+
 ## Level 1 — status of each ADR
 
 **States:** `Current` · `Current-with-amendments` (still standing, some points amended — see level 2) · `Superseded by ADR-<NNN>` (refuted in full).
@@ -15,7 +17,8 @@ TASK 7 writes the founding set: site stack, hosting and deploy, i18n strategy, c
 | [ADR-003](ADR-003-i18n-strategy.md) | i18n strategy — unprefixed English, `/es/` Spanish | 2026-08-19 | `Current` |
 | [ADR-004](ADR-004-hosting-deploy.md) | Hosting and deploy — Cloudflare Workers, static assets | 2026-08-19 | `Current` |
 | [ADR-005](ADR-005-publication.md) | Publication — public GitHub remote, now, whole repository | 2026-08-19 | `Current` |
-| [ADR-006](ADR-006-testing-toolchain.md) | Testing toolchain — `node:test`, Stryker (`tap-runner`), Playwright | 2026-08-19 | `Current` |
+| [ADR-006](ADR-006-testing-toolchain.md) | Testing toolchain — `node:test`, Stryker (`tap-runner`), Playwright | 2026-08-19 · amended 2026-08-23 | `Current-with-amendments` |
+| [ADR-007](ADR-007-ui-component-model.md) | UI component model — `.astro` by default, Preact for islands, zero islands today | 2026-08-23 | `Current` |
 
 ## Level 2 — amendments, point by point
 
@@ -30,7 +33,8 @@ An amended point does **not** invalidate the whole ADR — only that point.
 
 | ADR · § | What the point said | Verb | Superseded by | Date |
 |---|---|---|---|---|
-| — | *none yet* | — | — | — |
+| [ADR-006](ADR-006-testing-toolchain.md) · Decision, Review trigger | Two tiers: `node:test` for content logic, Playwright for e2e. Vitest enters only if `site/lib/content/**` turns out to need Vite. Nothing decided about testing a component | ✏️ **Amended** | [ADR-006 § Amendment · 2026-08-23](ADR-006-testing-toolchain.md#amendment--2026-08-23--the-component-test-tier) — a third tier, Vitest + `@testing-library/preact` in `jsdom`, for DOM-requiring behaviour modules and Preact islands. The named trigger has **not** fired; its *policy* is what governs. Mutation coverage unchanged | 2026-08-23 |
+| [ADR-001](ADR-001-site-stack.md) · Decision | *"whether any specific piece of the site's UI should be a React island, plain CSS/JS, or a View Transition — that is a design decision for TASK 8"* | ↪️ **Extended** | [ADR-007](ADR-007-ui-component-model.md) — the deferral is answered, not overturned. `TASK 8` closed without recording it; `TASK 33` did. No inline mark and no status change: the point deferred a decision rather than asserting something now false | 2026-08-23 |
 
 ## How to keep this alive
 

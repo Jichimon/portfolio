@@ -2,13 +2,13 @@
 
 **Status:** the desktop set is complete and approved. Direction accepted 2026-08-20 (`docs/design/decisions/2026-08-20-hero-direction.md`); **pass 1** — home, the `otp-provider-decoupling` case study, the `/case-studies` index, the `mobile-banking-platform` anchor — approved 2026-08-22 after eleven revision rounds; **pass 2** — About, Experience, the bilingual 404, the Spanish length stress test, the responsive contract on every screen, the component sheet and two frozen 390px frames — approved 2026-08-23.
 
-**Not covered yet:** nothing here has been rendered by a browser. No headless browser exists in this repo until `TASK 15` installs Playwright, so narrow-state behaviour is reasoned from measured character counts and judged by eye in the canvas or the local preview — never screenshot-diffed. That gap is `INC-03`'s visual-QA item, and it needs the real site, not the mockup.
+**Not covered yet:** nothing here has been rendered by a browser. No headless browser exists in this repo until `TASK 27` installs Playwright, so narrow-state behaviour is reasoned from measured character counts and judged by eye in the canvas or the local preview — never screenshot-diffed. That gap is `INC-03`'s visual-QA item, and it needs the real site, not the mockup.
 
 **Pass 0 v1 was rejected 2026-08-20** — three typeset documents with no nav, no hero, no motion. See "History" below before reusing anything from that version's reasoning.
 
 ## What this is
 
-The Claude Design canvas source for `TASK 8`'s design/UX work item, run against `docs/design/claude-design-brief.md`. Every `.dc.html` file under `src/` is one artboard on a published Artifact canvas — a live editor, not a static export. The canvas has two pages: **Screens** (the real pass-1 build, current) and **Directions** (pass 0's three explorations, kept for history, not the current design).
+The Claude Design canvas source for `TASK 8`'s design/UX work item, run against `docs/design/claude-design-brief.md`. Every `.dc.html` file under `src/` is one artboard on a published Artifact canvas — a live editor, not a static export. The canvas has two pages: **Screens** (pass 1 plus pass 2, current — ten pages and the component sheet) and **Directions** (pass 0's three explorations, kept for history, not the current design).
 
 ## Layout
 
@@ -116,7 +116,7 @@ The two phone frames cover **two archetypes, not all eight screens**: home (hero
 node docs/design/canvas/verify.mjs
 ```
 
-Run it **before** every re-seed. It exits 1 and names the file on any failure. Eight properties, every one derived from the artboards rather than from a list kept here.
+Run it **before** every re-seed, and it also now runs on every `node scripts/gate.mjs`, as the `design canvas` step — a stale canvas fails the gate rather than surviving until the next manual run. It exits 1 and names the file on any failure. It is portable, with no absolute path baked in, so it runs the same from any checkout. Nine properties, every one derived from the artboards rather than from a list kept here.
 
 **Page versus document**, and where the line comes from: a **page has a rail** — it is somewhere you can be on the site, so it owes the reader navigation, a locale switch, and copy that behaves like copy. The component sheet has no rail, because there is nowhere to navigate to from a specimen; its prose is *about* the site rather than *of* it, which is why it may quote a rule the pages have to obey. Three checks are scoped by that one distinction, derived from the artboard — never a per-file exception list.
 
@@ -131,6 +131,7 @@ Run it **before** every re-seed. It exits 1 and names the file on any failure. E
 | No visible copy states how many of a growing thing there are | pages | Found nine spots counting case studies, deep dives and employers. "Five case studies" is wrong the day a sixth lands and nothing fails when it does. Sentence-scoped, because *"Three specific problems … documented as separate case studies"* puts four words between the number and the noun |
 | A Spanish screen never links into an unprefixed route | pages | Found the Spanish home's wordmark still pointing at the English home. Proven in red (`P-14`) after its first version excused every `href="/"` and hid exactly that |
 | The switcher marks a current locale — except on the 404, which is designed to have none | pages | A switcher with nothing current elsewhere would mean the locale was lost |
+| `src/` and `docs/design/claude-design-brief.md`'s screen inventory name the same artboards, checked in both directions | all | The eight checks above catch a screen that is broken; none of them catches a screen that the specification no longer knows exists, or a specification that still describes a screen nobody built. A twelfth artboard landing in `src/` and never reaching the document the implementation reads is invisible to every other check here — and so is the opposite, a screen deleted while the specification still describes it |
 
 **If the canvas was edited and saved in the GUI** since the last seed (the author used the visual editor), read it back before editing further: `WebFetch` the artifact URL, then `--extract` the saved file into a fresh directory and edit those files — never edit `build/src/` and re-seed over GUI-made changes, they'll be silently discarded.
 
@@ -147,9 +148,7 @@ Open the output with `file://` directly. It strips the `{{handlebars}}` the Desi
 
 ## What's next
 
-1. **Mobile** for the 4 screens above, against the accepted hero (the `MobileSeam.dc.html` artboard tested the *rejected* Direction C's seam — it needs redoing, not reusing).
-2. **`home.es`** as the Spanish-length stress test — the dateline and metric bullets are where the ~15–20% length difference is most likely to break the layout.
-3. **Pass 2**: screens 5–9 — About, Experience, Contact, system states, component sheet.
+Nothing, for this canvas. Mobile, the `home.es` stress test and pass 2 — the three items this section used to list as pending — are all built (see "What this is" and `TASKS.md`'s `TASK 8` entry). The design work item is closed. What follows is downstream: the site implementation backlog in `TASKS.md`, which builds against these eleven live artboards rather than against this canvas directly.
 
 ## Dark mode
 
@@ -157,6 +156,6 @@ Open the output with `file://` directly. It strips the `{{handlebars}}` the Desi
 
 ## History
 
-- **Pass 0 v1, rejected 2026-08-20.** Three typeset variations of the same content slice — no nav, no hero, no home page, no motion. Rejected in the author's own words as "un Word que se lea desde el navegador." Root cause and correction: `docs/design/claude-design-brief.md`'s "Visual direction" section.
+- **Pass 0 v1, rejected 2026-08-20.** Three typeset variations of the same content slice — no nav, no hero, no home page, no motion. Rejected in the author's own words as "un Word que se lea desde el navegador." Root cause and correction: `docs/design/claude-design-brief.md` §4, The visual system — the section was called "Visual direction" when it was rewritten; `TASK 31` renumbered the document.
 - **Pass 0 v2, accepted 2026-08-20 with an amendment.** Three complete home-page directions (A · Muro y nodos, B · Estratos y falla, C · Todo pasa por acá). The author picked **A**, amended: swap A's packed-block wall for **B's stacked-strata texture**, rendered as a **blurred atmospheric background** rather than a foreground diagram. Reasoning and what carries forward: `docs/design/decisions/2026-08-20-hero-direction.md`.
 - **Pass 1, this version.** The accepted hero built into the real home page, plus the three other screen-1–4 artboards: the richest case study template (`otp-provider-decoupling`, 3 diagrams including the before/after C4 pair), the case-studies index (5 items, platform→children hierarchy), and the platform anchor page (distinct treatment: a scale stat instead of an outcome, a services grid, deep-dive cards linking to its 3 children).

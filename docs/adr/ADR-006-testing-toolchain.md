@@ -1,7 +1,7 @@
 # ADR-006: Testing toolchain — `node:test`, Stryker, Playwright
 
 **Status:** Accepted
-**Date:** 2026-08-19
+**Date:** 2026-08-19 · amended 2026-08-23
 **Context:** The last of TASK 7's six decisions. Fills five rows `.claude/rules/30-testing.md` has left deliberately blank since TASK 5: unit test runner, mutation tool + threshold, e2e runner, the gate's sub-gate commands, and integration test strategy. That file already fixes *where* TDD/mutation bite (`scripts/guards/**` and `site/lib/content/**` — frontmatter parsing, the slug join, `:::diagram` resolution, locale parity, term checking) and where e2e/build checks apply (rendered pages, both locales). This decision only fixes *which tools*. No `package.json` exists anywhere in the repository yet — whichever tools are chosen here are the first npm dependencies this repository carries, and `site/lib/content/**` itself does not exist yet (`TASK 8` hasn't broken down the site work).
 
 ## Options considered
@@ -37,6 +37,8 @@ Only one real candidate surfaced: **Stryker Mutator** (`@stryker-mutator/core`) 
 
 **Unit runner: `node:test`, for both `scripts/guards/**` and `site/lib/content/**`.** One idiom across the entire mutation-covered surface. Mutation testing that surface uses **Stryker's `tap-runner`**, not the generic command runner (a mistake in this ADR's first draft, corrected above) — one Stryker configuration, real coverage-based mutant filtering at the test-file level, and no second test-runner idiom. If `TASK 8` later reveals `site/lib/content/**` code genuinely coupled to Astro's Vite-powered content-collections loader (open per the research above), that specific module is the trigger to introduce Vitest for it alone — not a reason to move the whole surface preemptively, and not a cost this project is paying today for a problem it doesn't yet have.
 
+> ✏️ **Amended 2026-08-23** — see [the component test tier](#amendment--2026-08-23--the-component-test-tier) below. This paragraph still stands for `site/lib/content/**`, which remains on `node:test`. What it did not contemplate is a **component** surface, which needs a DOM rather than Vite. Vitest now enters for that surface, and for it only.
+
 **Mutation tool: Stryker Mutator with `@stryker-mutator/tap-runner`, `break: 100`** (not Stryker's own default `break: null`, i.e. non-enforcing). The threshold matches this project's own established convention — every mutation result reported by hand in `progress/` to date (TASK 8's 7/7, TASK 9's 3/3, TASK 10's 6/6, TASK 13's 11/11) is 100% mutant-kill, matching `T-04`'s standard that a guard's battery must fail when the guard is neutered. Stryker's ship defaults (`high: 80, low: 60`) are informational bands, not enforced thresholds, unless `break` is set — leaving it at the default would silently enforce nothing, the opposite of this project's practice.
 
 **E2E runner: Playwright.** Astro's own documented pattern for it matches this project's own `T-02` rule word for word — a test that would still pass with the built site absent is not an e2e test, and Playwright's `webServer` config against a real `npm run build` is exactly that discipline, shown in Astro's docs rather than assumed.
@@ -58,6 +60,82 @@ Only one real candidate surfaced: **Stryker Mutator** (`@stryker-mutator/core`) 
 ## Review trigger
 
 If `site/lib/content/**`'s eventual code turns out to need Vite's runtime to test meaningfully (open question above — unknowable until `TASK 8` writes it), that is the trigger to introduce Vitest for that specific surface, accepting the two-config cost confirmed above only if the need is real, not preemptively. If `tap-runner`'s per-test-file process spawning becomes a measured bottleneck as the site's test-file count grows, that is a separate, independent trigger to reconsider the runner even without a Vite-coupling reason. If `break: 100` produces a genuine, irreducible equivalent-mutant case (a mutant no meaningful test could kill), record it as a named, reasoned exception at that mutant, not a lowered global threshold.
+
+> ✏️ **Amended 2026-08-23** — the first of these three triggers has **not** fired: whether `site/lib/content/**` needs Vite is still open, because that code still does not exist. What fired instead was the policy this trigger established — *introduce Vitest when the need is real, never preemptively* — applied to a surface this ADR never contemplated. See [the component test tier](#amendment--2026-08-23--the-component-test-tier) below.
+
+## Amendment · 2026-08-23 — the component test tier
+
+**Verb: ✏️ Amended.** The decisions above stand; this adds a third tier they did not contemplate. Raised by `TASK 33`, alongside `ADR-007`, which decides what the site is built from — this decides how that thing is tested. Indexed in `docs/adr/README.md` level 2.
+
+### What this ADR did not decide, stated accurately
+
+The register that opened `TASK 33` described this amendment as *"`ADR-006`'s own review trigger firing."* That is not quite true, and the accurate version matters, because a document that overstates its own continuity is one nobody can navigate later.
+
+This ADR's written trigger is about **`site/lib/content/**` needing Vite**. This amendment is about **components needing a DOM**. Those are adjacent propositions, not the same one. `site/lib/content/**` still does not exist, so that trigger has not fired and stays open exactly as written.
+
+What this ADR *did* establish, and what genuinely governs here, is a **policy**: introduce Vitest when the need is real, accepting the two-config cost *"only if the need is real, not preemptively."* The need is now real — for a surface this ADR never considered, because when it was written nothing had decided whether the site would have components with behaviour at all. `ADR-007` decided that on 2026-08-23.
+
+### The gap, concretely
+
+`ADR-001` and `ADR-007` between them put the site's client-side behaviour in plain modules rather than in framework components: the scroll-spy's current-section tracking, and the theme toggle's persistence and its resolve-before-first-paint requirement. **Both are real logic, and both need a DOM to test at all.** `node:test` provides no DOM. Playwright provides a real browser, but a full-page e2e run is the wrong instrument for *"given these section offsets and this scroll position, which entry is current"* — it is slow, it couples the assertion to a rendered page, and when it fails it does not say which of the two is broken.
+
+That is a gap between the two tiers this ADR decided, and nothing currently covers it.
+
+### Decision
+
+**A third tier: Vitest with `@testing-library/preact`, in a `jsdom` environment.**
+
+| Question | Answer |
+|---|---|
+| **What it covers** | DOM-requiring behaviour modules — the scroll-spy, the theme toggle — and Preact islands, once one exists. `ADR-007` puts the island count at zero today, so the tier's day-one subject is the behaviour modules, and it is not idle |
+| **What it does not cover** | `.astro` components. They are rendered by the build, and the design-fidelity harness diffs them against their artboards while Playwright exercises them in a real browser against a real build. A third thing asserting the same markup would duplicate that coverage without a named gap — the same reasoning that left the integration tier blank above |
+| **Testing Library flavour** | `@testing-library/preact`, **not** `@testing-library/react` aliased through `compat`. This is what Preact's own testing guide installs, and that guide does not treat `compat` as changing the answer |
+| **DOM environment** | `jsdom`. Astro's testing documentation is **silent** on `jsdom` vs `happy-dom` vs Vitest's browser mode — a genuine silence, not a recommendation to read between the lines of. `jsdom` is chosen because Preact's own testing guide names it for non-Jest runners, which is a sourced reason rather than a preference |
+| **Vitest configuration** | Through `getViteConfig()` from `astro/config` — Astro's documented way *"to set up Vitest with your Astro project's settings"*, which is what makes the `compat` JSX transform work in tests without a second copy of that configuration. Astro's docs do **not** say whether a plain behaviour module needs it; it is used anyway because it costs nothing and removes a second declaration site |
+| **Mutation coverage** | **No — and this is a decision, not an omission.** See below |
+| **Placement** | Colocated with the code, per `T-08`. Unchanged by this amendment; recorded so the silence is not read as an oversight |
+
+### Both runners are explicitly scoped, and neither uses default discovery
+
+This is the finding that would otherwise have been discovered by a confusing failure months from now. **Node's and Vitest's default test-file globs overlap**, and neither project's documentation mentions the other, so nothing warns you:
+
+- Node's auto-discovery — which applies only when `node --test` is given no glob argument — matches `**/*.test.{cjs,mjs,js}`.
+- Vitest's default `include` is `['**/*.{test,spec}.?(c|m)[jt]s?(x)']`.
+
+Both match an ordinary `*.test.mjs`. This repository has avoided the collision so far by accident of the invocation shape this ADR already chose — an explicit glob passed to `node --test`. That is now a **stated rule rather than a lucky habit**: each runner is given an explicit, disjoint scope, and neither is allowed to discover files on its own. Note that the separation cannot come from the file extension alone, since Vitest's default matches `.test.` and `.spec.` equally; it comes from the scope each runner is handed.
+
+### Mutation stays one config, and the component tier is outside it
+
+`break: 100` on `@stryker-mutator/tap-runner` over `scripts/guards/**` and `site/lib/content/**` is **unchanged**. The new tier is deliberately not mutation-covered, for two reasons that were already established rather than invented here:
+
+- **`D3` scoped mutation on purpose** — to parsing, joining and validating, which is real logic a mutant can break. It excluded render-shaped code because mutating it produces equivalent mutants and noise.
+- **This ADR already priced the alternative.** Covering a Vitest surface means `@stryker-mutator/vitest-runner`, and Stryker has no multi-runner support — a fact confirmed above, against Stryker's own configuration schema. That is a second config file and a second `npx stryker run`, both wired into the single test command. This ADR declined that cost when the question was `site/lib/content/**`, and the reasoning does not change because the surface does.
+
+**The honest counter-argument, recorded rather than suppressed:** the scroll-spy's *"which section is current"* logic is genuinely closer to `D3`'s protected category than to a render template, and a case could be made for covering it. It is not covered, and the reason is cost rather than principle. If a scroll-spy defect ever ships that a mutant would have caught, that is the trigger below firing, and this paragraph is what should be re-read.
+
+### The sub-gate command
+
+Alongside the three this ADR already names, and reaching the gate by delegation rather than by being re-listed (`T-09`):
+
+- Component / behaviour: `npx vitest run`
+
+### Consequences of this amendment
+
+- **We gain:** coverage of the one surface that had none — client-side behaviour that needs a DOM — with an instrument that fails informatively, at a tier below a full-page e2e run. And an explicit scoping rule between the two unit runners, decided before it could bite.
+- **We accept losing:** a second test-runner idiom, in a repository that deliberately had one. That was the exact cost this ADR weighed and declined in August, and it is accepted now because the alternative is worse: without it, the scroll-spy and the theme toggle are asserted only through a rendered page, which is testing internal behaviour through a surface that was never meant to carry it. We also accept that the component tier sits outside the mutation gate, so `T-03`'s guarantee does not extend to it — stated plainly rather than left for someone to infer from a config file.
+- **This creates a dependency on:** the Astro skeleton item, which installs Vitest and writes the config; and on the mutation-gate item, which must scope the Stryker glob so it does not reach the new tier.
+
+### Review trigger for this amendment
+
+- **A component-tier test asserts internal structure rather than what the reader observes.** That is `T-07`'s failure, and the tier was justified on `T-07`'s grounds — so it fires against the tier's own reason for existing.
+- **A defect in the scroll-spy or the theme toggle reaches the localhost milestone that a surviving mutant would have caught.** That is the trigger to re-open the mutation question above and pay the two-config cost, with a real incident behind it rather than a preference.
+- **`jsdom` diverges from real browser behaviour on something the site depends on** — most plausibly around scroll or intersection APIs, which is precisely what the scroll-spy uses. That is the trigger to reconsider Vitest's browser mode for this tier, and it is a foreseeable one rather than a hypothetical.
+
+### Sources for this amendment
+
+One researcher pass, 2026-08-23, the same pass that sourced `ADR-007`. Official/vendor, fetched 2026-08-23: Astro docs *Testing* (the `getViteConfig()` quote, and the silence on DOM environments — confirmed on two separate fetches with targeted prompts rather than inferred from one); Vitest docs *Environment* (`'node' | 'jsdom' | 'happy-dom' | 'edge-runtime'`, default `'node'`) and *include* (the default glob); Preact's *Preact Testing Library* guide (the `@testing-library/preact` install command, and *"this library relies on a DOM environment being present"* with `jsdom` named for non-Jest runners); Node.js *Test runner* documentation, v26.7.0 (the default discovery globs); npm registry metadata and GitHub Releases for `vitest` (`4.1.11`, published 2026-08-18) and `@testing-library/preact` (`3.2.4`).
+
+**Evidence caveats.** Preact's testing guide does not name Vitest anywhere — its applicability here rests on Vitest supporting the same `environment: 'jsdom'` setting Vitest's own docs describe, which is an inference across two vendors rather than a claim either makes. The glob-overlap finding is likewise **derived** by comparing two separately-documented defaults; neither project documents the other, and no vendor asserts a conflict. Whether `@testing-library/preact` needs a manual cleanup call is documented in neither Preact's guide nor the package's README — a genuine absence, and one the first component test will settle rather than something to guess at now.
 
 ## Sources
 

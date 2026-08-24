@@ -14,12 +14,15 @@
 //
 // Run: node docs/design/canvas/verify.mjs   (exit 1 on any failure)
 import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { derive } from "./derive.mjs";
-const dir = "c:/dev/projects/portfolio/docs/design/canvas/src";
+const here = dirname(fileURLToPath(import.meta.url));
+const dir = join(here, "src");
 
 const files = readdirSync(dir).filter((f) => f.endsWith(".dc.html"));
 const canvas = JSON.parse(readFileSync(`${dir}/canvas.json`, "utf8"));
-const preview = readFileSync("c:/dev/projects/portfolio/docs/design/canvas/local-preview.mjs", "utf8");
+const preview = readFileSync(join(here, "local-preview.mjs"), "utf8");
 
 // A screen is "live" if it is on the screens page; the directions page is kept history.
 const page = Object.fromEntries(canvas.artboards.map((a) => [a.file, a.page]));
@@ -132,9 +135,26 @@ for (const f of pages) {
   if (m) ok(/class="cur"/.test(m[0]), `${f}: no current locale marked in the switcher`);
 }
 
+// 7 — the design specification and src/ agree on the set of artboards, in both
+// directions. A screen list drifts silently otherwise: a twelfth artboard can land in
+// src/ and never reach the document an implementation actually reads (direction 1), or a
+// screen can be deleted or renamed while the specification still describes it, sending an
+// implementer looking for a file that no longer exists (direction 2). Both directions are
+// derived from the artifacts themselves, never a roster written into this file (P-13).
+const specPath = join(here, "..", "claude-design-brief.md");
+const spec = readFileSync(specPath, "utf8");
+const named = new Set([...spec.matchAll(/\b[A-Za-z][A-Za-z0-9]*\.dc\.html\b/g)].map((m) => m[0]));
+for (const f of files) {
+  ok(named.has(f), `${f}: exists in src/ but the design specification never names it`);
+}
+for (const n of named) {
+  ok(files.includes(n), `the design specification names ${n}, which does not exist in src/`);
+}
+
 if (fails.length) { console.error("FAIL\n  " + fails.join("\n  ")); process.exit(1); }
 console.log(`PASS — ${files.length} artboards · ${pages.length} pages + ${docs.length} document(s) live · ${canvas.annotations.length} annotations`);
 console.log("       registration bidirectional · derived screens match derive.mjs");
 console.log("       chrome on every page · 3 responsive states · no width floor");
 console.log("       every in-page anchor resolves · no copy counts a growing thing");
 console.log("       es routes stay prefixed · switcher targets this page");
+console.log("       src/ and the design specification name the same artboards, both directions");

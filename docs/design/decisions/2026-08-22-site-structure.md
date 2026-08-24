@@ -37,6 +37,8 @@ It stays in the canvas because the day the list outgrows the home section — ro
 
 **Trigger:** a sixth case study lands, or the home page's work section passes ~5 tiles.
 
+**Update, post-dating this decision:** the index screen (`CaseStudiesIndex.dc.html`) now shares the home page's bento component wholesale — the artboard's own comment reads *"the same component as the home page's 'What I've built'"* — rather than its own card language. That makes the "routing change, not a design round" claim above literally true rather than aspirational: the day the index routes, it is wiring an existing shared component to an existing shared route, nothing more.
+
 ## Consequences for implementation
 
 - **The nav is one component with two kinds of item** — in-page anchor and route — and it must resolve `#work` to `/#work` when it renders on a page that is not home. That is the only real complexity the decision creates, and it is worth naming before someone hard-codes two navs.
@@ -58,6 +60,12 @@ It does not work **in the Claude Design canvas** and will not: the Design runtim
 The canvas source already carries a working reference implementation of exactly this — a `data-spy="<class>"` host whose in-page anchors are tracked and whose matching `<li>` gets that class. It is ~30 lines of vanilla JS and it runs in the local preview. Reuse it or replace it, but the behaviour above is the contract.
 - **The article pages keep their table of contents.** They have sections (`Context`, `Problem`, `Constraints`, …) that the site nav cannot name, so there the two lists are genuinely different lists.
 - **`← Work` on a case study returns to `/#work`,** not to an index page that is not routed.
+
+## The language switcher, added since this decision
+
+`EN / ES` is chrome on every page — set in mono type in `.rail-bottom`, above the theme toggle, the same rail this decision already governs. Its target is **this page in the other language**, never the other locale's home: a visitor reading a case study in Spanish and clicking `EN` lands on that same case study in English, not on `/`.
+
+**The 404 is the one page with no locale to mark current.** `NotFound.dc.html` keeps the rail — it is a live destination, and the one page whose entire job is getting the visitor somewhere else, so removing its navigation would remove the only thing that helps — but since the page cannot tell which language the visitor wanted (it answers every unmatched route in both locales, in the same file), neither switcher entry is marked current. That is a designed state, not a gap in the switcher's logic.
 
 ## What was rejected
 

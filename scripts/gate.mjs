@@ -81,6 +81,11 @@ const STEPS = [
     cmd: ['node', 'scripts/guards/gate/check-content.mjs'],
   },
   {
+    name: 'design canvas',
+    protects: 'the design canvas stays internally consistent and in sync with its specification (P-13)',
+    cmd: ['node', 'docs/design/canvas/verify.mjs'],
+  },
+  {
     name: 'eval suite',
     protects: 'every incident has a case, every case a resolvable proof, and no unproven case claims Caught (A15, A16)',
     cmd: ['node', 'scripts/guards/gate/check-evals.mjs'],

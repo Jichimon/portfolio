@@ -283,7 +283,26 @@ From `EVAL-000` (`GAP-01`), which downgraded `EC-001` to `Partial` on exactly th
 
 ---
 
-## TASK 15 — Mutation gate, or an honest rung · `harness` · `TODO`
+## TASK 34 — The gate reports every step, not just the first failure · `bugfix` · `TODO`
+
+**Found 2026-08-23**, while re-cutting the backlog local-first. `scripts/gate.mjs` stops at the first failing step. `check-trace` (step 9) has failed on `TASK 12`'s known correlation gap since 2026-08-19, so **steps 10–13 have not run in any gate invocation since** — `check-docs`, `check-context-budget`, `check-content`, `check-evals`.
+
+`check-docs` turned out to be **red behind it**, with three findings that predate this session: `site/src/content.config.ts`, `resources/testimonials.en.md` and `resources/testimonials.es.md`. Nobody saw them, and "the gate passes up to the known failure" had been reading as "the gate passes".
+
+That is `INC-08`'s shape in a new place. `INC-08` was two path-filtered workflows meaning a repo-root guard ran in CI exactly zero times, invisibly; this is one long-lived failure meaning four guards run locally exactly zero times, invisibly. Both are *a check that exists and does not check*, and `T-09` says the gate is one command and is CI parity — a gate that silently verifies nine steps out of thirteen is not parity with anything.
+
+**Done:** the gate runs **every** step and reports a per-step verdict, exiting non-zero if any failed — with a red test proving that a failure in an early step does not prevent a later step from running or reporting. The exit code and the summary must still make a single failure impossible to miss; reporting everything is not the same as burying the failure.
+
+**Constraints**
+- **Fail-fast was not a bug, it was a choice** — it makes a broken repository cheap to diagnose. The fix is to keep the loud exit while removing the blindness, not to make failure quieter.
+- A step whose *precondition* is genuinely absent should `SKIP` with a reason, which `gate.mjs` already supports; that mechanism is not what is broken here and should not be widened to paper over real failures (`P-03` — silence reads as coverage).
+- Sequencing matters where a later step depends on an earlier one's output. If any such dependency exists, it is named and that step alone stays gated on its predecessor; the rest do not inherit the constraint (`P-13` — derive it, do not assume the whole list is ordered).
+- **Do not fix `check-trace`'s underlying failure here.** That is `TASK 12`, and `H-03` keeps every agent out of `evidence/` regardless.
+
+---
+## TASK 15 — Mutation gate, or an honest rung · `harness` · `TODO` · **runs fourth, in the site sequence**
+
+**Pulled into the site backlog on 2026-08-23.** The author asked for *one* command covering every test, and `ADR-006` names mutation as a sub-gate that `gate.mjs` does not yet run. Leaving this out would ship an `npm test` that claims to run all the tests and does not — which is `T-09`'s failure mode arriving through the front door. It runs at position 4, **before any site code lands**, so `site/lib/content/**` is covered by the Stryker config's glob the moment `TASK 22` writes it, rather than retrofitted afterwards.
 
 From `EVAL-000` (`GAP-02`). `T-03` places the mutation gate at **rung 2**; `scripts/gate.mjs` has thirteen steps and none is a mutation run. Every mutation result in `progress/` was produced by hand. The rung claim is therefore ahead of reality, which is the same defect step 12 found in `C-09` and `C-14`.
 
@@ -363,8 +382,8 @@ Order agreed with the author, by dependency rather than the numeric listing: sit
 
 **Unblocked 2026-08-19** — `TASK 7` closed, 6/6 ADRs accepted.
 
-**In progress 2026-08-20** — the design/UX item's input artifact exists: `docs/design/claude-design-brief.md`, carrying the screen inventory and the stack constraints the design cannot violate. Its **visual-direction section was rewritten** after the author rejected pass 0 v1 (three typeset documents, no nav/hero/motion) — see "History" in `docs/design/canvas/README.md`. **A direction is accepted** (`docs/design/decisions/2026-08-20-hero-direction.md`, since revised twice against real author feedback — the doc records both the original call and what changed): Direction A's structure, amended with Direction B's stacked-strata texture, now legible rather than heavily blurred, wine/burgundy accent, a gold/ochre `--label` tertiary color, and a visible seam line with traveling pulses in place of the original soft glow. **Pass 1 (screens 1–4, desktop) was APPROVED by the author on 2026-08-22**, after eleven revision rounds — home, the `otp-provider-decoupling` case study, the `/case-studies` index and the `mobile-banking-platform` anchor page. **The design deliverable is DONE — pass 2 approved 2026-08-23.** Eleven live artboards: home, the `otp-provider-decoupling` case study, the `/case-studies` index, the `mobile-banking-platform` anchor, About, Experience, the **bilingual 404**, the **`home.es` length stress test**, the **component sheet**, and two frozen **390px phone frames**. The **responsive contract** (three states, rail collapses below 820px) is on every screen and the **language switcher** is chrome on every page. The sheet carries fourteen component groups, each with its class name, its states and **what content it is handed** — plus the contact form's four states (idle/sending/sent/error), the only new design in it, since the form is the one place on the site where an action can fail. Three artboards are **derived, not authored** (`docs/design/canvas/derive.mjs`) and `verify.mjs` re-runs the derivation in memory, so a hand-edited copy cannot drift.
-**Closed 2026-08-23.** The backlog is written and sits immediately below this entry: `TASK 21`–`TASK 29`, cut against the page set in `docs/design/decisions/2026-08-22-site-structure.md` rather than the brief's nine-screen inventory. Four framing decisions were taken with the author before writing it — deploy in item one, sections omitted when their content is absent, `mailto:` before a Worker, `*.workers.dev` before a custom domain — and they are recorded at the head of the backlog so no later item re-litigates them. All four breakdown constraints below are discharged: the design/UX task produced eleven artboards and a component sheet; `INC-03`'s visual-QA checklist is `TASK 27`; rail position tracking is an acceptance criterion on `TASK 23`; and content-driven components, in both its markup and its copy halves, is one of three criteria applied to every implementation item rather than repeated in each. The `home.es` delta is **measured, not assumed** — +10% overall across 37 corresponding strings, and the one element that changes shape is the rail's timezone line (43→63 chars, two lines to three); nothing in the layout is sized to an English string. **Not yet verified by rendering** — no headless browser exists in the repo until `TASK 15` installs Playwright, so narrow-state overflow is reasoned from measured character counts. `docs/design/canvas/verify.mjs` now asserts the canvas's seven structural properties before every re-seed, derived from the artboards rather than a roster (`P-13`). Original pass-1 note follows: [design canvas](https://claude.ai/code/artifact/890abe00-2817-4bc8-bd8c-6fc9dc887f6b) — home, the `otp-provider-decoupling` case study, the `/case-studies` index, and the `mobile-banking-platform` anchor page, source in `docs/design/canvas/` (a `local-preview.mjs` fallback ships alongside it in case the Artifact link doesn't resolve). Mobile for these 4 screens, a `home.es` stress test, pass 2 (screens 5–9), and a couple of small flagged follow-ups (diagram text legibility; a proposed "Get in touch" copy change that needs its own content-task edit to `home.en.md`/`home.es.md` since `resources/**` is read-only for agents under `H-02`) remain. **The backlog itself is still unwritten** — this is a prerequisite, not the deliverable. See `progress/2026-08-20-01-task8-design-brief.md` (the brief) through `progress/2026-08-22-16-task8-design-pass2-about-experience.md` (pass 2 opens, current) for the full decision trail. **The site's structure is now decided and recorded** in `docs/design/decisions/2026-08-22-site-structure.md`: the home page *is* the work page — no `Home` nav item, no separate `/work` route, `Work` and `Contact` are sections of home (`#work`, `#contact`), `About` and `Experience` are their own pages, and the five case studies are their own pages. `/case-studies` is **designed and not routed**, deferred until the list outgrows the home section. The breakdown's page-level implementation items should be cut against that page set, not against the nine-screen inventory in the brief.
+**In progress 2026-08-20** — the design/UX item's input artifact exists: `docs/design/claude-design-brief.md`, carrying the screen inventory and the stack constraints the design cannot violate. Its **visual-direction section was rewritten** after the author rejected pass 0 v1 (three typeset documents, no nav/hero/motion) — see "History" in `docs/design/canvas/README.md`. **A direction is accepted** (`docs/design/decisions/2026-08-20-hero-direction.md`, since revised twice against real author feedback — the doc records both the original call and what changed): Direction A's structure, amended with Direction B's stacked-strata texture, now legible rather than heavily blurred, wine/burgundy accent, a gold/ochre `--label` tertiary color, and a visible seam line with traveling pulses in place of the original soft glow. **Pass 1 (screens 1–4, desktop) was APPROVED by the author on 2026-08-22**, after eleven revision rounds — home, the `otp-provider-decoupling` case study, the `/case-studies` index and the `mobile-banking-platform` anchor page. **The design deliverable is DONE — pass 2 approved 2026-08-23.** Eleven live artboards: home, the `otp-provider-decoupling` case study, the `/case-studies` index, the `mobile-banking-platform` anchor, About, Experience, the **bilingual 404**, the **`home.es` length stress test**, the **component sheet**, and two frozen **390px phone frames**. The **responsive contract** (three states, rail collapses below 820px) is on every screen and the **language switcher** is chrome on every page. The sheet carries fifteen component groups, each with its class name, its states and **what content it is handed** — plus the contact form's four states (idle/sending/sent/error), the only new design in it, since the form is the one place on the site where an action can fail. Three artboards are **derived, not authored** (`docs/design/canvas/derive.mjs`) and `verify.mjs` re-runs the derivation in memory, so a hand-edited copy cannot drift.
+**Closed 2026-08-23.** The backlog is written and sits immediately below this entry: `TASK 21`–`TASK 33`, cut against the page set in `docs/design/decisions/2026-08-22-site-structure.md` rather than the brief's nine-screen inventory. Four framing decisions were taken with the author before writing it — deploy in item one, sections omitted when their content is absent, `mailto:` before a Worker, `*.workers.dev` before a custom domain — and they are recorded at the head of the backlog so no later item re-litigates them. **The first of those four was reversed on 2026-08-23**, later the same day, in favour of local-first: a stable, real site on `localhost` is the milestone the author judges before anything is published. The mechanism is unchanged — CI-only deploy to Cloudflare — only its position moved. See the amended decision table at the head of the backlog. This item stays `DONE`; a reversed framing decision reconciles the living document, it does not reopen a closed work item (`P-07`). All four breakdown constraints below are discharged: the design/UX task produced eleven live artboards — ten pages plus the component sheet — alongside four pass-0 history boards; `INC-03`'s visual-QA checklist is `TASK 27`; rail position tracking is an acceptance criterion on `TASK 23`; and content-driven components, in both its markup and its copy halves, is one of six criteria applied to every implementation item rather than repeated in each. The `home.es` delta is **measured, not assumed** — +10% overall across 37 corresponding strings, and the one element that changes shape is the rail's timezone line (43→63 chars, two lines to three); nothing in the layout is sized to an English string. **Not yet verified by rendering** — no headless browser exists in the repo until `TASK 27` installs Playwright, so narrow-state overflow is reasoned from measured character counts. `docs/design/canvas/verify.mjs` now asserts the canvas's **nine** structural properties, derived from the artboards rather than a roster (`P-13`) — and since `TASK 31` it is a **gate step** (`design canvas`), so a stale canvas fails `node scripts/gate.mjs` rather than surviving until someone re-seeds by hand. **Original pass-1 note follows, superseded and kept for the trail** — everything it calls outstanding shipped in pass 2, and its `TASK 31` corrections landed 2026-08-23: [design canvas](https://claude.ai/code/artifact/890abe00-2817-4bc8-bd8c-6fc9dc887f6b) — home, the `otp-provider-decoupling` case study, the `/case-studies` index, and the `mobile-banking-platform` anchor page, source in `docs/design/canvas/` (a `local-preview.mjs` fallback ships alongside it in case the Artifact link doesn't resolve). Mobile for these 4 screens, a `home.es` stress test, pass 2 (screens 5–9), and a couple of small flagged follow-ups (diagram text legibility; a proposed "Get in touch" copy change that needs its own content-task edit to `home.en.md`/`home.es.md` since `resources/**` is read-only for agents under `H-02`) remain. See `progress/2026-08-20-01-task8-design-brief.md` (the brief) through `progress/2026-08-23-19-task8-closed-backlog.md` (the backlog, closing) for the full decision trail. **The site's structure is now decided and recorded** in `docs/design/decisions/2026-08-22-site-structure.md`: the home page *is* the work page — no `Home` nav item, no separate `/work` route, `Work` and `Contact` are sections of home (`#work`, `#contact`), `About` and `Experience` are their own pages, and the five case studies are their own pages. `/case-studies` is **designed and not routed**, deferred until the list outgrows the home section. The breakdown's page-level implementation items should be cut against that page set, not against the nine-screen inventory in the brief.
 
 Turn the site from one word into a backlog. Runs through the `work-item` procedure and produces new `TASK N` entries here — design items, implementation items, and evaluation items for both the site and the harness.
 
@@ -383,34 +402,70 @@ Turn the site from one word into a backlog. Runs through the `work-item` procedu
 
 # The site implementation backlog
 
-`TASK 8`'s output. Eleven items, cut against the page set in `docs/design/decisions/2026-08-22-site-structure.md` — **not** the brief's nine-screen inventory, which the structure decision superseded.
+`TASK 8`'s output, **re-cut local-first on 2026-08-23**. Cut against the page set in `docs/design/decisions/2026-08-22-site-structure.md` — **not** the brief's nine-screen inventory, which the structure decision superseded.
+
+Fourteen items run in the sequence below. Eleven are `TASK 8`'s own (`TASK 21`–`TASK 31`). Three are not, and are named rather than quietly absorbed: **`TASK 15`** is a pre-existing harness item pulled in because `npm test` is incomplete without it; **`TASK 32`** is the deploy half split out of `TASK 21`; **`TASK 33`** was opened by the re-cut itself.
 
 **Ids are stable and order is not the id** (`G-10`). Run them in this sequence:
 
-| # | Item | Why here |
-|---|---|---|
-| 1 | `TASK 30` — publish the repository to GitHub | Nothing else can be automated until the code has a remote |
-| 2 | `TASK 21` — Astro skeleton, deployed **by CI** | Proves the whole path — push → build → live — before anything is built on it |
-| 3 | `TASK 31` — reconcile the brief and the decision docs | The input artifact every item below reads is currently stale. Fixing it after the pages are built fixes nothing |
-| 4 | `TASK 22` — content layer | The reusable core; every page item depends on it |
-| 5 | `TASK 23` — tokens and the layout shell | Every page item depends on it |
-| 6 | `TASK 27` — design-fidelity harness | **Moved ahead of the pages.** It has to exist *before* the screens it checks, or the first three pages ship unverified and get retrofitted |
-| 7 | `TASK 24` — home | |
-| 8 | `TASK 25` — case study and platform templates | |
-| 9 | `TASK 26` — About, Experience and 404 | |
-| 10 | `TASK 28` — custom domain | Blocked on the domain existing; deliberately off the critical path |
-| 11 | `TASK 29` — contact form Worker | Deferred with a stated trigger |
+| # | Item | Type | Spec? | Why here |
+|---|---|---|---|---|
+| 1 | `TASK 31` — reconcile the brief and the decision docs | `content` | no | The input artifact every item below reads is currently stale. Fixing it after the pages are built fixes nothing |
+| 2 | ~~`TASK 33`~~ — UI component model + component test tier | `research` | no | **DONE 2026-08-23.** `ADR-007` + `ADR-006`'s amendment. Every spec below cites them in `governed_by` |
+| 3 | `TASK 21` — Astro skeleton + the two root commands | `feature` | yes | The first line of code, and the two commands every later item is judged by |
+| 4 | `TASK 15` — mutation gate wired into `gate.mjs` | `harness` | no | **Pulled in.** `npm test` is incomplete without it, and running it before any site code lands means `site/lib/content/**` is covered by the config's glob rather than retrofitted |
+| 5 | `TASK 22` — content layer | `feature` | yes | The reusable core; every page item depends on it |
+| 6 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |
+| 7 | `TASK 27` — design-fidelity harness | `harness` | no | **Ahead of the pages.** It has to exist *before* the screens it checks, or the first three pages ship unverified and get retrofitted |
+| 8 | `TASK 24` — home | `feature` | yes | |
+| 9 | `TASK 25` — case study and platform templates | `feature` | yes | |
+| 10 | `TASK 26` — About, Experience and 404 | `feature` | yes | |
+| — | **THE LOCALHOST MILESTONE** — the author judges the site; `harness-evaluator` scores the harness | | | |
+| 11 | `TASK 30` — publish the repository to GitHub | `maintenance` | no | Nothing else can be automated until the code has a remote |
+| 12 | `TASK 32` — CI deploy pipeline, GitHub Actions → Cloudflare | `feature` | yes | Proves the whole path — push → build → live — and switches on `TASK 27`'s third comparison |
+| 13 | `TASK 28` — custom domain | `feature` | yes | Blocked on the domain existing; deliberately off the critical path |
+| 14 | `TASK 29` — contact form Worker | `feature` | yes | Deferred with a stated trigger |
 
-**Four decisions taken with the author on 2026-08-23**, so nothing below re-litigates them:
+## The localhost milestone
+
+The line the whole local sequence runs at. It has no deliverable of its own, so it has no id — but it is the entry condition for `TASK 30`, and a milestone that lives only in a conversation is a milestone nobody can check:
+
+> `npm start` serves `/`, `/es/`, all five `/case-studies/<slug>` in both locales, `/about`, `/experience` and their `/es/` counterparts, plus a real 404 — both themes, all three responsive states — and `npm test` is green, including every `TASK 27` fidelity diff.
+
+## Two commands, and only two
+
+Declared once here so no item invents a third. Both live in a **root `package.json`**, delegating into `site/` — root is where a newcomer looks, and it keeps "one command" literally true rather than "one command, from inside `site/`".
+
+| Command | Does | Why this shape |
+|---|---|---|
+| `npm start` | `astro build`, then serves `dist/` | The production artifact, on localhost. **This is the verification path.** `npm run dev` still exists for iteration but is never what "presentable" is judged against — `INC-03` was exactly a defect invisible in a dev build |
+| `npm test` | A thin alias to `node scripts/gate.mjs` | **One list, not two.** `T-09` requires the gate to *delegate* to its sub-gates rather than re-list them, or a step added to a sub-gate is silently absent from the top-level run. Unit, component, mutation, e2e and design fidelity all arrive through the gate |
+
+**`npm test` runs at the end of every item.** Not "before declaring done" as a habit — as the item's own last step.
+
+## The execution model
+
+Implementation is **delegated, not hand-written by the orchestrator**: `implementer` for code, `test-engineer` where the test suite is the deliverable, `adversarial-auditor` before close — all three on `sonnet`, per their role files. The orchestrator writes the spec, runs the human checkpoint, and **verifies the artifact rather than the report** (`P-11`): "I ran the gate and it passed" and "the gate passes" are different propositions.
+
+Every `feature` item therefore runs: **spec → author approves → delegate → `npm test` → wrap-up.**
+
+**The cost, stated up front:** `H-05` is rung 1 and cannot be waived in-session. `delegation-gate` matches specs on `work_item` by strict equality, so it is **one spec per `feature` item** — eight of them in this backlog, each needing the author's approval recorded in `approved_version` before any write-capable role can be delegated against it. Items typed `harness`, `content`, `maintenance` and `research` need no spec; their approved artifact is something else.
+
+**A second cost, found by hitting it twice on 2026-08-23 (`TASK 31`):** a delegation brief **must not name a `feature`-typed work item by its id — not even in passing, and not inside a quoted error message.** `extractWorkItems` in `scripts/guards/lib/delegation-gate.mjs` scans the **whole brief text** with `/\bTASK[\s-]?(\d+)\b/gi` and treats every hit as an item being delegated against; there is no field separating *the item I am working on* from *an item I am mentioning*. A `content`-item brief was denied twice over ids it merely cited as downstream context — the second time because it quoted the text of the first denial, which contained one. **The finding cannot be transmitted by quoting it; it has to be paraphrased.**
+
+This is not a defect to route around. Reading the brief instead of a field the orchestrator fills in is `P-13`'s shape: a declared field would be a roster, and an orchestrator who forgot to fill it would get a silently ungoverned run. **The working rule:** name `feature`-typed items descriptively in a brief — *"the page implementation items"*, *"the deploy item"* — and write their ids only inside the files the agent edits, never in the brief itself. Ids of `content`, `research`, `harness` and `maintenance` items are unaffected, because those types are not in `specRequiredFor`.
+
+## Five decisions taken with the author on 2026-08-23, so nothing below re-litigates them
 
 | Decision | Consequence for the backlog |
 |---|---|
-| **Deploy early, iterate in production** | `TASK 21` is a walking skeleton that is live before any design exists. Every later item ships onto something already online, so deploy risk is discovered on day one instead of at the end |
-| **A section is omitted when its content is absent** | No `[NEEDS INPUT]` ever reaches production. Missing testimonials means no testimonials block; a missing photo means no figure. The site looks finished from the first deploy and fills in as content lands, with no code change — which is the content-driven constraint doing real work |
+| ~~**Deploy early, iterate in production**~~ — **SUPERSEDED the same day** | The original call: `TASK 21` is a walking skeleton live before any design exists, so deploy risk is found on day one. **Replaced by local-first:** a stable, real site on `localhost` is the milestone the author judges before anything is published. The deploy *mechanism* is unchanged — still CI-only — but it now runs after the milestone, as `TASK 30` + `TASK 32`. Recorded rather than deleted: a reversed decision with no trace is one the next session re-litigates |
+| **Local-first, deploy second** | The sequence above. `TASK 21` builds and serves locally; nothing is published until the whole site is presentable |
+| **A section is omitted when its content is absent** | No `[NEEDS INPUT]` ever reaches production. Missing testimonials means no testimonials block; a missing photo means no figure. The site looks finished from the first build and fills in as content lands, with no code change — which is the content-driven constraint doing real work |
 | **`mailto:` now, a Worker later** | Zero backend, zero secrets, zero spam surface at launch. The stated cost: the form's designed `sending` / `sent` / `error` states are not exercised yet. `TASK 29` adds the Worker when the author wants it |
 | **`*.workers.dev` first, custom domain after** | Nothing blocks the first deploy. `TASK 28` connects the real domain once it exists |
 
-## Four criteria apply to every item and are not repeated in each one
+## Six criteria apply to every item and are not repeated in each one
 
 **1 · Content-driven.** A sixth case study is a new pair of `.md` files and nothing else. If adding an item means editing a template, the item's done was not met. This applies to copy as well as markup: no visible string states how many of a growing thing there are.
 
@@ -432,12 +487,18 @@ Turn the site from one word into a backlog. Runs through the `work-item` procedu
 
 **The check that makes it real, not aspirational:** a build-time assertion that no color literal, breakpoint literal or route string appears outside its declaration site. Owned by `TASK 23` for tokens and `TASK 22` for routes — as a property, never a roster (`P-13`).
 
+**5 · Every item ships its own tests, and is not done until `npm test` is green.** Per `T-01`'s type table: content-layer logic gets `node:test` unit tests inside the mutation-covered surface; **client-side behaviour gets component tests** — Vitest + `@testing-library/preact` in `jsdom`, per `TASK 33`'s amendment to `ADR-006` — covering the DOM-requiring modules (the scroll-spy, the theme toggle) and Preact islands once one exists, and asserting what the user observes rather than internal structure (`T-07`). `.astro` components are **not** in that tier: the build renders them and the fidelity diff asserts them. every screen gets its `TASK 27` fidelity diff. A test that would still pass with the thing under test removed is not that kind of test (`T-02`), and a flake is a finding, not something to retry until green (`T-06`).
+
+**6 · The work is delegated, and the delegation is enumerated before it starts.** The role is named in this register; **the files it owns are enumerated in the item's spec**, which is the artifact the author approves and the only thing `H-05` will let a write-capable role run against. Ownership is disjoint across files and behaviors (`G-12`) — two roles never own the same object — and slices are sized by object, never by surface (`P-09`): *these six files*, never *the components*. An agent cut off mid-run delivers zero, not half, so when a slice will not fit, the scope gets cut rather than hoped through. The orchestrator then verifies the artifact, not the report (`P-11`).
+
 
 ---
 
-## TASK 30 — Publish the repository to GitHub · `maintenance` · `TODO` · **runs first**
+## TASK 30 — Publish the repository to GitHub · `maintenance` · `TODO` · **runs after the localhost milestone**
 
 `ADR-005` accepted a public GitHub remote for the whole repository on 2026-08-19, and verified the history clean before deciding — no `private/`, no `evidence/`, no unsanitized original ever committed. **The push itself was left as the author's action and has not happened.** Everything automatable downstream is blocked on it.
+
+**Moved from position 1 to position 11 on 2026-08-23**, when the backlog was re-cut local-first. Nothing downstream of this item is needed to reach a presentable `localhost`, and the author judges the site before publishing it. The constraint below that mattered most gets *more* true as a result, not less: by the time this runs, the working tree additionally carries all of `site/`, so there is more to review in the first diff, not less.
 
 **Deliverable:** the repository public on GitHub, `main` tracking the remote.
 
@@ -450,13 +511,13 @@ Turn the site from one word into a backlog. Runs through the `work-item` procedu
 
 ---
 
-## TASK 31 — Reconcile the brief and the decision docs with what was built · `content` · `TODO`
+## TASK 31 — Reconcile the brief and the decision docs with what was built · `content` · `TODO` · **runs first**
 
 `docs/design/claude-design-brief.md` describes a design that no longer exists, and it is the **input artifact every implementation item reads**. A stale brief is what the next session takes as truth.
 
 Fifteen review rounds changed things the brief still states otherwise: the contact invite copy, the count-free rewrite across four screens, the logo slots, the confirmation message, Experience's `h1`, the language switcher, the responsive contract, and the bilingual 404 — none of which the brief mentions. The screen inventory is superseded by `docs/design/decisions/2026-08-22-site-structure.md`.
 
-**Deliverable:** the brief and the three decision docs reconciled with the eleven artboards, in one change.
+**Deliverable:** the design documentation reconciled with the eleven live artboards, in one change — `docs/design/claude-design-brief.md`, the **two** decision docs in `docs/design/decisions/`, and `docs/design/canvas/README.md`, which is the third document in that class. *(This line said "the three decision docs" until this item counted them: there are two. Corrected by the item it describes — the same class of stale claim it exists to fix.)*
 
 **Done:** every screen the brief names exists in `docs/design/canvas/src/`, and every artboard there is named by the brief — checked as a property in both directions, not by reading (`P-13`); no statement in the brief contradicts a shipped artboard.
 
@@ -467,20 +528,70 @@ Fifteen review rounds changed things the brief still states otherwise: the conta
 
 ---
 
-## TASK 21 — Astro skeleton, deployed by GitHub Actions · `feature` · `TODO` (needs TASK 30)
+## TASK 33 — UI component model and component test tier · `research` · `DONE` · **ran second**
 
-An Astro project that builds, and a workflow that ships it to Cloudflare **on every push to `main`**. **One page saying nothing** — no design, no content, no components. The point is to prove the whole path end to end before anything is built on top of it.
+Two decisions that were left open by name and are now needed, because **every spec below cites them in `governed_by`** — and a spec citing an ADR that does not exist governs nothing.
 
-**Deliverable:** `site/` with `astro.config.mjs`, `package.json`, `wrangler.jsonc`, one route — plus `.github/workflows/deploy.yml`.
+`ADR-001` deferred the first explicitly: *"whether any specific piece of the site's UI should be a React island, plain CSS/JS, or a View Transition — that is a design decision for TASK 8."* `TASK 8` closed without recording it. `ADR-006` left the second as a named gap: it decided `node:test` for content logic and Playwright for e2e, and decided **nothing** about testing a component, which needs a DOM that `node:test` alone does not provide.
 
-**Done:** **a commit pushed to `main` appears at the live URL with no local command run**, and the URL returns HTTP 200 over HTTPS. Recorded here and in `docs/adr/ADR-004`.
+**Deliverable:** `docs/adr/ADR-007-ui-component-model.md`; a dated amendment to `docs/adr/ADR-006-testing-toolchain.md`; the stack-dependent rows in `.claude/rules/30-testing.md` updated to match; `docs/adr/README.md` reconciled.
+
+**`ADR-007` — decided with the author on 2026-08-23; the ADR records it rather than re-opening it:** `.astro` by default, zero framework JS; **Preact through `@astrojs/preact` with `preact/compat`** declared for islands, so what gets written is literal React — JSX, hooks, the same API. The rejected option and its cost are recorded: React proper, no functional gain at this scale, against a site whose author named low weight and fast load as the priority.
+
+**Two claims in this entry were corrected by the item itself** — recorded rather than quietly edited, because both would have been cited as fact by the specs below:
+
+- ~~*"islands are... the theme toggle, the scroll-spy rail, and later the contact form's states"*~~ → **the island count at the localhost milestone is zero.** The design specification of record — reconciled the previous day — specifies the scroll-spy as *"roughly 30 lines of vanilla JS"* with a working reference implementation already in the canvas source, and its acceptance criterion is that the rail still works with JavaScript disabled. The theme toggle must resolve *before first paint*, which no hydrating island can do. Both stay `.astro` plus a script. Only the contact form's four states clear the bar, and they arrive with the contact-form Worker item. Preact is unchanged as the declared framework, installed and proven by the skeleton item.
+- ~~*"~3KB instead of ~45KB gz per hydrating page"*~~ → **neither number survived sourcing, and the error runs in both directions.** Preact's homepage says 3kB while its own README says 4kB the same day; the `preact/compat` surface this project actually chose measures **9,689 B** gz, and `react` + `react-dom/client` measures **60,329 B** — higher than the 45KB claimed. No source measures the same widget built once in each. `ADR-007` therefore asserts the direction, which every source corroborates, and declines the numbers (`C-01`).
+
+**`ADR-006` amendment:** component tests are **Vitest + `@testing-library/preact` in `jsdom`**, a third tier alongside `node:test` (content logic, mutation-covered) and Playwright (e2e + fidelity). The cost is stated plainly: a second test-runner idiom in a repository that deliberately had one — accepted because the alternative asserts internal structure, and `T-07` forbids exactly that. The tier is **not** mutation-covered: `D3` scoped mutation to parsing, joining and validating, and covering a Vitest surface needs a second Stryker config, the cost `ADR-006` already priced and declined.
+
+**A third correction, to this line:** this entry said the amendment *"is `ADR-006`'s own review trigger firing."* It is not, quite. That trigger is about `site/lib/content/**` needing **Vite**; the amendment is about components needing a **DOM**, and `site/lib/content/**` still does not exist. What governs is the *policy* the trigger established — introduce Vitest when the need is real, never preemptively — applied to a surface `ADR-006` never contemplated. The amendment says so in those words rather than claiming a continuity it does not have.
+
+**Done:** both ADRs `Accepted` and indexed in `docs/adr/README.md`; `30-testing.md`'s stack-dependent table names the component tier and its invocation; no row left blank without a written reason.
+
+**Closed 2026-08-23.** `ADR-007` accepted; `ADR-006` amended in place — dated line, inline markers at both affected paragraphs, and a dated amendment section. `docs/adr/README.md` carries **the first level-2 rows the file has ever had**: `ADR-006` ✏️ Amended and flipped to `Current-with-amendments`, `ADR-001` ↪️ Extended with no inline mark, because it deferred a decision rather than asserting something now false. `30-testing.md` gained the component tier, the explicit-scoping row and a component sub-gate command. Work log: `progress/2026-08-23-22-task33-component-model-and-test-tier.md`.
+
+**Constraints**
+- **Amend `ADR-006`; do not write a second ADR for the other half of the testing toolchain.** One topic across two documents is the drift shape `G-10` exists to prevent. `ADR-007` is its own ADR because it decides what the site is *built from*, not what it is *tested with*.
+- The Preact decision is the author's and is already taken. This item writes it down with its rejected alternatives and its cost; it does not re-litigate it (`P-17`: the concern is stated once, then the work gets done).
+- Answer a rule row only when there is a reason for it. A blank row with a stated reason is a legitimate answer; a speculative one is worse than nothing.
+
+---
+
+## TASK 21 — Astro skeleton and the two root commands · `feature` · `TODO` · **runs third**
+
+An Astro project that builds and serves locally, plus the two commands the whole backlog is judged by. **One page saying nothing** — no design, no content, no components. The point is to prove the local path end to end before anything is built on top of it.
+
+**Split from its original form on 2026-08-23.** This entry used to carry the GitHub Actions workflow as well, which made it one item with two dones — and a done that needed a remote to exist (`P-01`, `INC-01`'s shape). The deploy half is now `TASK 32`.
+
+**Deliverable:** `site/` with `astro.config.mjs`, `package.json`, the `@astrojs/preact` integration and one route — plus a **root `package.json`** carrying `start` and `test`.
+
+**Done:** `npm start` from the repository root builds the site and serves the production output on localhost; `npm test` from the root runs the full gate and passes; the Preact integration is proven by one throwaway island that actually hydrates, then removed.
+
+**Constraints**
+- **`npm test` is a thin alias to `node scripts/gate.mjs`, never a second list of steps** (`T-09`). A step added to a sub-gate must appear in the top-level run without anyone editing the alias.
+- **`npm start` is the production build, not the dev server.** `npm run dev` may exist for iteration, but the verification path is the built artifact — `INC-03` was a CSS-purge defect invisible in dev that survived two visual reviews.
+- Astro, static output, no adapter (`ADR-001`, `ADR-004`). Preact per `ADR-007`.
+- **No deploy config here.** `wrangler.jsonc` belongs to `TASK 32`; writing it now means writing configuration nothing reads for weeks.
+- `site/node_modules` and `site/dist` are gitignored, and `scripts/guards/guards.config.json` excludes them from `check-terms` — a `node_modules` tree will otherwise slow every gate run and produce term false-positives. This is the one edit outside `site/` and the root `package.json` that this item makes.
+- **Delegation:** `implementer`, owning `site/**` and the root `package.json`. The `guards.config.json` exclusion stays with the orchestrator, since it is a boundary-adjacent file.
+
+---
+
+## TASK 32 — CI deploy pipeline: GitHub Actions → Cloudflare Workers · `feature` · `TODO` (needs TASK 30)
+
+The deploy half split out of `TASK 21` on 2026-08-23. A workflow that ships the site to Cloudflare **on every push to `main`** — and nothing else that ships it at all.
+
+**Deliverable:** `.github/workflows/deploy.yml` and `site/wrangler.jsonc`.
+
+**Done:** **a commit pushed to `main` appears at the live URL with no local command run**; the URL returns HTTP 200 over HTTPS; and **`TASK 27`'s prod comparison is switched on and passing**. Recorded here and in `docs/adr/ADR-004`.
 
 **Constraints**
 - **CI is the only deploy path, from the first deploy.** A manual `wrangler deploy` first and CI later means shipping one mechanism and then replacing it — and the manual one keeps working, so nobody notices when the automated one breaks. The workflow builds and deploys; nothing else does.
-- The workflow runs `node scripts/gate.mjs` **before** deploying. A gate that only runs locally is a gate that runs when someone remembers.
+- The workflow runs `npm test` **before** deploying. A gate that only runs locally is a gate that runs when someone remembers — and a green local gate is not evidence that CI fired (`T-10`).
 - **The author creates `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repository secrets.** No Cloudflare credential enters the session environment (`G-08`); an agent writes the workflow, the author supplies the secrets. The token is scoped to Workers deploy on one account, never a global key.
 - Astro, static output, no adapter (`ADR-001`, `ADR-004`) — `wrangler deploy` serves `dist/` as static assets.
-- `site/node_modules` and `site/dist` are gitignored, and `guards.config.json` excludes them from `check-terms` — a `node_modules` tree will otherwise slow every gate run and produce term false-positives.
+- **This item closes `TASK 27`'s deferred third comparison.** Until a deployed base URL exists, that comparison reports `skipped` with its reason; this item is not done while it still does.
 
 ---
 
@@ -514,7 +625,7 @@ Everything every page shares: the `oklch` token set and its `data-theme` swap, t
 
 **Constraints**
 - **Rail position tracking is an acceptance criterion, not a nice-to-have** — the author has raised it four times and it is the one interaction they called indispensable. The full acceptance list is in `docs/design/decisions/2026-08-22-site-structure.md`; a working ~30-line reference implementation is in the canvas source, generalized over `data-spy`.
-- Tracking is an island (`ADR-001`), never the mechanism. **No-JS is a supported state, not a degraded one.**
+- Tracking is a **progressive enhancement**, never the mechanism. **No-JS is a supported state, not a degraded one.** Per `ADR-007` this is *not* a Preact island: the rail is server-rendered markup because it has to work without JavaScript, and the tracking is a script attached to it. The theme toggle is the same shape, and for a sharper reason — it must resolve before first paint, which hydration cannot do.
 - Three states: wide >1180, medium 820–1180, narrow <820 where the rail becomes a top bar. No fixed width floor.
 - The theme choice must not flash on load — set it before first paint, or accept a flash and say so.
 
@@ -569,12 +680,15 @@ The two article archetypes, and the five case studies routed through them.
 
 `INC-03`'s remedy, deferred since `docs/harness/architecture.md` §M *"until the site has screens worth diffing"*. The site is that trigger — and this is the mechanism criterion 3 names, so **it is built before the screens it checks, not after them.** Built afterwards, the first three pages ship unverified and then get retrofitted, which is the more expensive order and the one that quietly never happens.
 
-**Deliverable:** a Playwright suite that captures every route at 1440 / 1024 / 390 in both themes and both locales, and diffs **three** things: the local dev build, the deployed build, and the design intent — the corresponding artboard, rendered from `docs/design/canvas/build/src/`.
+**Deliverable:** a Playwright suite that captures every route at 1440 / 1024 / 390 in both themes and both locales, and diffs **three** things: the local build, the deployed build, and the design intent — the corresponding artboard, rendered from `docs/design/canvas/build/src/`.
 
-**Done:** the suite runs in `gate.mjs` **and in the deploy workflow**; a deliberately introduced CSS regression fails it (`P-14` — proven in red, never merely seen to pass); a page item can name its artboard and get a pass/fail without writing new harness code.
+**Done:** the suite is reachable from `npm test` — i.e. it runs as a sub-gate of `gate.mjs`, not as a separate invocation someone has to remember; a deliberately introduced CSS regression fails it (`P-14` — proven in red, never merely seen to pass); a page item can name its artboard and get a pass/fail without writing new harness code.
+
+**The prod comparison is deferred, and deferred out loud (amended 2026-08-23).** The backlog is now local-first, so there is no deployed build to compare against until `TASK 32`. The mechanism is still built for **three** targets: the prod target reads its base URL from an environment variable and, when that is unset, reports `skipped — no deployed build exists yet (TASK 32)`. A skip that names its reason and its owner is `P-03` applied to a test — silence reads as coverage, a named skip does not. Removing the third leg instead would remove `INC-03`'s entire lesson.
 
 **Constraints**
 - **Three comparisons, not two.** `INC-03`'s origin was a CSS-purge defect invisible in dev, with seven element-level defects surviving two visual reviews against a dev build. Dev-vs-design alone would have missed it exactly as it was missed then, and prod-vs-dev alone would not have known what correct looked like.
+- **The skip is temporary by construction.** `TASK 32` is not done until the base URL is set and the prod comparison passes. A skip with no owner is a skip that becomes permanent.
 - **Routes and artboards are both enumerated from their artifacts** — the content collection and `canvas.json` — never from a list in the test file (`P-13`). `docs/design/canvas/verify.mjs` already does exactly this and is the pattern to copy.
 - A pixel diff on a whole page is a test that fails for the wrong reasons. Diff at the **component** level against the sheet, with a tolerance, plus a small set of full-page structural assertions.
 - The artboards are mockups: content differs from the real content by design. **The comparison is structural and stylistic — layout, tokens, spacing, states — never text equality.** An item claiming otherwise would fail forever and be switched off.
