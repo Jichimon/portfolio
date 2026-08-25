@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTerms, isExcluded, isBinary, scanText, formatFinding, blankOpaqueValues } from './terms.mjs';
+import { parseTerms, isExcluded, isBinary, scanText, formatFinding, blankOpaqueValues, mask } from './terms.mjs';
 
 const TERMS = parseTerms('# a comment\n\nAcmeCore\n  Vault-Prod  \n\n# trailing comment\nledger_tx\n');
 const EXCL = [{ path: '.git' }, { path: 'node_modules' }, { path: 'private' }, { path: 'evidence/runs' }];
@@ -157,4 +157,70 @@ test('the finding context is the REAL line, not the blanked one', () => {
   const line = '"integrity": "sha512-AA==", "name": "secret"';
   const hits = scanText(line, [{ term: 'secret', line: 24 }], { opaqueFields: ['integrity'] });
   assert.match(hits[0].context, /sha512-AA==/);
+});
+
+// ── TASK 45: per-term word-boundary opt-in ───────────────────────────────────
+// A `\b <term> \b` line in banned-terms.txt (wrapped, both sides required) opts that ONE
+// term into word-boundary matching. Every other term keeps the substring behaviour above —
+// this is a per-term decision, never a global switch (a global switch opens a class of
+// false negatives in compound identifiers, which is exactly where an internal system name
+// appears). Fictional terms only, never a real one (H-04).
+
+const FLAGGED = parseTerms('FixtureSecret\n\\b ShortTerm \\b\n');
+
+test('RED: parseTerms recognizes the wrapped flag and marks the term word-boundary', () => {
+  assert.deepEqual(FLAGGED, [
+    { term: 'FixtureSecret', line: 1 },
+    { term: 'ShortTerm', line: 2, wordBoundary: true },
+  ]);
+});
+
+test('RED: a flagged term matches standalone', () => {
+  // This is the one that fails today — it proves the flag was PARSED rather than swallowed
+  // as a literal (the live defect: the whole line `\b ShortTerm \b` read as one term,
+  // escaped, and matched against nothing).
+  const hits = scanText('we rolled out ShortTerm last quarter\n', FLAGGED);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].term.term, 'ShortTerm');
+});
+
+test('RED: a flagged term does not match inside a compound identifier', () => {
+  const hits = scanText('ShortTerm5\nnode_modules/ShortTerm5/index.js\n', FLAGGED);
+  assert.deepEqual(hits, []);
+});
+
+test('RED: an unflagged term still matches inside a compound identifier', () => {
+  // The decision is PER-TERM, not global — this is what proves it. FixtureSecret carries
+  // no flag, so it keeps the exact substring behaviour it always had.
+  const hits = scanText('FixtureSecret5\nnode_modules/FixtureSecret5/index.js\n', FLAGGED);
+  assert.equal(hits.length, 2);
+});
+
+test('RED: a malformed flag — opens but does not close — fails the run with its line number', () => {
+  assert.throws(
+    () => parseTerms('FixtureSecret\n\\b OnlyOpen\n'),
+    /banned-terms\.txt:2/,
+  );
+});
+
+test('RED: a malformed flag — closes but does not open — fails the run with its line number', () => {
+  assert.throws(
+    () => parseTerms('FixtureSecret\nOnlyClose \\b\n'),
+    /banned-terms\.txt:2/,
+  );
+});
+
+test('a flagged term is masked in the finding, honouring the same word boundary', () => {
+  const hits = scanText('we rolled out ShortTerm last quarter\n', FLAGGED);
+  const out = formatFinding('f.md', hits[0]);
+  assert.ok(!out.includes('ShortTerm'), out);
+  assert.match(out, /█{9}/, 'ShortTerm is 9 characters');
+});
+
+test('mask does not over-mask a compound identifier for a flagged term', () => {
+  // mask() has no notion of "found" or "not found" — it re-derives its own matches. If it
+  // ignored the flag it would still blank ShortTerm5, misleading a human about where the
+  // real (word-boundary) finding actually is.
+  const line = 'ShortTerm5 is a public package name';
+  assert.equal(mask(line, FLAGGED), line);
 });

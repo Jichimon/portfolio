@@ -162,6 +162,21 @@ The root lockfile is committed for the same reason `site/`'s is: CI runs `npm ci
 
 **Found on the guard's first run against the real tree:** `site/astro.config.mjs` carried `// Static output, no adapter (ADR-001, ADR-004). Preact is registered with compat enabled because the next slice (SKEL-004) needs it present.` — three references in two lines, in the only source file the site had. Rewritten to one line naming the single thing the code cannot say: what `compat` does.
 
+## Amendment — 2026-08-25 · the behaviour tier is moved to the home this ADR already gave it
+
+**Nothing in this ADR changes. The implementation had drifted from it, and this records the reconciliation** — kept rather than fixed silently, because a tree that is declared in one place and built in another is a decision nobody can audit.
+
+Sub-decision 1's tree puts the client modules at `src/behaviour/`, described as *"the Vitest tier"*. The layout-shell item built them at **`site/lib/behavior/`** instead — inside the core, and with the American spelling. Nothing enforced the difference, so nothing caught it.
+
+**It surfaced as a number, not as a review finding.** `site/lib/**` is the surface Stryker mutates. The behaviour modules are covered by `.component.test.ts` files, which only Vitest can drive and the tap runner cannot — so those 111 mutants had **no killers reachable by the mutation runner at all** and scored **0.00%**, dragging the repository's aggregate to 70.02 against a `break` of 74 and turning the gate's mutation step red.
+
+Three answers were weighed by the author. Widening `mutation-suppressions.test.mjs` to permit a reasoned non-test exclusion was rejected: its property is that the mutate globs exclude test files and nothing else, and *the worst-scoring file is exactly the one it would be tempting to drop.* Leaving the step red was rejected as a standing cost. **Honouring this ADR's own tree was chosen** — it costs no rule change, no glob negation, and leaves that property untouched.
+
+The move was cheap because the dependency direction already held: **nothing in `site/lib/**` imported the tier** — only `src/layouts/BaseLayout.astro` did, via two dynamic imports. `S-06` is therefore unaffected, and `site/vitest.config.ts` widened its `include` from `lib/**` to `{lib,src}/**` for the same suffix. Verified after the move: 2 files, 15 tests, green.
+
+**One thing this exposes and does not resolve.** Sub-decision 1's tree annotates `src/` as *"Astro only"*, and the behaviour tier is not Astro — it is framework-free code that happens to need a DOM. The annotation was already loose (the gateway is `.ts`), and the tree's own `behaviour/` line has always contradicted it. The line is corrected in `.claude/rules/50-implementation.md` rather than here: `src/` is the side that Vite builds, which is the property that actually decides what may live there.
+
+
 ## Consequences
 
 - **We gain:** one place where content is fetched and one place where it is interpreted, both testable without a browser or a bundler; a copy surface that already has a locale-parity guard over it; class names that mean something to a reader six months from now; and five constraints that load themselves into a delegated agent's session instead of depending on an orchestrator remembering to paste them.

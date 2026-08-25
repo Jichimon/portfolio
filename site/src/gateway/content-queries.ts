@@ -35,6 +35,12 @@ interface RailStrings {
   theme_to_dark: string;
   theme_to_light: string;
   menu: string;
+  wordmark: string;
+}
+
+interface SocialLink {
+  name: string;
+  url: string;
 }
 
 interface HomeStrings {
@@ -102,6 +108,7 @@ interface NotFoundStrings {
 interface UiStringGroups {
   nav: NavStrings;
   rail: RailStrings;
+  socials: SocialLink[];
   home: HomeStrings;
   article: ArticleStrings;
   about: AboutStrings;

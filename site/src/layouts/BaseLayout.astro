@@ -34,6 +34,12 @@ interface RailLabels {
   theme_to_dark: string;
   theme_to_light: string;
   menu: string;
+  wordmark: string;
+}
+
+interface SocialLink {
+  name: string;
+  url: string;
 }
 
 interface Props {
@@ -43,11 +49,12 @@ interface Props {
   currentSlug: string;
   nav: NavLabels;
   rail: RailLabels;
+  socials: SocialLink[];
   alternateHref: string;
   footerText: string;
 }
 
-const { lang, title, isIndexPage, currentSlug, nav, rail, alternateHref, footerText } = Astro.props;
+const { lang, title, isIndexPage, currentSlug, nav, rail, socials, alternateHref, footerText } = Astro.props;
 ---
 
 <!doctype html>
@@ -83,6 +90,7 @@ const { lang, title, isIndexPage, currentSlug, nav, rail, alternateHref, footerT
         currentSlug={currentSlug}
         nav={nav}
         rail={rail}
+        socials={socials}
         alternateHref={alternateHref}
       />
       <main class="page-shell__main">
@@ -99,8 +107,8 @@ const { lang, title, isIndexPage, currentSlug, nav, rail, alternateHref, footerT
     <script>
       {
         Promise.all([
-          import('../../lib/behavior/theme.mjs'),
-          import('../../lib/behavior/scroll-spy.mjs'),
+          import('../behaviour/theme.mjs'),
+          import('../behaviour/scroll-spy.mjs'),
         ]).then(function (modules) {
           var theme = modules[0];
           var scrollSpy = modules[1];

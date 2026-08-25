@@ -187,7 +187,7 @@ test('CANARY: Stryker still parses directives from every comment node, delimiter
  * together — but they make it two deliberate edits instead of one, and the second one says out
  * loud what it is for.
  */
-const FLOOR = 74; // measured 2026-08-24; raised by TASK 38, never lowered
+const FLOOR = 74.5; // measured 2026-08-25 at 74.74; raised by TASK 38, never lowered
 
 test('the mutation threshold may not be lowered below the floor this repository has reached', async () => {
   const { default: config } = await import(pathToFileURL(join(ROOT, 'stryker.config.mjs')));

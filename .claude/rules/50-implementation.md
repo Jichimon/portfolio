@@ -17,8 +17,10 @@ site/
   lib/        the core — Node ESM, no Astro, no Vite. node:test runs it, Stryker mutates it
               (the Stryker config lives at the REPOSITORY root, not here — its sandbox is
                rooted at the working directory and has to reach scripts/guards/lib/ too)
-  src/        Astro only
-    gateway/  the sole caller of getCollection
+  src/        the side Vite builds — Astro, plus the DOM-requiring behaviour tier, which
+              needs no framework but does need a browser: Vitest runs it, Stryker does not
+    gateway/    the sole caller of getCollection
+    behaviour/  scroll-spy, theme — deliberately outside the mutated core (ADR-008, 2026-08-25)
 ```
 
 ```text

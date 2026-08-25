@@ -23,6 +23,13 @@ rail:
   theme_to_dark: "Dark mode"
   theme_to_light: "Light mode"
   menu: "Menu"
+  wordmark: "Luis Antelo"
+
+socials:
+  - name: "GitHub"
+    url: "https://github.com/Jichimon"
+  - name: "LinkedIn"
+    url: "https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/"
 
 home:
   employers_heading: "Where I've worked"
@@ -94,7 +101,8 @@ Every value above is lifted from an artboard in `docs/design/canvas/src/`. Nothi
 | Group | Source |
 |---|---|
 | `nav` | `Main.dc.html` 430–436 — the seven rail items and the `soon` tag |
-| `rail` | `Main.dc.html` 426–427, 439, 446 · `MobileSeam.dc.html` 99 for `menu`, which only appears in the narrow top bar |
+| `rail` | `Main.dc.html` 425–427, 439, 446 · `MobileSeam.dc.html` 99 for `menu`, which only appears in the narrow top bar |
+| `socials` | `Main.dc.html` 448 · the same two links the footer carries (`CaseStudiesIndex.dc.html` 343). Values are identical in both locales — a name and a URL, nothing to translate |
 | `home` | `Main.dc.html` 531, 542, 655, 667, 668, 687 · `MobileSeam.dc.html` 142 for the two seam labels |
 | `article` | `CaseStudyDetail.dc.html` 262, 287, 293–297 · `PlatformPage.dc.html` 264, 286 · `CaseStudiesIndex.dc.html` 334 |
 | `about` | `About.dc.html` 266, 270–272 |

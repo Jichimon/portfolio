@@ -301,3 +301,209 @@ test('a heredoc that is never terminated does not swallow the rest of the comman
 test('a delimiter appearing as ordinary text does not open a heredoc', () => {
   assert.equal(checkGitWrite('echo EOF && ' + GIT_PUSH).allowed, false);
 });
+
+// ---------------------------------------------------------------------------
+// TASK 38: the full read-only allowlist, one subcommand at a time. Each is a
+// StringLiteral in READ_ONLY — a mutated spelling is a mutated boundary, and only an
+// assertion naming that exact subcommand catches it.
+// ---------------------------------------------------------------------------
+
+test('RED: every read-only subcommand on the allowlist is individually allowed', () => {
+  ['git cat-file -p HEAD', 'git check-attr -a file', 'git check-ignore file',
+   'git count-objects', 'git diff-files', 'git diff-index HEAD', 'git diff-tree HEAD',
+   'git help log', 'git ls-remote origin', 'git ls-tree HEAD',
+   'git merge-base main feature', 'git name-rev HEAD', 'git rev-list HEAD',
+   'git show-ref', 'git var GIT_AUTHOR_IDENT', 'git verify-commit HEAD',
+   'git verify-tag v1.0', 'git version', 'git whatchanged'].forEach(allowed);
+});
+
+test('RED: "git add" is a write and is not on the allowlist', () => {
+  denied('git add file.txt');
+  denied('git add -A');
+});
+
+test('RED: further write subcommands outside the allowlist fail closed', () => {
+  ['git commit-tree HEAD', 'git update-ref refs/heads/x HEAD',
+   'git symbolic-ref HEAD refs/heads/x', 'git replace', 'git filter-branch',
+   'git fast-import', 'git reflog', 'git reflog show', 'git reflog expire --all',
+   'git reflog delete HEAD@{0}'].forEach(denied);
+});
+
+// ---------------------------------------------------------------------------
+// TASK 38: the two ambiguous subcommands the original battery never touched.
+// ---------------------------------------------------------------------------
+
+test('notes: bare, list and show pass; mutating forms do not', () => {
+  allowed('git notes');
+  allowed('git notes list');
+  allowed('git notes show');
+  denied('git notes add -m x');
+  denied('git notes remove');
+});
+
+test('bisect: log and view pass; every step of a real bisect does not', () => {
+  allowed('git bisect log');
+  allowed('git bisect view');
+  denied('git bisect start');
+  denied('git bisect good');
+  denied('git bisect bad');
+  denied('git bisect reset');
+});
+
+test('remote: get-url is a read form alongside show and -v', () => {
+  allowed('git remote get-url origin');
+  denied('git remote prune origin');
+});
+
+test('branch: a write flag disqualifies even when a list flag is also present', () => {
+  denied('git branch --list -d old');
+});
+
+test('branch: --list with a pattern argument still lists', () => {
+  allowed('git branch --list "feature/*"');
+});
+
+test('tag: -v (verify) is a write flag here, unlike branch\'s -v (verbose)', () => {
+  denied('git tag --list -v');
+});
+
+test('tag: a count flag to -n is still a read', () => {
+  allowed('git tag -n5');
+});
+
+// ---------------------------------------------------------------------------
+// TASK 38: flags between the binary and the subcommand.
+// ---------------------------------------------------------------------------
+
+test('RED: --no-pager is a harmless global and does not hide the subcommand', () => {
+  allowed('git --no-pager log');
+  denied('git --no-pager commit -m x');
+});
+
+test('RED: --namespace consumes its value in both spellings and still finds the subcommand', () => {
+  allowed('git --namespace=foo log');
+  allowed('git --namespace foo log');
+  denied('git --namespace foo commit -m x');
+});
+
+// ---------------------------------------------------------------------------
+// TASK 38: wrappers not in the original battery — every entry in FLAG_WRAPPERS and
+// DIRECT_WRAPPERS gets its own case, because each is a StringLiteral survivor otherwise.
+// ---------------------------------------------------------------------------
+
+test('RED: sudo and doas run the command as another user, still a write', () => {
+  denied('sudo git commit -m x');
+  denied('sudo git push');
+  denied('doas git push');
+});
+
+test('RED: nohup, xargs, timeout, stdbuf, nice and ionice all forward to the real command', () => {
+  denied('nohup git push');
+  denied('xargs git push');
+  denied('timeout 5 git push');
+  denied('stdbuf -oL git push');
+  denied('nice git push');
+  denied('ionice git push');
+});
+
+test('RED: zsh, dash, ksh and cmd /c are eval wrappers too', () => {
+  denied('zsh -c "git push"');
+  denied('dash -c "git push"');
+  denied('ksh -c "git push"');
+  denied('cmd /c "git push"');
+});
+
+test('a direct wrapper around a read is still allowed', () => {
+  allowed('env git status');
+  allowed('sudo git status');
+  allowed('xargs git status');
+});
+
+// ---------------------------------------------------------------------------
+// TASK 38: a plain newline is a separator on its own, without a heredoc involved.
+// ---------------------------------------------------------------------------
+
+test('RED: a bare newline between two commands is still a separator', () => {
+  assert.equal(checkGitWrite('git status' + NL + GIT_PUSH).allowed, false);
+});
+
+test('RED: a write buried in the middle of a semicolon chain is still caught', () => {
+  assert.equal(checkGitWrite('echo hi; ' + GIT_WRITE + '; echo done').allowed, false);
+});
+
+test('RED: an env-var prefix does not disguise a write anywhere but the very front', () => {
+  assert.equal(checkGitWrite('GIT_DIR=x GIT_WORK_TREE=y ' + GIT_WRITE).allowed, false);
+});
+
+// ---------------------------------------------------------------------------
+// TASK 38: a Windows-style --git-dir path, backslash and all.
+// ---------------------------------------------------------------------------
+
+test('RED: a Windows-style --git-dir path does not change the verdict', () => {
+  const bs = String.fromCharCode(92);
+  assert.equal(checkGitWrite('git --git-dir=C:' + bs + 'repo' + bs + '.git ' + GIT_WRITE.slice(4)).allowed, false);
+});
+
+// ---------------------------------------------------------------------------
+// TASK 38: bare `git`, and a trailing unrecognized flag with nothing after it — the
+// boundary the leading-option scan loop must stop at without reading past the array.
+// ---------------------------------------------------------------------------
+
+test('RED: bare "git" with no subcommand at all is a no-op and is allowed', () => {
+  allowed('git');
+});
+
+test('an unrecognized flag with nothing after it does not crash and stays allowed', () => {
+  allowed('git -v');
+  allowed('git -v status');
+});
+
+test('submodule: "summary" is also a read form, alongside "status"', () => {
+  allowed('git submodule summary');
+  denied('git submodule foreach');
+});
+
+// ---------------------------------------------------------------------------
+// TASK 38: the reason text itself is part of what the caller observes (pretooluse.mjs
+// forwards findings[0].reason verbatim into the denial message), so its content is
+// asserted, not just its presence.
+// ---------------------------------------------------------------------------
+
+test('the -c injection finding names execution, specifically', () => {
+  const r = checkGitWrite('git -c core.pager=less status');
+  assert.equal(r.allowed, false);
+  assert.match(r.findings[0].reason, /can execute arbitrary code/);
+});
+
+test('an ambiguous-subcommand denial names "in this form can write"', () => {
+  const r = checkGitWrite('git branch newthing');
+  assert.equal(r.allowed, false);
+  assert.match(r.findings[0].reason, /"git branch" in this form can write/);
+});
+
+// ---------------------------------------------------------------------------
+// TASK 38: a value-consuming option in its SPACE-SEPARATED form swallows the very next
+// token as its value — including a token that looks like a write subcommand. That is a
+// real, slightly surprising property of every VALUE_OPTS entry (each is its own
+// StringLiteral in the guard), not a bypass: nothing runs, because the "subcommand"
+// itself was consumed as the option's argument, leaving none.
+// ---------------------------------------------------------------------------
+
+test('RED: each VALUE_OPTS entry, in its space form, swallows the next token as its value', () => {
+  allowed('git --git-dir commit');
+  allowed('git --work-tree commit');
+  allowed('git --namespace commit');
+  allowed('git -C commit');
+});
+
+test('RED: --receive-pack is denied alongside --upload-pack', () => {
+  denied('git --receive-pack=/tmp/evil ls-remote origin');
+});
+
+test('remote: the bare form (no arguments at all) lists', () => {
+  allowed('git remote');
+});
+
+test('remote: a mix where not every flag is -v/--verbose is still a write', () => {
+  denied('git remote -v --unknown');
+});

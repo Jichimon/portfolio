@@ -249,6 +249,49 @@ From `EVAL-000` (`GAP-03`, `GAP-04`, `GAP-05`, `GAP-07`, `GAP-08`, `GAP-09`, `GA
 
 The one that matters most: **a run stopped by `maxTurns` is recorded as `COMPLETE`.** `G-06` promises `FAILED` with `budget_exhausted`; no footer on disk has ever said that. A failed delegation is currently indistinguishable from a successful one, which is `INC-06`'s lesson inverted — the agent delivers zero and the trace reports success.
 
+
+**Two more specimens, 2026-08-25, and they narrow the cause rather than repeating it.** The same session that wrote the triage above delegated two `implementer` slices in parallel. **Both were cut off. Both were cut off inside their verification step, not inside the work.**
+
+| | slice A (`TASK 45`) | slice B (`TASK 39`) |
+|---|---|---|
+| files owned | 3 | 3 |
+| tool calls | 36 | 35 |
+| tokens | ~91k | ~84k |
+| cut at | mid hand-applied mutation battery, between restoring mutant 2 and applying mutant 3 | immediately before running the gate |
+| fragment in place of a report | *"Restoring, and applying mutant 3 (offset bug in the flag-slicing)."* | *"Let's run the full gate now."* |
+
+**This refutes file-count as the sole explanation.** The datum recorded below — *every slice owning more than two files was cut; every slice owning two completed* — predicted these two would be marginal at three files. They were cut, but not while writing files: both had their production edits and their test files landed, and both died in the step that proves the work. The sharper statement of the pattern is therefore **the last step in the brief is the one that gets cut**, whatever it is. When the brief ends in a report, the report is lost; when it ends in a verification battery, the verification is lost — and a half-applied mutation battery is strictly worse than a missing report, because it can leave a **guard mutated on disk** where nothing but that same battery would notice.
+
+
+**By the end of that session the count was five cut-offs out of five delegated runs, and the last one falsifies the obvious fix.** After the two above, a third and fourth were cut the same way. The fifth was briefed with the mitigation *inverted* — its brief said **measure first, before writing anything**, precisely so the measurement could not be the step that got lost. It was cut anyway, and it produced **zero tests**: the up-front measurement consumed the entire budget, and the run ended having re-derived a baseline the brief had already handed it.
+
+**So reordering the brief does not solve this, and that is the finding.** Moving the fragile step earlier just changes which step is lost. What the five runs share is not an ordering but a shape: **every one of them was briefed to do work AND to prove it in the same run**, and the budget fits one of those, not both. The candidates that remain are a larger budget, or splitting proof from work into two runs — and this item owns the re-measurement that would decide between them. Neither is decided in passing.
+
+**A sixth data point, from the orchestrator rather than an agent.** All five runs were re-driven to completion by `SendMessage`, cheaply, because the orchestrator could see the tree and tell each one exactly what already existed. That is not a fix — it needs a human-supervised session and does nothing for an unattended run — but it does say the loss is **recoverable when someone is watching**, which is a different cost from `INC-06`'s *the agent delivers zero*.
+
+
+**One mitigation was tried in these two briefs and it worked, partially.** Both agents were instructed to write their `progress/` log **first**, as a skeleton, and update it as they went — explicitly to stop the record from competing for the final turn. **Both logs survived both cut-offs.** So log-first preserves the artifact; it does not prevent the cut. That is a real result for the re-measurement this item owns: the fix is not only a bigger number, it is **ordering the brief so that nothing which must not be interrupted is scheduled last**.
+
+
+**Triaged 2026-08-25, and the headline clause above is NOT REACHABLE as written. That is this triage's finding, not a status update.** The item was scoped for a session, the substrate was read before anything was planned (`P-04`), and the conclusion is that **no code path in `scripts/` can produce `termination.state: FAILED` or `budget_exhausted`, because nothing in the runtime tells a hook that a budget was hit.**
+
+| What was checked | What was found |
+|---|---|
+| Does any hook payload carry a turn count, a budget field, or a stop reason for a subagent? | **No.** `evidence.mjs:272-276` writes the string literal `'COMPLETE'` in both branches and the literal `'objective_reported'` on `SubagentStop`, because there is nothing to read. The string `budget_exhausted` does not appear anywhere in the codebase. |
+| Does `SubagentStop` even fire when a run is cut off? | **Apparently not.** Five trace files on disk carry a footer and nothing else, with `agent: ""` and a dash-prefixed filename — the artifact of a stop with no `agent_type`. This entry already recorded it from the other side: *"the first stop left none at all"*, the footer belonging to the later resume. |
+| Every footer on disk | 35 `objective_reported`, 8 `other`, **zero anything else**, across 79 headers. |
+
+**So the honest outcome is a corrected claim, not a fabricated value** — the same shape this item's own `permission_mode` constraint already grants, arriving one clause earlier. `G-06`'s promise is amended rather than deleted: `maxTurns` really is enforced natively by the runtime; what was never true is that the **trace** records the termination. Amended 2026-08-25 in `.claude/rules/40-agent-policy.md`, per `G-11` — make the claim honest, including downward.
+
+**What stays in scope and is still reachable**, written down so the next session starts from the triage instead of repeating it:
+
+- **`permission_mode` — reachable, and the route is known.** All 79 headers read `"unknown"` because `SessionStart`/`SubagentStart` payloads omit the field. But `PostToolUse` and `PostToolUseFailure` payloads **do** carry it. The value is obtainable; it is simply not on the event the header is written from.
+- **`agent: ""` and footer-only files — reachable.** `trace-writer.mjs:78` composes the filename from an empty `agent`, producing `-<id>.jsonl`. A writer that refuses to open a file it cannot name is a local fix.
+- **A reused `tool_use_id` — reachable.** `evidence/runs/unknown/orchestrator.jsonl` reuses `"probe"` twice and `"p"` ten times.
+- **`run.header` multiplicity — reachable, but under-determined.** 16 files carry two or three headers. The payload cannot distinguish a resume from a cold start: all four headers carrying a non-null `model` still report `reason: "startup"`. So `check-trace` can assert how many are permitted and under what condition, but the once-per-run vs once-per-resume question **is decided, not discovered** — the data does not answer it.
+- **The step is red for a cause no agent may clear.** `check-trace` reports 13 orphan `tool.result` events — all `Bash`, all `ok: true`, all `bytes: 15`, across two run directories — where `PostToolUse` fired and `PreToolUse` never recorded the request. `H-03` keeps every agent out of `evidence/`, so clearing them is a human act. **It has been done twice by deleting run directories** (`progress/2026-08-24-01`, `progress/2026-08-24-06`), which is worth naming plainly: the gate has been made green by deleting the evidence.
+
+
 **Live specimen, 2026-08-24 — four of this item's open criteria now have a real trace behind them, not a hypothesis.** `TASK 15` delegated an `adversarial-auditor` run that stopped without delivering a report and had to be resumed by message. Its trace (`adversarial-auditor-aab270189d54aa26a.jsonl`, read not written — `H-03`) records:
 
 | Observed | What this item promises |
@@ -355,7 +398,39 @@ From `EVAL-000` (`GAP-02`). `T-03` places the mutation gate at **rung 2**; `scri
 
 ---
 
-## TASK 38 — Ratchet the mutation score toward 100 · `harness` · `TODO`
+## TASK 38 — Ratchet the mutation score toward 100 · `harness` · `TODO` · **ratchet turned once, 2026-08-25**
+
+**THE RATCHET TURNED, 2026-08-25: `break` 74 -> 74.5 against a re-measured 74.74%.** That is this item's stated close condition — *raised at least once against a re-measured score, with the new floor recorded and the survivors it represents named* — and it is met. The item stays open because it closes on a ratchet, not on perfection, and re-opens as often as the floor can move.
+
+| | at session start | now |
+|---|---|---|
+| aggregate | **70.02%** (below a break of 74 — the gate step was red) | **74.74%** over 4,773 mutants |
+| `git-write.mjs` (`H-01`) | 54.38% · 73 survivors · 26 uncovered | **85.71%** · 31 survivors · **0 uncovered** |
+| `shell.mjs` (the tokenizer both path guards sit on) | 66.21% · 146 survivors · **no test file at all** | **80.73%** · 84 survivors · 58 tests |
+| `site/lib/behavior` | 0.00% over 111 mutants, uncoverable by any runner here | **out of the mutated surface** |
+| guard suite | 453 tests | **609 tests** |
+
+**Two of the three files this entry named as "start here" have left the danger list; the third has not, and this item is therefore NOT fully closed against its own Done.** `git-write.mjs` is rank 21 of 26 and `shell.mjs` rank 20, but **`evidence.mjs` (68.77%, 119 available) is still the second-worst file in the repository** and was never touched this session. The Done clause *"the three modules above are no longer the three worst"* is met **2 of 3**, and saying so is cheaper than discovering it next time. **`site-structure.mjs` at 59.66% — 1,046 mutants, 317 survivors, 105 uncovered, 422 available — is now the worst**, and it is where the next scoped pass goes.
+
+**The timeout-variance risk stopped being hypothetical within the hour.** The run that set the floor read **74.74%**; the gate's own run minutes later, with **no code change at all**, read **74.63%** — a 0.11-point drift, leaving 0.13 of slack against the 74.5 floor. That is the mechanism this item warned about, observed rather than predicted: timeouts count as killed and their count is timing-dependent. The floor still holds, and the response if it ever does not is more kills, never a lower number.
+
+**The slack is 0.24 points and that is thinner than it looks.** Timeouts count as killed and their count is timing-dependent: runs on this surface have reported **21, 45 and 66** timeouts. A drop from 66 to 21 is 45 fewer kills — **0.94 points** — enough to fail the threshold on a slower machine with no code change at all. Recorded in `stryker.config.mjs` beside the number rather than left to be discovered by whoever hits it. The answer if it happens is more kills, never a lower floor.
+
+**Named survivors, so the next pass starts from a list rather than a re-measurement:** 31 in `git-write.mjs` · 84 in `shell.mjs`, grouped into 7 families in `progress/2026-08-25-04` (largest: backslash-escape-before-closing-quote logic duplicated across three functions but exercised only through `tokenize`; and the `$(...)` depth-tracking branch in `splitSegments`) · 422 in `site-structure.mjs`, unexamined.
+
+
+**Measured again 2026-08-25, and the behaviour-tier question is answered.** The architectural question this entry opened was decided by the author in favour of **honouring `ADR-008`'s own tree**: the tier moved from `site/lib/behavior/` to `site/src/behaviour/`, the home sub-decision 1 had declared all along and which the layout-shell item had not used. It cost no rule change, no glob negation, and left `mutation-suppressions.test.mjs`'s property untouched — the two answers that would have weakened it were rejected. Nothing in `site/lib/**` imported the tier; only `BaseLayout.astro` did, through two dynamic imports. Verified after the move: 2 files, 15 tests, green under Vitest. `ADR-008` carries the dated amendment.
+
+**`shell.mjs` got its missing test file, and it moved the most of anything here.** It had no colocated battery at all and was exercised only through the two guards built on it. Now **58 tests, and 66.21% → 80.73%** — 441 mutants, 84 survivors, down from 146. The 84 remaining are grouped into 7 named families in `progress/2026-08-25-04-task38-shell-test-battery.md` rather than counted.
+
+**The floor was NOT raised, and that is the honest outcome rather than a deferral.** The full run after all of the above scored **73.06% over 4,773 mutants** — 3,416 killed, 66 timed out, 1,046 survived, 238 with no coverage. `break` sits at **74**, so the gate's mutation step is **still red, by 0.94 points**. Raising the floor against a score that is below it would be the exact move `ADR-006` forbids, and lowering it to 73 would make the ratchet something that accommodates its result.
+
+**An effect worth naming, because it will recur and looks like a regression.** Two files this session improved went *down*: `terms.mjs` 80.95 → 74.12 and `gate.mjs` 86.44 → 80.41. Neither got worse — both **grew**, and the new code carries proportionally fewer kills than the old. This entry already records that *a percentage floor can be gamed by adding well-tested code*; this is the same coin's other face, and it means a session that adds real code can lower the score while improving the repository. The mitigation is unchanged: ratchet often enough that the slack stays small.
+
+**Also added while here:** `stryker.config.mjs` gained the `json` reporter. The only machine-readable artifact of a run was a 2.3 MB HTML file with the report embedded as a JS assignment, which is not something a ratchet can read reliably — and this item's whole deliverable is a number read off a run.
+
+**Where the remaining deficit sits, measured:** `git-write.mjs` **54.38%** (217 mutants, 73 survivors, 26 uncovered — the worst file in the repository, and the guard behind `H-01`) · `site-structure.mjs` **59.66%** (1,046 mutants, 317 survivors, 105 uncovered) · `evidence.mjs` **68.77%** (381 mutants, 97 survivors). **51 kills anywhere crosses 74.**
+
 
 **The score is BELOW the floor as of 2026-08-25, and this item is no longer only a burn-down.** The layout-shell item measured **70.02 against a break of 74** over 4,713 mutants. `break` was not lowered — it ratchets up and does not come back — so the gate’s mutation step is red until this runs.
 
@@ -396,7 +471,15 @@ Opened 2026-08-24 by `TASK 15`, the moment the mutation gate produced its first 
 
 ---
 
-## TASK 39 — A gate step that never ran must not report PASS · `bugfix` · `TODO`
+## TASK 39 — A gate step that never ran must not report PASS · `bugfix` · `DONE`
+
+**Closed 2026-08-25.** Three deliverables, all with red batteries; `gate.test.mjs` 12 → 20 tests, 3 hand-applied mutants killed.
+
+**1 · A third state.** `runGate` returns `incomplete`; the exit code is `1` on FAIL/BLOCKED, **`2`** when nothing failed but steps did not run, `0` only when every step passed. The headline reads `GATE INCOMPLETE` and names them. `skipIf` is untouched — `SKIP` stays a legitimate verdict, and what was wrong was the headline and the exit code, not the mechanism. The existing assertion at `gate.test.mjs:65-77`, which asserted `exitCode === 0` on a skip, was **inverted rather than left standing beside a new one**.
+
+**2 · Liveness.** The runner contract widened from *returns a number* to `{ code, stdout }`, and a step that ran zero tests is derived from `node:test`’s own summary line, independent of exit code. A step producing no such line — a plain `check-*` guard — is judged on exit code alone, so nothing that is not a test runner is penalised. **Derived, never enumerated** (`P-13`): a hardcoded per-step count would have been the same roster in disguise.
+
+**3 · `dependsOn` takes several predecessors**, so `mutation` can declare both test steps instead of only one. **Proven live rather than only in unit tests:** in the closing gate run `mutation` ran and reported its own failure instead of being `BLOCKED` behind a single predecessor. Chaining the two test steps was considered and rejected — it would block a genuinely independent second failure behind the first, which is the blindness `TASK 34` was opened to remove. Detail: `progress/2026-08-25-02-task39-gate-liveness-and-skip.md`.
 
 **The evidence for that decision arrived the next day and it is not marginal.** Between the tier landing and the layout shell closing, `astro check` accumulated **19 type errors** — eighteen missing annotations across two test files and one real assignment defect in a layout — and **nothing anywhere went red**. Every one was written by a delegated run that had verified its own work with the test runner. A type-check that exists as a script and is wired into nothing is a type-check that does not exist, and the cost of adding it as a gate step is one line.
 
@@ -507,7 +590,11 @@ This is `INC-08`'s shape — *a check that exists and does not check* — arrivi
 
 ---
 
-## TASK 46 — Two rail strings the interface-strings collection does not carry · `content` · `TODO`
+## TASK 46 — Two rail strings the interface-strings collection does not carry · `content` · `DONE`
+
+**Closed 2026-08-25.** `ui.{en,es}.md` carry `rail.wordmark` and a top-level `socials` group, author-written, byte-identical in both locales, each with its traceability row — the English file cites `Main.dc.html` 425 and 448, the Spanish `HomeES.dc.html` 425 and 448, all four verified against the artboards. `RailSocials.astro` renders the list from data with the `·` as a CSS `::before`, hidden under `@media (max-width: 820px)`. **Verified against the built output, not against a guard:** both links are present in `dist/index.html` and `dist/es/index.html`, and the hide rule survives into the compiled CSS. `check-site` reports **0 findings** — the declared `SITE_IDENTITY_NAME` violation is gone. `astro check`: 0 errors, 0 warnings.
+
+**The finding this item produced is worth more than the item.** The first pass made the two props **optional with a silent default**, because the orchestrator had fenced `site/src/layouts/` and `site/src/pages/` off from the delegated slice — and those were exactly the files the wiring needed. The result: `check-site`, `astro check` and `astro build` were **all three green over a feature that rendered nothing**, because `BaseLayout.astro` passed neither value down. It was found by grepping the built HTML, not by any guard. Both props are now required, so the type system enforces the wiring. **`check-site` passing never meant "renders" — it meant "no string literal escaped the gateway",** and those are different propositions. Detail: `progress/2026-08-25-03-task46-rail-socials-wordmark.md`.
 
 **Opened 2026-08-24 by the layout-shell item.** The design’s rail carries GitHub and LinkedIn links below the theme toggle, and they are the one rail element the responsive contract specifies to **disappear below 820px** — on a phone, language outranks a profile link. **The interface-strings collection carries no `socials` group**, so both the labels and the two URLs exist only in an artboard.
 
@@ -524,7 +611,13 @@ This is `INC-08`'s shape — *a check that exists and does not check* — arrivi
 - **The hiding rule is part of the deliverable.** The block is the one piece of rail chrome that is deliberately dropped at narrow, and a version that survives to 390px is not the design.
 
 ---
-## TASK 45 — The confidentiality guard matches substrings, and a short term collides forever · `bugfix` · `TODO`
+## TASK 45 — The confidentiality guard matches substrings, and a short term collides forever · `bugfix` · `DONE`
+
+**Closed 2026-08-25.** The decision, recorded: **per-term word-boundary opt-in**. `private/banned-terms.txt` gains a wrapped flag syntax — `\b <term> \b` — and the author marks the one colliding term; the other 32 keep substring matching. The three rejected answers and their costs are in the work log. `terms.mjs` 22 → 30 tests, four red paths seen to fail first; 5 hand-applied mutants, 5 killed, source restored byte-identical.
+
+**The item reproduced its own failure mode before it was fixed, which is the useful part.** The flag was written to disk before the parser existed, so `parseTerms` read the whole line as a literal term, escaped it, and matched nothing — `check-terms` reported **PASS with that term entirely unprotected**. That is `INC-13`’s family arriving through the fix rather than the defect. The guard therefore now **fails the run, naming the line number, on a half-formed flag** (`G-13`: a guard that cannot evaluate must deny) rather than degrading to a literal in silence.
+
+**Liveness proven against the real term list, not against fixtures.** Run from the orchestrator (`H-04` denies the file to delegated roles only), printing no term: 33 parsed, 1 flagged, 32 substring. The flagged term matches standalone and at start of line; stays clean against a trailing digit, inside the registry tarball path, and glued to letters; and **25/25 unflagged single-word terms still match inside compound identifiers** — which is what proves the decision is per-term and not global. **Known limit, recorded rather than discovered later:** `\b` does not exist between a letter and a digit, so `<term>-something` would still collide. The flag is deliberately kept equal to the regex primitive — a per-term human decision needs to be predictable, not clever. Detail: `progress/2026-08-25-01-task45-terms-word-boundary.md`.
 
 **Opened 2026-08-24 by `TASK 44`.** Installing the component tier pulled in a transitive dependency whose **npm package name contains a banned term as a substring**. `check-terms` matches case-insensitively with **no word boundary**, so the generated `site/package-lock.json` now fails the confidentiality step in four places. No authored content is involved, nothing was published, and the containing text is a public package name from the public registry.
 

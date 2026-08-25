@@ -18,11 +18,18 @@ nav:
 rail:
   role: "Senior Software Engineer"
   location: "Cochabamba, Bolivia"
-  timezone: "GMT-4 · solapamiento completo con el horario laboral de EE. UU."
+  timezone: "GMT-4"
   language_group: "Idioma"
   theme_to_dark: "Modo oscuro"
   theme_to_light: "Modo claro"
   menu: "Menú"
+  wordmark: "Luis Antelo"
+
+socials:
+  - name: "GitHub"
+    url: "https://github.com/Jichimon"
+  - name: "LinkedIn"
+    url: "https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/"
 
 home:
   employers_heading: "Dónde he trabajado"
@@ -95,6 +102,8 @@ Se levanta tal cual del artboard, sin tocar una coma.
 |---|---|
 | `nav` completo, incluido `pronto` | `HomeES.dc.html` 430–436 |
 | `rail.location`, `rail.timezone`, `rail.theme_to_dark`, `rail.theme_to_light` | `HomeES.dc.html` 427, 783 |
+| `rail.wordmark` | `HomeES.dc.html` 425 |
+| `socials` — los dos, nombre y URL | `HomeES.dc.html` 448 · idénticos al artboard inglés: un nombre propio y una URL, nada que traducir |
 | `home` — los cuatro títulos, `contact_invite`, `contact_note` | `HomeES.dc.html` 532, 542, 655, 667, 668, 687 |
 | `contact_form` — los siete | `HomeES.dc.html` 672–683 |
 | `footer.metrics_slot` | `HomeES.dc.html` 716 |

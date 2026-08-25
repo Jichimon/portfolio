@@ -2,12 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runGate } from './gate.mjs';
 
-/** A recording runner: returns the exit code the fixture asked for, and remembers who ran. */
-const runnerFor = (codes) => {
+/**
+ * A recording runner: returns the `{ code, stdout }` the fixture asked for, and
+ * remembers who ran. `outputs` is optional and defaults every step to no stdout,
+ * matching a plain guard command that prints nothing a liveness check would parse.
+ */
+const runnerFor = (codes, outputs = {}) => {
   const ran = [];
   const run = (step) => {
     ran.push(step.name);
-    return codes[step.name] ?? 0;
+    return { code: codes[step.name] ?? 0, stdout: outputs[step.name] ?? '' };
   };
   return { run, ran };
 };
@@ -62,7 +66,11 @@ test('an all-green run exits zero', () => {
   assert.equal(runGate(steps('one', 'two'), run).exitCode, 0);
 });
 
-test('a skipped step declares itself and is never run', () => {
+test('RED: a skipped step declares itself, is never run, and leaves the gate incomplete rather than passed', () => {
+  // TASK 39: a SKIP is a legitimate verdict, not a failure - but it is also not
+  // a pass. Nothing failed here, so exitCode 1 would be wrong; exitCode 0 is the
+  // exact bug this item exists to close, because it prints "GATE PASSED" over a
+  // step that never ran.
   const { run, ran } = runnerFor({});
   const list = steps('one', 'two');
   list[0].skipIf = () => true;
@@ -72,7 +80,8 @@ test('a skipped step declares itself and is never run', () => {
   assert.equal(r.results[0].status, 'SKIP');
   assert.equal(r.results[0].note, 'target does not exist yet');
   assert.deepEqual(ran, ['two']);
-  assert.equal(r.exitCode, 0);
+  assert.deepEqual(r.incomplete.map((x) => x.step.name), ['one']);
+  assert.equal(r.exitCode, 2);
 });
 
 test('a skip is not a pass: it never enters the failure list, and never hides one', () => {
@@ -134,4 +143,83 @@ test('RED: a dependency on a LATER step throws - it can never have a verdict yet
   list[0].dependsOn = 'two';
 
   assert.throws(() => runGate(list, run), /two/);
+});
+
+test('RED: dependsOn accepts several predecessors and runs when they all pass', () => {
+  // TASK 39: the gate now has two test steps, and a step downstream of both (the
+  // mutation step, in the real gate) needs to name both rather than picking one.
+  const { run, ran } = runnerFor({});
+  const list = steps('one', 'two', 'three');
+  list[2].dependsOn = ['one', 'two'];
+
+  const r = runGate(list, run);
+  assert.equal(r.results[2].status, 'PASS');
+  assert.deepEqual(ran, ['one', 'two', 'three']);
+});
+
+test('RED: dependsOn with several predecessors is BLOCKED when any one of them did not pass', () => {
+  const { run, ran } = runnerFor({ two: 1 });
+  const list = steps('one', 'two', 'three');
+  list[2].dependsOn = ['one', 'two'];
+
+  const r = runGate(list, run);
+  assert.equal(r.results[2].status, 'BLOCKED');
+  assert.match(r.results[2].note, /two/);
+  assert.deepEqual(ran, ['one', 'two']);
+});
+
+test('RED: several predecessors still throws when one of them does not exist', () => {
+  const { run } = runnerFor({});
+  const list = steps('one', 'two');
+  list[1].dependsOn = ['one', 'nope'];
+
+  assert.throws(() => runGate(list, run), /nope/);
+});
+
+test('RED: several predecessors still throws when one of them is a LATER step', () => {
+  const { run } = runnerFor({});
+  const list = steps('one', 'two', 'three');
+  list[0].dependsOn = ['two', 'three'];
+
+  assert.throws(() => runGate(list, run), /two/);
+});
+
+test('RED: a step whose command exits 0 but ran zero tests does not report PASS', () => {
+  // TASK 39: `node --test` on a glob that matches nothing still exits 0. The gate
+  // used to read only the exit code, so a renamed or deleted test file silently
+  // kept the step green while the check it carried vanished. Derived from the
+  // runner's own summary line - node:test's default and TAP reporters both print
+  // it - never from a hardcoded per-step count (P-13).
+  const { run } = runnerFor({}, { one: 'ℹ tests 0\nℹ pass 0\nℹ fail 0\n' });
+  const list = steps('one');
+
+  const r = runGate(list, run);
+  assert.notEqual(r.results[0].status, 'PASS');
+});
+
+test('a step whose command exits 0 and ran at least one test still passes', () => {
+  const { run } = runnerFor({}, { one: 'ℹ tests 3\nℹ pass 3\nℹ fail 0\n' });
+  const list = steps('one');
+
+  const r = runGate(list, run);
+  assert.equal(r.results[0].status, 'PASS');
+});
+
+test('a step whose output carries no test-count line at all is judged on exit code alone', () => {
+  // A plain guard (check-content, check-terms, ...) is not a test runner and prints
+  // no test-count summary - the absence of the line is not the same claim as "ran
+  // zero tests", so it must not be penalized for a property it never had.
+  const { run } = runnerFor({}, { one: 'no findings\n' });
+  const list = steps('one');
+
+  const r = runGate(list, run);
+  assert.equal(r.results[0].status, 'PASS');
+});
+
+test('the TAP-reporter form of the same summary line is recognized too', () => {
+  const { run } = runnerFor({}, { one: '1..1\n# tests 0\n# pass 0\n# fail 0\n' });
+  const list = steps('one');
+
+  const r = runGate(list, run);
+  assert.notEqual(r.results[0].status, 'PASS');
 });

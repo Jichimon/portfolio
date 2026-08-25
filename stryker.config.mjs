@@ -86,7 +86,25 @@ export default {
   //
   // A genuine equivalent mutant is still excluded AT THE MUTANT with a written reason, never by
   // lowering this number (ADR-006), and checkStrykerSuppressions fails a reasonless one.
-  thresholds: { high: 100, low: 100, break: 74 },
+  //
+  // RAISED 2026-08-25, 74 -> 74.5, against a re-measured 74.74% over 4,773 mutants: 3,496
+  // killed, 66 timed out, 992 survived, 212 with no coverage. What moved it: the DOM-requiring
+  // behaviour tier left the mutated surface for the home ADR-008 already gave it (111 mutants
+  // that no runner here could kill), shell.mjs got its first colocated battery (66.21 -> 80.73),
+  // and git-write.mjs - the guard behind H-01, and the worst file in the repository - went
+  // 54.38 -> 85.71 with its uncovered mutants down to zero.
+  //
+  // The slack is 0.24 points and that is thinner than it looks, so it is stated rather than
+  // left to be discovered: TIMEOUTS COUNT AS KILLED, and the timeout count is timing-dependent.
+  // Runs on this surface have reported 21, 45 and 66 timeouts. A drop from 66 to 21 is 45 fewer
+  // kills, which is 0.94 points - enough to fail this threshold on a slower machine with no
+  // code change at all. If that happens, the answer is to kill more mutants, never to lower
+  // this number.
+  //
+  // OBSERVED within the hour of setting it: the run that set this floor read 74.74, and the
+  // gate run minutes later read 74.63 with no code change. 0.11 points of drift, 0.13 of slack
+  // left. The mechanism above is not hypothetical.
+  thresholds: { high: 100, low: 100, break: 74.5 },
 
 
   // The sandbox is a COPY of the working tree, and it is not limited to what git tracks —
@@ -103,5 +121,5 @@ export default {
   ignorePatterns: ['private', 'evidence'],
 
   coverageAnalysis: 'perTest',
-  reporters: ['progress', 'clear-text', 'html'],
+  reporters: ['progress', 'clear-text', 'html', 'json'],
 };

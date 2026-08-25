@@ -11,15 +11,46 @@
 //      the confidentiality mapping straight into the transcript — private/ leaking through
 //      the guard that protects it (H-04). Findings now carry the LOCATION and mask the term.
 //
-// Substring matching, deliberately, exactly as the shell version did: a false positive is
-// noise a human dismisses in one look, a false negative is a published leak.
+// Substring matching by default (TASK 37 kept it deliberately for package names and
+// resolved URLs). TASK 45 adds a PER-TERM opt-in: a line wrapped `\b <term> \b` matches
+// only at a word boundary, for the one term that collides with a short, unrelated public
+// identifier (a package name on the public npm registry). Every other term is unaffected —
+// this is a per-term human decision, never a global switch. A global switch would trade
+// today's false positive for a class of false negatives in compound identifiers, which is
+// exactly where an internal system name would appear.
 
-/** Terms with their line in banned-terms.txt, so a finding is lookup-able without the term. */
+const WORD_BOUNDARY_OPEN = '\\b ';
+const WORD_BOUNDARY_CLOSE = ' \\b';
+
+/**
+ * Terms with their line in banned-terms.txt, so a finding is lookup-able without the term.
+ * A term recognizes the `\b <term> \b` flag (both markers required) and carries
+ * `wordBoundary: true` when it does. A line with only ONE of the two markers is malformed
+ * and fails the run rather than being read as a literal — a guard that cannot evaluate its
+ * own term list must deny, not silently protect nothing (G-13). This is what today's live
+ * defect was: the un-parsed line `\b <term> \b` read as one literal term, escaped, and
+ * matched against nothing, while `check-terms` still reported PASS.
+ */
 export function parseTerms(text) {
   const out = [];
   text.split(/\r?\n/).forEach((raw, i) => {
-    const term = raw.trim();
-    if (term && !term.startsWith('#')) out.push({ term, line: i + 1 });
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.startsWith('#')) return;
+    const line = i + 1;
+    const opens = trimmed.startsWith(WORD_BOUNDARY_OPEN);
+    const closes = trimmed.endsWith(WORD_BOUNDARY_CLOSE);
+    if (opens !== closes) {
+      throw new Error(
+        `private/banned-terms.txt:${line}: malformed \\b flag — a flagged line must both ` +
+        `open with "\\b " and close with " \\b"; this line has only one of the two markers.`,
+      );
+    }
+    if (opens && closes) {
+      const term = trimmed.slice(WORD_BOUNDARY_OPEN.length, -WORD_BOUNDARY_CLOSE.length).trim();
+      out.push({ term, line, wordBoundary: true });
+    } else {
+      out.push({ term: trimmed, line });
+    }
   });
   return out;
 }
@@ -43,14 +74,30 @@ export function isBinary(buf) {
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
+ * The pattern for one parsed term. `wordBoundary` wraps the escaped term in `\b`, so a
+ * flagged term matches "ShortTerm" but not "ShortTerm5" or "node_modules/ShortTerm5" — the
+ * exact collision TASK 45 exists to fix. Unflagged terms are unchanged: a bare substring,
+ * matching inside a compound identifier exactly as before (TASK 45's per-term contrast).
+ */
+function termPattern({ term, wordBoundary }) {
+  const body = escapeRe(term);
+  return wordBoundary ? `\\b${body}\\b` : body;
+}
+
+/**
  * Blocks of the term's own length, so the position stays visible and the term does not.
  * Exported because the evidence trace scrubs with it too: a trace of a session that touched
  * private/ would recreate the exact leak this repository exists to prevent (H-04).
+ *
+ * Honours each term's own word-boundary flag. Masking with plain substring matching while
+ * scanText matches only at a boundary would blank characters that were never a real finding
+ * (e.g. "ShortTerm5" for a flagged "ShortTerm"), which prints a context line where the
+ * masked block no longer corresponds to the reported column.
  */
 export function mask(line, terms) {
   let out = line;
-  for (const { term } of terms) {
-    out = out.replace(new RegExp(escapeRe(term), 'gi'), (m) => '█'.repeat(m.length));
+  for (const term of terms) {
+    out = out.replace(new RegExp(termPattern(term), 'gi'), (m) => '█'.repeat(m.length));
   }
   return out;
 }
@@ -90,7 +137,7 @@ export function scanText(text, terms, { opaqueFields = [] } = {}) {
     // masked against every term, so a human still sees where they are.
     const searchable = blankOpaqueValues(line, opaqueFields);
     for (const term of terms) {
-      const re = new RegExp(escapeRe(term.term), 'gi');
+      const re = new RegExp(termPattern(term), 'gi');
       for (const m of searchable.matchAll(re)) {
         hits.push({ line: i + 1, column: m.index + 1, term, context: mask(line, terms) });
       }

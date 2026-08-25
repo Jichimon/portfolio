@@ -68,7 +68,7 @@ const STEPS = [
     // nothing (P-03). passWithNoTests is deliberately off in vitest.config.ts, so this skip is
     // the ONLY thing standing between an empty tier and a loud failure — which is the right
     // way round: renaming the suffix makes the gate fail, not go quietly green.
-    skipIf: () => !holdsFileEndingWith('site/lib', '.component.test.ts'),
+    skipIf: () => !holdsFileEndingWith('site', '.component.test.ts'),
     skipNote: 'no .component.test.ts exists yet — the behaviour modules arrive with the layout shell',
   },
   {
@@ -91,7 +91,13 @@ const STEPS = [
     // It is about the REPORT: without it, one broken guard test produces two failures, and the
     // second one tells you a mutant survived, which is not what happened. BLOCKED names the
     // root cause once.
-    dependsOn: 'guard tests',
+    //
+    // Both test tiers, not just the guards — the gate has two node:test steps and Stryker's
+    // initial run covers both surfaces (scripts/guards/lib/** and site/lib/**). A broken
+    // 'site core tests' step dies inside Stryker's initial run exactly like a broken
+    // 'guard tests' step does, so naming only one root cause left the other unblocked and
+    // reporting the same misleading "mutant survived" (TASK 39).
+    dependsOn: ['guard tests', 'site core tests'],
     // A fresh clone has no root node_modules, and without this `npx` would go to the network
     // and download Stryker mid-gate. The cost is a step that can vanish quietly, which is
     // INC-08's shape — so CI installs at the root and the summary prints every skip out loud.
@@ -178,22 +184,28 @@ const STEPS = [
 
 // The run loop lives in guards/lib/gate.mjs so it can be tested without spawning
 // sixteen processes. This file owns the step list and the reporting, nothing else.
-const { results, failures, exitCode } = runGate(STEPS, (step) => {
+const { results, failures, incomplete, exitCode } = runGate(STEPS, (step) => {
   const [bin, ...args] = step.cmd;
   const exe = bin === 'node' ? process.execPath : bin;
   // A step may declare its own working directory. Almost none do — the gate reads the
   // repository from the root — but a package-scoped runner has to start inside its package
   // to resolve its own config, and passing that as a flag would be a second way to say the
   // same thing. ROOT stays the default, so nothing that does not ask is affected.
-  return spawnSync(exe, args, { cwd: step.cwd ?? ROOT, stdio: 'inherit' }).status ?? 1;
+  //
+  // stdout is captured rather than inherited so `runGate` can derive liveness from a test
+  // runner's own summary line (TASK 39) — a step that exits 0 having run zero tests must
+  // not report PASS. stderr still streams straight to the terminal, so a hung or noisy step
+  // is still visible live; the captured stdout is written out below, once the step is done.
+  const result = spawnSync(exe, args, { cwd: step.cwd ?? ROOT, stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8' });
+  if (result.stdout) process.stdout.write(result.stdout);
+  return { code: result.status ?? 1, stdout: result.stdout ?? '' };
 });
 
 console.log('\n' + '-'.repeat(60));
 for (const line of formatSummary(results)) console.log(line);
 console.log('-'.repeat(60));
 
-const skipped = results.filter((r) => r.status === 'SKIP');
-if (skipped.length) console.log(`\n${skipped.length} step(s) skipped — declared, not silent.`);
+if (incomplete.length) console.log(`\n${incomplete.length} step(s) skipped — declared, not silent.`);
 
 if (failures.length) {
   // Reporting every step is not the same as burying the failure: the summary above
@@ -201,6 +213,19 @@ if (failures.length) {
   console.error(`\nGATE FAILED — ${failures.length} of ${results.length} step(s) did not pass:`);
   for (const { step, status, note } of failures) {
     console.error(`\n  ${status}  ${step.name}${note ? ` (${note})` : ''}`);
+    console.error(`    protects: ${step.protects}`);
+  }
+  process.exit(exitCode);
+}
+
+if (incomplete.length) {
+  // Nothing FAILED, but a SKIP is not a PASS either — the step's check never ran,
+  // so "GATE PASSED" here would be exactly the false-green TASK 39 exists to close.
+  // A distinct headline and a distinct exit code (2) let a human — and CI — tell
+  // "broken" apart from "incomplete" without reading the summary above.
+  console.error(`\nGATE INCOMPLETE — ${incomplete.length} of ${results.length} step(s) did not run:`);
+  for (const { step, note } of incomplete) {
+    console.error(`\n  SKIP  ${step.name}${note ? ` (${note})` : ''}`);
     console.error(`    protects: ${step.protects}`);
   }
   process.exit(exitCode);

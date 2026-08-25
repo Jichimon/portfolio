@@ -18,7 +18,7 @@ export default getViteConfig({
     // two overlap, and the extension alone cannot separate them. So the boundary is the
     // SUFFIX: .component.test.ts belongs to this runner, .test.mjs to the other one.
     // Nothing here is discovered.
-    include: ['lib/**/*.component.test.ts'],
+    include: ['{lib,src}/**/*.component.test.ts'],
 
     // passWithNoTests is deliberately NOT set. A run that finds nothing must fail loudly:
     // with it on, renaming the suffix above would make every test in this tier vanish and
