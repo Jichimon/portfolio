@@ -1,0 +1,62 @@
+---
+// A real button, not a checkbox styled to look like one. It reads and writes a
+// viewer preference, not content, so it takes only the label naming the theme it
+// would switch TO — the component that makes it do that is a later, separate
+// module; this one renders the correct resting state and stays inert without it.
+// aria-pressed and the host's data-spy-style hook are left correct on purpose: they
+// are the seams that module attaches to, not decoration.
+interface Props {
+  label: string;
+}
+
+const { label } = Astro.props;
+---
+
+<button type="button" class="site-rail__theme-toggle" aria-pressed="false">
+  <span class="site-rail__theme-toggle-track" aria-hidden="true">
+    <span class="site-rail__theme-toggle-thumb" />
+  </span>
+  <span class="site-rail__theme-toggle-label">{label}</span>
+</button>
+
+<style>
+  .site-rail__theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-ink-muted);
+    letter-spacing: 0.03em;
+  }
+  .site-rail__theme-toggle-track {
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+    border-radius: 9px;
+    border: 1px solid var(--color-border-strong);
+    position: relative;
+    background: var(--color-bg-elevated);
+    flex: 0 0 auto;
+  }
+  .site-rail__theme-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-ink);
+    transition:
+      transform 0.18s ease,
+      background 0.18s ease;
+  }
+  :global(:root[data-theme='dark']) .site-rail__theme-toggle-thumb {
+    transform: translateX(16px);
+    background: var(--color-accent);
+  }
+</style>

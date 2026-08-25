@@ -270,6 +270,20 @@ The one that matters most: **a run stopped by `maxTurns` is recorded as `COMPLET
 - The `permission_mode` capture may turn out to be unavailable from the hook payload. If so, the honest outcome is a recorded finding plus a correction to `G-04`'s claim — not a fabricated value.
 - Re-measure `harness-evaluator`'s turn budget while here (`GAP-13`): it was raised 20 → 60 after a run was cut off mid-analysis, and one completed run is now available as a data point.
 
+**Three more specimens, 2026-08-24, and these are the unambiguous ones.** `TASK 22` ran four delegated `implementer` slices; **three stopped mid-turn without reporting**, each with its work already finished and its report the thing that got cut. That removes the ambiguity this entry records about the earlier implementer that used 30 of 30 and *did* report — the question was whether it fit exactly or was cut after the work happened to be done. Here the answer is visible: the work landed, the account of it did not.
+
+**A sixth followed, and six specimens in one work item is now a pattern rather than a run of bad luck.** The guard slice stopped at **155k tokens across 46 tool calls** with one of its two assertions written and wired, the second still a stub, and `check-site` left **throwing** mid-edit. Its notification read *"Now wire it into checkSite:"*.
+
+**The pattern the six specimens make, stated as a datum rather than a conclusion:** every slice in this item that owned **more than two files** was cut off; every slice that owned **two** completed, twice, including one that was reopened and finished a second time. That is six data points on one role at one budget, in one day, on work of comparable difficulty. It does not by itself say whether the fix is a larger budget, a harder cap on files-per-slice, or a report written before the work rather than after — but it is the first evidence in this repository that the failure correlates with something the orchestrator controls when writing the brief, rather than with the nature of the task.
+
+**A fifth specimen followed the fourth within the hour, same item, same shape:** a markup slice stopped at **149k tokens across 41 tool calls** with six of its seven files written and its notification reading *"Now the two page files."* This one had already been re-cut smaller **once** after the fourth, and consumed everything it needed as finished, verified inputs — no design decisions, no toolchain discovery. It still did not fit. That is a useful datum for the re-measurement: two consecutive cuts of the same work, the second deliberately narrowed, both ending the same way. **The remaining work after the cut-off was one file**, which is what resuming is for — but nothing in the trace says so, and the orchestrator only knew by opening the tree.
+
+**A fourth specimen, 2026-08-24, and it separates two causes that the first three could not.** The layout-shell item delegated a slice owning seven file groups plus a font decision plus a typing fix. It stopped at **228k tokens across 47 tool calls** having produced **one partially-written file**, and its notification carried a fragment — *"Now let's create the tokens.css file."* — where a report belongs.
+
+**This one was not a budget that was too low; it was a slice that was too big**, and the two look identical from the trace. The three specimens above all had their *work* finished and their *report* cut, which is the report-competes-with-the-work shape. This one was cut in the middle of the third file of seven. `P-09` already names the remedy — enumerate objects, never surfaces, and cut the scope rather than hoping — and the re-cut into two slices sharing no file is what shipped. **What the trace cannot tell you is which of the two it was**, and until a footer says `FAILED` with the budget named, every future instance needs a human to open the tree and look. That is this item's whole point, arriving through a fourth door.
+
+**What the shape suggests, for the re-measurement this item owns:** the report competes for the same budget as the work and always loses, because it comes last. One slice's brief added a mutation battery as a required step and that slice was the first to be cut — so a brief that adds a verification step has to buy the budget for it, which is a different finding from *the number is too low*. Both belong here; neither is decided in passing.
+
 **`adversarial-auditor`'s budget belongs in this re-measurement too, and it now has two specimens on one day.** It carries `maxTurns: 20` — the **lowest of the five roles**, against `implementer` and `test-engineer` at 30, `researcher` at 25 and `harness-evaluator` at 60. It is also the only role whose job is running red paths, and a red path is never one call: back the file up, modify it, run the suite, restore it, verify the restore. Five calls to establish one finding.
 
 Both `TASK 15` audits on 2026-08-24 stopped without reporting and had to be resumed by message — the first at 28 `tool.requested`, the second at 29. **The second one is the informative one:** it was deliberately cut to a single question about a single object, precisely because the first had been given six attack categories, and it blew the budget anyway. So this is not only the brief-slicing problem the `work-item` procedure now records; 20 turns does not fit an audit that runs anything.
@@ -343,6 +357,12 @@ From `EVAL-000` (`GAP-02`). `T-03` places the mutation gate at **rung 2**; `scri
 
 ## TASK 38 — Ratchet the mutation score toward 100 · `harness` · `TODO`
 
+**The score is BELOW the floor as of 2026-08-25, and this item is no longer only a burn-down.** The layout-shell item measured **70.02 against a break of 74** over 4,713 mutants. `break` was not lowered — it ratchets up and does not come back — so the gate’s mutation step is red until this runs.
+
+**The breakdown, so nobody re-derives it or blames the wrong half.** `site/lib/nav` scored **100.00%** (38 mutants, zero survivors) and `site/lib/content` held at 92.62%. `site/lib/behavior` scored **0.00%** across 111 mutants — none covered, because its tests are `.component.test.ts` and Vitest runs them, which the tap runner does not drive. **That is the tempting explanation and it is not the main one:** removing all 111 from the denominator gives 71.71%, still short. The behaviour tier accounts for **1.69 of a 5.64-point fall**. The rest is `scripts/guards/lib/site-structure.mjs` at **59.66% over 1,046 mutants, 317 survivors and 105 uncovered** — a file that grew by two guard functions in that item and is now the largest single deficit in the repository.
+
+**An architectural question has to be answered before or alongside the burn-down, and it is the author’s.** `ADR-008`’s tree contracts the core as *"Node ESM, no Astro, no Vite — node:test runs it, Stryker mutates it."* The behaviour modules are Node ESM with no Astro **and need a DOM**, so neither half of that sentence is true of them. There is no declared home for *framework-free but DOM-requiring*. An exclusion was tried and correctly refused by `mutation-suppressions.test.mjs`, whose property is that the mutate globs exclude test files and nothing else — *"the worst-scoring file is exactly the one it would be tempting to drop."* Three answers, each with a different cost: widen that property to permit a reasoned, differently-covered surface; move the tier out of the mutated core; or leave the step red until this item lands.
+
 **Where these two run, agreed with the author 2026-08-24 so nobody re-derives it.** Neither is site work and neither blocks the localhost milestone, so both sit outside the seventeen-item sequence — but "outside the sequence" is how an item quietly becomes never, and that is what this note prevents.
 
 - **`TASK 39` runs immediately before the design-fidelity item**, not before the first page. The tempting argument — *a step added to a blind gate is never verified*, which is what pulled `TASK 34` in at position 3 — is weaker than it looks here: every item that adds a step must already prove it in red (`T-04`, `P-14`), so a dead step is caught the day it is written. The blindness is about later decay, not day one. What makes the fidelity item the right neighbour is that its entire value is a diff that actually runs.
@@ -362,6 +382,8 @@ Opened 2026-08-24 by `TASK 15`, the moment the mutation gate produced its first 
 
 `P-14` says a guard is not trusted until it has been proven in red. A 54% mutation score on the guard behind `H-01` is a measured statement that nearly half its battery proves nothing — and `INC-14` already found two rung-1 boundaries broken, one failing *open*, which is what this number looks like from the inside.
 
+**Eleven more survivors arrived 2026-08-24 with the content core, and they are named rather than counted.** `TASK 22` wired the mutation runner to `site/lib/content/**` — the surface had 149 mutants and **no test file had ever been handed to the runner to kill them**, so the aggregate was 72.11 and the gate was failing. Wired, that surface scores 92.62: **8 survivors in `locale-pair.mjs`, 3 in `internal-link-localizer.mjs`**, 0 without coverage. The two sibling modules are at 100. The measured floor moved 74.35 → 75.66 and `break` was deliberately **not** raised, because raising it against a re-measured score is this item's own deliverable and doing it in passing would leave nobody able to say which number was tested.
+
 **Done:** `break` in `stryker.config.mjs` is raised at least once against a re-measured score, with the new floor recorded and the survivors it represents named — and the three modules above are no longer the three worst. Closing at 100 is the eventual goal; **this item closes on a ratchet, not on perfection**, and re-opens as often as the floor can move.
 
 **Constraints**
@@ -375,6 +397,10 @@ Opened 2026-08-24 by `TASK 15`, the moment the mutation gate produced its first 
 ---
 
 ## TASK 39 — A gate step that never ran must not report PASS · `bugfix` · `TODO`
+
+**The evidence for that decision arrived the next day and it is not marginal.** Between the tier landing and the layout shell closing, `astro check` accumulated **19 type errors** — eighteen missing annotations across two test files and one real assignment defect in a layout — and **nothing anywhere went red**. Every one was written by a delegated run that had verified its own work with the test runner. A type-check that exists as a script and is wired into nothing is a type-check that does not exist, and the cost of adding it as a gate step is one line.
+
+**A second live specimen, found 2026-08-24 by `TASK 44`, and it is not a gate step — which is why it is worth recording here.** `npm run check` in `site/` printed a fatal diagnostic (`astro check` refusing to run against TypeScript 7, whose native compiler does not expose the programmatic API it needs) and **returned exit code 0**. Nobody had noticed, because that command is not wired into the gate — so the property this item owns was being violated in a place the item’s own framing does not reach. The immediate cause was fixed by pinning TypeScript to `^6.0.3`; the exit-code behaviour belongs to Astro’s CLI and is not this repository’s to fix. **What is this repository’s:** deciding whether `astro check` becomes a gate step, since a type-check nobody runs is a type-check that does not exist. Noted rather than opened as its own item, because it is this item’s property arriving through a different door.
 
 Opened 2026-08-24 by `TASK 15`'s adversarial audit. Two findings, one shape, and neither belongs to the item that found them — they are properties of `gate.mjs` and predate it.
 
@@ -392,6 +418,7 @@ That is `INC-08` in the gate itself: *a check that exists and does not check*, i
 
 - **`SKIP` is a legitimate verdict and must stay one.** `check-site` skipped honestly for weeks before `site/` existed, and the mutation step must skip on a fresh clone rather than fail confusingly. What is wrong is the *headline*, not the mechanism — do not fix this by deleting `skipIf` (`P-03`: silence reads as coverage, but so does a green summary over a skip).
 - **Derive liveness, never enumerate it** (`P-13`). "Each step declares the minimum work it must have done" is a roster in disguise if it becomes a hardcoded per-step count. A test-count floor read from the runner's own output is a property; `expect 433 tests` is a number that rots the next time someone adds a test.
+- **A third finding, same file, opened 2026-08-24 by `TASK 22`:** `dependsOn` takes a **single** predecessor and `assertDependenciesResolve` requires it to be an earlier step. The gate now has two test steps — `guard tests` and `content core tests` — and the mutation step can only declare one of them. A broken content-core test therefore fails **two** steps for one root cause: its own, and `mutation`, whose Stryker run dies on the failed initial test run. Chaining the two test steps was considered and rejected: it would block a genuinely independent second failure behind the first, which is the blindness this item's sibling was opened to remove. The fix is for `dependsOn` to accept several predecessors, which is a `runGate` change and therefore needs its own red battery (`T-04`).
 - Do not widen this into re-plumbing `runGate`. `TASK 34` extracted it so it is testable without spawning sixteen processes; that is the seam to use.
 
 ---
@@ -436,6 +463,97 @@ Split from `TASK 27` on 2026-08-24, with the author. `TASK 27` bundled two thing
 - **This is not the fidelity diff.** No artboard comparison, no tolerance, no prod target. Claiming otherwise would make `TASK 27` look done when it is not.
 - `npm start` is the production build; the suite runs against the built output, never a dev server (`INC-03`, `T-02`).
 - **The file cap is 6 and `site/` already holds four.** `playwright.config.ts` takes it to five (`S-03`).
+
+---
+
+## TASK 42 — The test and mutation globs cover one subfolder, not the core · `bugfix` · `DONE`
+
+**Closed 2026-08-24.** All four globs now read `site/lib/**`: the unit-runner row and the sub-gate row in `30-testing.md`, the gate step’s command, and Stryker’s `mutate` and `tap.testFiles`. The step is renamed **`site core tests`** and its `skipIf` guards `site/lib` rather than `site/lib/content`, so a checkout without the core still declares the gap out loud instead of passing on nothing.
+
+**The red path returned a sharper result than the item predicted.** A deliberately failing test was planted in a sibling directory under the core. `node --test "site/lib/content/**/*.test.mjs"` **exited 0** — not skipped, not warned, *passed*, with a failing test sitting in the tree — while the widened glob exited 1 and printed it. The planted file was removed and the suite re-run green. The defect was never hypothetical: it was one directory away, and it would have been invisible on arrival.
+
+**The mutation half is verified in the shared pass that closes the layout-shell item, and `break` is re-measured there rather than here.** A wider `mutate` glob is a new denominator, so `74` was stale the moment these globs changed — but the shell lands two more mutated guard functions in the same stretch of work, and measuring twice would price two intermediate denominators nobody will ever use. Deferred on the author’s instruction, with the reason recorded so a stale threshold does not read as an unnoticed one.
+
+**`ADR-006`’s first review trigger fired and resolved in the negative, in the same change.** It asked whether the core’s eventual code would need Vite’s runtime to test meaningfully and said it stayed open because that code did not exist. It exists now — four modules, 26 tests, every one running under plain `node --test` with no Astro in the import graph. Vitest is **not** introduced for this surface and the second Stryker config stays declined. Detail: `progress/2026-08-24-09-task42-task44-globs-and-component-tier.md`.
+
+**Superseded opening note follows, kept for the trail.**
+Opened 2026-08-24 by `TASK 22`. Both unit-test globs and Stryker's `mutate` glob name **`site/lib/content/**`**, not `site/lib/**`. `ADR-008`'s tree plans two more directories beside it — `site/lib/i18n/` for locale URLs and `site/lib/nav/` for nav structure — and **the day either gets its first file, that file is outside the gate step and outside the mutation run, silently.**
+
+`TASK 22` avoided it by putting everything it wrote under `content/`, including a link localizer that arguably belongs in `i18n/`. That was the cheap choice for one item and it is not available to the next one: the layout-shell item owns the nav data module, and `ADR-008` names its location.
+
+This is `INC-08`'s shape — *a check that exists and does not check* — arriving through a glob rather than through a path filter. The narrowing was written before any of this code existed, when `content/` was the only directory anyone had imagined.
+
+**Done:** the unit-test glob in `30-testing.md`, the gate step's command and Stryker's `mutate` and `testFiles` globs all cover the surface the rules actually describe — with a red test proving a file in a sibling directory under the core is run and mutated, and `ADR-006` reconciled to match (`G-11`).
+
+**Constraints**
+
+- **Widening is the safe direction and still needs measuring.** More mutants means a new denominator; re-measure the floor rather than assuming the number holds.
+- `S-06` already scopes the whole of `site/lib/**` as framework-free, so the rules disagree with each other today: one surface, two boundaries. Fix the globs, do not narrow `S-06`.
+- Do not fold in the ratchet item's burn-down. This item makes the net cover the surface; killing what it catches is the other item's job.
+
+---
+
+## TASK 44 — Component test tier: Vitest, jsdom, `@testing-library/preact` · `harness` · `DONE`
+
+**Opened and closed 2026-08-24**, pulled into the sequence ahead of the layout-shell item for the same reason the mutation-gate item was pulled in ahead of any site code: a test tier installed *inside* the feature item that uses it is a tier whose own red path never gets proven. The shell lands the first two DOM-requiring modules — the scroll-spy and the theme toggle — and `ADR-006`’s 2026-08-23 amendment had decided the tier without anyone building it.
+
+**Delivered:** Vitest 4.1.11, jsdom 29.1.1 and `@testing-library/preact` 3.2.4 in `site/`; `site/vitest.config.ts` built on `getViteConfig()` so a test imports what the site imports; and an **eighteenth gate step**, `component tests`.
+
+**Two decisions worth not re-deriving.** The two unit runners are separated by **suffix** — `.component.test.ts` for Vitest, `.test.mjs` for `node:test` — because their default globs overlap, the extension alone cannot separate them, and a directory split would have meant a module’s *location* decided its runner rather than its nature. And **`passWithNoTests` is deliberately off**: with it on, renaming that suffix would make every test in the tier vanish and the suite stay green forever. The legitimately-empty case is handled where it is visible instead — the gate step skips itself with a written reason (`P-03`).
+
+**Proven in both directions before being declared done** (`P-14`): a failing DOM assertion under the new suffix exits 1 and the step fails; the same test flipped green exits 0; the planted file was then removed. A third mechanism was added in passing — a gate step may declare its own `cwd`, because a package-scoped runner has to start inside its package to resolve its own config. The root stays the default.
+
+**The tier is outside the mutation surface, and that is declared rather than silent:** `D3` scoped mutation to parsing, joining and validating, and covering a Vitest surface needs a second Stryker config and a second invocation — the cost `ADR-006` priced and declined.
+
+---
+
+## TASK 46 — Two rail strings the interface-strings collection does not carry · `content` · `TODO`
+
+**Opened 2026-08-24 by the layout-shell item.** The design’s rail carries GitHub and LinkedIn links below the theme toggle, and they are the one rail element the responsive contract specifies to **disappear below 820px** — on a phone, language outranks a profile link. **The interface-strings collection carries no `socials` group**, so both the labels and the two URLs exist only in an artboard.
+
+**The block was correctly omitted rather than invented**, which is this project’s standing rule — a section is omitted when its content is absent — and `resources/**` is read-only to every agent, so inventing the strings would have been the only alternative and would have been the actual error. Recorded so the omission reads as a decision rather than as something nobody noticed.
+
+**The wordmark is the second one, and it is the sharper case.** The rail prints the author’s name as the site’s only way home — there is no `Home` nav item, by design, so the wordmark carries that job alone. It **cannot** be omitted the way the socials block can, so the layout-shell item rendered it as a literal and **declared the violation in the file rather than burying it**. It is the one place the shell does not satisfy the no-strings-outside-content rule, and the guard built in the same item will report it — correctly. The value is identical in both locales, so there is nothing to translate; it needs a key, not a translation.
+
+**Done:** `ui.{en,es}.md` carries a `socials` group and a wordmark key, each with its traceability row; the rail renders the socials block with its below-820 hiding rule and reads the wordmark from content; and the string guard reports zero findings.
+
+**Constraints**
+
+- **The author writes the content**, not an agent. The two URLs are the author’s own public profiles and the labels are visible strings, so both belong in the content file under the same rule as every other chrome string.
+- **The list must be data, not markup.** A third profile is a new entry in the content file and nothing else — the same criterion every other list on this site is held to.
+- **The hiding rule is part of the deliverable.** The block is the one piece of rail chrome that is deliberately dropped at narrow, and a version that survives to 390px is not the design.
+
+---
+## TASK 45 — The confidentiality guard matches substrings, and a short term collides forever · `bugfix` · `TODO`
+
+**Opened 2026-08-24 by `TASK 44`.** Installing the component tier pulled in a transitive dependency whose **npm package name contains a banned term as a substring**. `check-terms` matches case-insensitively with **no word boundary**, so the generated `site/package-lock.json` now fails the confidentiality step in four places. No authored content is involved, nothing was published, and the containing text is a public package name from the public registry.
+
+**This is the same family as `TASK 37`**, which fixed integrity-hash false positives on 2026-08-24 — and that fix was scoped to opaque *fields*, explicitly keeping package names and resolved URLs scanned. That was the right call then: a package name genuinely could carry a leak. It is also exactly what this walks into now, which is why this is a decision rather than a patch.
+
+**Done:** a decision, recorded, on which error direction costs more, and the guard reflecting it.
+
+**Constraints**
+
+- **Four candidate answers, none free.** Word-boundary matching trades this false positive for a class of false *negatives* — a term embedded in a compound identifier would stop matching, and compound identifiers are exactly where an internal system name shows up. Treating lockfile package-name and URL fields as opaque reverses `TASK 37`’s deliberate call. Excluding generated lockfiles wholesale is the weakest and the file is committed. Leaving it is the worst: **a gate step nobody can make green is a gate step people learn to ignore**, which is how a confidentiality check dies.
+- **`C-07` applies to the fix, not only to the content.** This must not be routed around — the answer is a stated decision about matching semantics, never an exclusion added quietly to make a red step green.
+- **It recurs on every install.** This is not a one-off to wait out; the next dependency with a short colliding name reproduces it.
+
+---
+## TASK 43 — Concurrent writes happened, and the deferred remedies name a different actor · `harness` · `TODO`
+
+Opened 2026-08-24 by `TASK 22`. `40-agent-policy.md` defers two mechanisms — **enforced write scope for `implementer`/`test-engineer`**, and **worktree isolation as a default** — and both name the same trigger: *concurrent writes*. The trigger fired.
+
+**It did not fire the way either row anticipated.** Not two agents: **the orchestrator and one agent**, writing the same two files inside the same minute. A delegated run reported `completed` twice while still alive; its second report was a fragment, the orchestrator read that as a finished run, verified the tree, found work left undone and did it. The agent's own edits then failed with *"string not found"*, because the edits had already been made underneath it.
+
+**Nothing was corrupted, and that is luck rather than design.** The agent reported the collision from inside, verified with `git diff` instead of overwriting, and refused an edit war. Both parties' independent measurements agreed exactly. A less careful agent would have re-applied its version over the other's.
+
+**Done:** a decision, recorded, on whether this builds one of the two deferred mechanisms or only corrects their trigger wording — and if the answer is neither, the reason written where the next person will find it before repeating this.
+
+**Constraints**
+
+- **The orchestrator is not covered by `roleWriteScopes`** — it has no role file, by design, because a subagent cannot run the human checkpoint. Any enforcement aimed at this case has to reckon with that asymmetry rather than assume the orchestrator is just another role.
+- The cheap half may not be a mechanism at all: *a `completed` notification is not a report, and a fragment is resumed rather than taken over.* That is a procedure rule, and it belongs in the delegation step of the work-item procedure if it belongs anywhere.
+- Worktree isolation is the heavier answer and its other named triggers have still not fired. Do not adopt it here on the strength of one incident without pricing it (`P-17`).
 
 ---
 
@@ -546,6 +664,8 @@ Nineteen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-08
 | 7 | ~~`TASK 40`~~ — code readability: names and comments | `research` | no | **DONE 2026-08-24.** The author set three constraints on how the code reads. Ran before the first real source file for the same reason the fidelity harness was placed ahead of the pages: landing it after means three items write in the old style and get retrofitted |
 | 8 | ~~`TASK 36`~~ — interface strings as content | `content` | no | **DONE 2026-08-24.** 63 chrome strings per locale, in frontmatter, nine groups one per template. Scope derived from criterion 4 rather than from the item body's enumeration, which pulled in the article masthead labels and the page labels the later items would otherwise have typed into a template |
 | 9 | `TASK 22` — content layer | `feature` | yes | The reusable core; every page item depends on it |
+| — | ~~`TASK 42`~~ — the test and mutation globs cover the core | `bugfix` | no | **DONE 2026-08-24. Pulled in.** The item below creates `site/lib/nav/`, and the globs stopped at `site/lib/content/**` — so that file would have been outside the gate step and outside the mutation run, silently. Proven in red: the old glob exited **0** with a failing test in the tree |
+| — | ~~`TASK 44`~~ — component test tier | `harness` | no | **DONE 2026-08-24. Pulled in.** The item below lands the first two DOM-requiring modules. A tier installed inside the feature item that uses it is a tier whose own red path never gets proven |
 | 10 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |
 | 11 | `TASK 41` — Playwright smoke tier | `harness` | no | The half of the fidelity harness that verifies the site rather than building diffing infrastructure. Runs with the pages, not before them |
 | 12 | `TASK 24` — home | `feature` | yes | |
@@ -805,7 +925,23 @@ The deploy half split out of `TASK 21` on 2026-08-23. A workflow that ships the 
 
 ---
 
-## TASK 22 — Content layer: collections, schema, locale join · `feature` · `TODO`
+## TASK 22 — Content layer: collections, schema, locale join · `feature` · `DONE` · **ran ninth**
+
+**Closed 2026-08-24.** `SPEC-TASK-22` approved and implemented in five delegated slices. **26 tests in the content core, 92.62% mutation score over it, 0 mutants without coverage**, and the guard suite 465 → 476. The gate runs **17 steps** and passes 16; the one red is `evidence trace`, which `H-03` puts outside every agent's reach and which every item since has closed the same way. K1 = 15, and its composition matters more than the number — see the log.
+
+**The finding that paid for the item.** `ADR-003` stated as fact that a collection's auto-generated id is filename-derived. **False for `astro@7.2.5`, and false in the dangerous direction:** the loader's default returns `data.slug` whenever frontmatter carries one, and `ADR-002` made `slug` universal — so both halves of every locale pair generated the *same* id and one silently overwrote the other. The ADR warned about an id that could not pair; the reality was an id that made entries **disappear**. Found by the first real build failing with `slug "about" is present only in "es", missing "en"` — the content core's own pair assertion, written two slices earlier for exactly this, catching a live defect on first contact with real content. Fixed with an explicit `generateId`; the ADR's parenthetical is **refuted** in the index.
+
+**A second finding that would have shipped a red gate.** `stryker.config.mjs` listed `site/lib/content/**` in its `mutate` globs and claimed the surface was *"covered the moment it is written"* — but its `tap.testFiles` never named it. Measured before the fix: **149 mutants on the new surface, every one without coverage**, dragging the aggregate to **72.11 against a break threshold of 74**. After: **75.66**, with the `scripts/` subtree byte-identical between runs, so the whole movement is attributable to the content core alone. A glob that generates mutants and a glob that supplies killers are two separate promises, and only one had been made. `break` was deliberately **not** raised — that is `TASK 38`'s deliverable.
+
+**What verification caught that a green suite did not.** Slice 1 returned 11/11 green with **four surviving mutants across three vacuous assertions** — including a test whose name promised it rejected duplicate slugs and which passed with the duplicate check deleted. Slice 2 returned green with a home page identified by **array position**, invisible to mutation testing entirely: correct code, correct tests, and a caller reordering an argument would silently move the site's home page. Three redundant branches were found by mutation and none by review; one design defect was found by review and could not have been found by mutation. **A 100% score reads like an all-clear and is not one.**
+
+**The route-literal guard earned its place on its first run**, flagging `/about` in a fixture where every neighbouring fixture was already invented — and firing on nothing else: not the invented slugs, not `'/es'`, not the template literals.
+
+**Loose ends became `TASK 42` and `TASK 43`**, plus notes on the ratchet, trace-fidelity, gate and article-template items, and one constraint on the home item: the core orders case studies alphabetically by slug, which is deterministic, plausible-looking and **not** the published order. Detail: `progress/2026-08-24-08-task22-content-layer.md`.
+
+**Superseded opening note follows, kept for the trail.**
+
+**Opened 2026-08-24.** `SPEC-TASK-22-content-layer.spec.md` drafted, nine behaviors, **checkpoint open**. Four scope calls taken with the author before writing it — the diagram directive and the rehype wiring defer to the item that renders prose, the route-literal guard checks for literals naming a real slug, and the gateway exposes the interface strings. Four findings from validating against real state, three of which would have failed the gate had the spec been written from the documents alone: `stryker.config.mjs` generates mutants for this surface that **no test file is handed to the runner to kill**; `gate.mjs` has no step for the core's tests at all; the installed Zod is 4.4.3, where `ADR-002`'s `.passthrough()` is deprecated; and `guards.config.json`'s self-staling `docs.ignore` entry for `site/src/content.config.ts` expires the moment this item creates that file. Detail: `progress/2026-08-24-08-task22-content-layer.md`.
 
 The reusable core, and the item most of the site's value depends on. Astro content collections over `resources/`, with the minimal Zod schema and the `slug`-based locale join.
 
@@ -821,7 +957,29 @@ The reusable core, and the item most of the site's value depends on. Astro conte
 
 ---
 
-## TASK 23 — Tokens and the layout shell · `feature` · `TODO`
+## TASK 23 — Tokens and the layout shell · `feature` · `DONE` · **ran tenth**
+
+**Closed 2026-08-25.** `SPEC-TASK-23` shipped in seven delegated slices. The site now serves `/` and `/es/` with a complete rail, footer, both themes and all three responsive states — **and zero `<script>` tags reach the page before the rail does**, so the no-JavaScript contract holds by construction rather than by discipline.
+
+**Measured:** guard suite **476 → 506** · site core **43 tests** · component tier **15 tests in jsdom, 14/14 mutants killed** on an independent battery · `astro check` **0 errors across 27 files** · gate **18 steps**.
+
+**The two mechanizations this item owed are built, and `S-05`’s row was wrong twice.** It promised a **Stylelint** assertion that `ADR-008` — its stated origin — never chose; and it required two things CSS cannot both satisfy, since a media query cannot read a custom property. Both corrected. The token guard **derives the sanctioned set from the stylesheet** rather than carrying a list, and the weakening is stated in the rule rather than hidden: an invented fourth breakpoint is caught, the same sanctioned width repeated across eight components is not.
+
+**The precision result matters as much as the recall one.** Against 26 real files full of expressions, punctuation, HTML entities, class names and scoped `<style>` blocks, the string guard reports **exactly one** finding — the wordmark, which is a real violation with no content key to fix it. Four red paths planted against the real tree were all caught and all restored byte-identically.
+
+**A defect caught before it could be measured.** Stryker’s `mutate` glob now reads `site/lib/**`, and the behaviour modules land there with `.component.test.ts` tests that **Vitest** runs — not the tap runner. Every mutant generated for them would have had no killer, dropping the aggregate for a surface that is genuinely tested. Excluded with the reason written at the exclusion; it would otherwise have surfaced only as an unexplained score drop.
+
+**Two orchestrator misses, recorded because they read identically from outside.** Slice one was closed on a green suite and a mutant battery **without running `check-site`** — the route-literal guard from the previous item then found six literals in it. And the behaviour modules were closed on Vitest and mutants **without running `astro check`**, which had accumulated **19 type errors**. Verifying the artifact against *some* of the checks that apply to it is a quieter version of trusting the report.
+
+**Loose ends became `TASK 46` and notes on the budget and gate-honesty items.** The wordmark and the socials block both need content the author owns. Detail: `progress/2026-08-24-10-task23-layout-shell.md`.
+
+**Superseded opening note follows, kept for the trail.**
+
+**Opened 2026-08-24.** `SPEC-TASK-23-layout-shell.spec.md` written and **approved by the author at the checkpoint** — `status: active`, `approved_version: 1.0`. Nine behaviors, `SHELL-001`…`SHELL-009`, seven of them `critical`. Two prerequisites were cleared first and are recorded as their own closed items rather than absorbed into this one: the test and mutation globs now cover the whole core, and the component test tier exists.
+
+**Four delegated slices, cut by object** (`P-09`): the nav structure core · the token stylesheet and the shell markup · the two guard assertions · the two DOM-requiring behaviour modules. **Slices two and three run in that order deliberately** — the guard lands *after* the code it judges, so it can be proven in red against a real tree rather than only against fixtures. That ordering is what made the route-literal guard from the content-layer item find a real violation on its first run.
+
+**Verification is one shared pass at the end**, on the author's instruction: Stryker is the expensive operation in this repository, and this item plus its two prerequisites all move the denominator, so measuring three times prices two intermediate numbers nobody will use. `break` is re-measured once, against the run that follows all of it.
 
 Everything every page shares: the `oklch` token set and its `data-theme` swap, the three-state responsive contract, the rail (wordmark, nav, language switcher, theme toggle, socials), and the footer.
 
@@ -832,6 +990,14 @@ Everything every page shares: the `oklch` token set and its `data-theme` swap, t
 **Design fidelity:** the rail, footer and all three responsive states diffed against `Components.dc.html` §01–§05 and any page artboard. `TASK 27` is the mechanism.
 
 **Note:** the canvas repeats the token block in every `.dc.html`. That is correct for eleven independent mockups and would be a defect here — **do not carry it across.**
+
+**Two mechanizations this item owes, both decided with the author on 2026-08-24 before the spec was written.**
+
+**The `S-05` assertion is `check-site`, not Stylelint** — and the registry row that said otherwise was wrong. `50-implementation.md` promised *"the Stylelint assertion behind `S-05`"*, but `ADR-008`, its stated origin, **never chose Stylelint**: the word does not appear in the ADR. A rule asserting a mechanism its origin does not support is the shape `G-10` exists to prevent, so the row is corrected as part of this item. The guard **reads the token stylesheet and derives the `--*` names from it** rather than carrying a list; outside that sheet, no `#hex`, no `rgb(`/`rgba(`/`hsl(`/`oklch(`, and no `max-width:`/`min-width:` inside an `@media`. Rejected: installing Stylelint, which would add a dependency and a gate step for one assertion and make its config a **second** declaration site for what counts as a token — a roster, which is the shape `P-13` rejects.
+
+**The `S-01` assertion is built here, scoped.** In `.astro` outside the gateway: no text node and no human-readable attribute (`aria-label`, `title`, `alt`, `placeholder`) carries a run of letters outside an expression. The switcher’s punctuation (`/`, `·`) does not fire, because it is not letters. This is the first markup with strings in it, so it is the first time there is anything to scan.
+
+**The register says three states and the artboards carry four breakpoints.** There is a `560px` query adjusting padding and title size in every page artboard. It is **not** a fourth state — the rail only changes shape at 820 — so all four media queries are implemented and "three states" is read as the rail’s layout contract rather than a breakpoint count. Recorded so the fidelity diff is not written against three.
 
 **Constraints**
 - **Rail position tracking is an acceptance criterion, not a nice-to-have** — the author has raised it four times and it is the one interaction they called indispensable. The full acceptance list is in `docs/design/decisions/2026-08-22-site-structure.md`; a working ~30-line reference implementation is in the canvas source, generalized over `data-spy`.
@@ -854,6 +1020,7 @@ Everything every page shares: the `oklch` token set and its `data-theme` swap, t
 - Contact form is `mailto:` for now, with the designed `sent`/`error` states unused; do not build a fake success state that lies.
 - Logo slots render only when a logo file exists, and the wordmark stands alone otherwise (component sheet §14).
 - **The technology strip is derived from the case studies' `stack` arrays, and needs a normalisation rule decided rather than discovered.** Measured 2026-08-24: all fifteen artboard chips are in the union of the five case studies, so derivation works — but that union holds twenty distinct values with real overlaps (`AWS` beside `AWS Fargate` and `AWS Lambda`; `SQL Server` beside `SQL Server 2012 → 2022`; `BIAN` beside `BIAN microservices`) plus two the design dropped. The artboard's fifteen are a curated subset, so a naive union renders twenty chips.
+- **The content layer returns case studies in alphabetical slug order, and that is not the published order.** `listCaseStudyEntriesForLang` sorts by `slug` because the core was asked for *the same order on every call* and nothing more — determinism, not curation. **Alphabetical is deterministic, looks plausible and is wrong**, which is exactly how it ships unnoticed. The published order is this item's to decide, and `featured` is already on every entry. Do not leave the core's ordering as the site's ordering by default.
 - **The employer strip has no structured source until `TASK 20` lands.** Its four entries live as prose in `experience.{en,es}.md`. Omit the section rather than hardcode it — a section is omitted when its content is absent.
 
 ---
@@ -872,6 +1039,7 @@ The two article archetypes, and the five case studies routed through them.
 - `platform` gets the distinct treatment the design specifies — a scale figure instead of an outcome metric, a services grid, and Deep Dives styled as the card language its children use elsewhere.
 - **`/case-studies` (the index) is designed and deliberately not routed.** It ships when the list outgrows the home section, roughly eight items. Do not route it in this item.
 - **`scale` is one content string and the artboard prints it as two.** The platform page shows a large figure over a small caption; the frontmatter carries `"Hundreds of thousands of active users"`. No number is invented either way — it is already in the content, in words. Choose: split the field in two keys, or render the string whole and accept that the artboard's typographic split is not reproduced. State which.
+- **The platform-to-deep-dive relation has no structured field, and cannot get one.** `mobile-banking-platform` is the parent of three of the four case studies, and that relationship exists **only as prose links in the article body** — there is no `parent` or `children` key in any frontmatter, and `resources/**` is frozen (`H-02`), so one cannot be added. The only structured signal is `type: platform` versus `type: case-study`, which says a page *is* a parent but not *of what*. Decide how the Deep Dives grid gets its list — parse the body links, derive from `type` and accept showing all siblings, or ask the author for a content change — and say which. Found 2026-08-24 by `TASK 22`, which owns the collection and deliberately did not invent a relation the content does not carry.
 - **`skills` has no label in any artboard.** The five case studies carry the field and none of the eleven artboards shows it. Render it unlabelled or do not render it; **inventing a label the design does not have is what criterion 3 forbids.** Say which was chosen.
 
 ---

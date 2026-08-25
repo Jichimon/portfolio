@@ -24,9 +24,17 @@ export default {
     // private/banned-terms.txt, which ignorePatterns keeps out of the sandbox. Dropping it here
     // therefore costs nothing measurable and removes the only reason to copy private/ into a
     // temp directory. It still runs, every time, under the gate's `guard tests` step.
+    // site/lib/** is here because the mutate glob below alone was NOT enough, and the
+    // gap was measured rather than reasoned about (TASK 22). This file already claimed the
+    // surface was "covered the moment it is written" — half true: mutants were generated for it
+    // and no test file was ever handed to the runner to kill them. First run after the content
+    // core landed: 149 mutants across four modules, ALL with no coverage, dragging the aggregate
+    // to 72.11 and failing the break threshold. A glob that generates mutants and a glob that
+    // supplies killers are two separate promises, and only one of them had been made.
     testFiles: [
       'scripts/guards/lib/**/*.test.mjs',
       'scripts/guards/hooks/**/*.test.mjs',
+      'site/lib/**/*.test.mjs',
     ],
   },
 
@@ -35,17 +43,25 @@ export default {
   // Mutating them would report a large survivor set that says nothing about test quality, and
   // 30-testing.md's surface block is reconciled to match this rather than the other way round.
   //
-  // site/lib/content/** is here BEFORE the directory exists. That is the whole reason this item
-  // runs ahead of the content-layer item: the surface is covered the moment it is written,
-  // rather than retrofitted once it already has untested code in it.
+  // site/lib/** was here BEFORE the directory existed. That is the whole reason this item ran
+  // ahead of the content-layer item: the surface is covered the moment it is written, rather
+  // than retrofitted once it already has untested code in it.
+  //
+  // WIDENED 2026-08-24 (TASK 42). Both globs read site/lib/content/** until now, which was the
+  // whole of the core on the day they were written and stopped being it the moment a second
+  // directory was planned. ADR-008's tree names site/lib/nav/ and site/lib/i18n/, and S-06
+  // already scopes the WHOLE of site/lib/** as framework-free — so the rules disagreed with
+  // each other: one surface, two boundaries. A file in a sibling directory would have been
+  // outside the gate step and outside this run, silently, which is INC-08's shape arriving
+  // through a glob instead of through a path filter.
   mutate: [
     'scripts/guards/lib/**/*.mjs',
     '!scripts/guards/lib/**/*.test.mjs',
     // Extension-specific, and that is a latent hole worth naming: if this surface is ever
     // written in TypeScript, the glob matches nothing and the score silently becomes a
     // guards-only number with no warning louder than the one below.
-    'site/lib/content/**/*.mjs',
-    '!site/lib/content/**/*.test.mjs',
+    'site/lib/**/*.mjs',
+    '!site/lib/**/*.test.mjs',
   ],
 
   // MEASURED, not chosen. ADR-006 specified break: 100 on the strength of every hand-applied

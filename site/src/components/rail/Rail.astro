@@ -1,0 +1,163 @@
+---
+import RailNav from './RailNav.astro';
+import LanguageSwitcher from './LanguageSwitcher.astro';
+import ThemeToggle from './ThemeToggle.astro';
+import { buildLocalizedRoutePath } from '../../../lib/content/routes/route-set.mjs';
+
+interface NavLabels {
+  work: string;
+  about: string;
+  experience: string;
+  contact: string;
+  writing: string;
+  architectures: string;
+  search: string;
+  soon_tag: string;
+}
+
+interface RailLabels {
+  role: string;
+  location: string;
+  timezone: string;
+  language_group: string;
+  theme_to_dark: string;
+  theme_to_light: string;
+  menu: string;
+}
+
+interface Props {
+  lang: 'en' | 'es';
+  isIndexPage: boolean;
+  currentSlug: string;
+  nav: NavLabels;
+  rail: RailLabels;
+  alternateHref: string;
+}
+
+const { lang, isIndexPage, currentSlug, nav, rail, alternateHref } = Astro.props;
+const homeHref = buildLocalizedRoutePath('/', lang);
+
+// The identity name below has no field of its own in the interface strings
+// collection yet — every other visible string in this rail is sourced through the
+// gateway, and this one is the exception. It is not invented: it is the same name
+// used as the prefix of every page title and the author's own public profile, only
+// not yet promoted to a dedicated, translatable entry. Reported rather than fixed
+// here, because this file cannot edit content and the value is identical in both
+// locales, so there is nothing to translate even once it is promoted.
+const SITE_IDENTITY_NAME = 'Luis Antelo';
+---
+
+<nav class="site-rail">
+  <div class="site-rail__identity">
+    <div class="site-rail__wordmark"><a href={homeHref}>{SITE_IDENTITY_NAME}</a></div>
+    <div class="site-rail__role">{rail.role}</div>
+    <div class="site-rail__location">
+      {rail.location}
+      <span class="site-rail__location-tz">{rail.timezone}</span>
+    </div>
+  </div>
+
+  <RailNav lang={lang} isIndexPage={isIndexPage} currentSlug={currentSlug} nav={nav} />
+
+  <div class="site-rail__bottom">
+    <LanguageSwitcher lang={lang} alternateHref={alternateHref} groupLabel={rail.language_group} />
+    <ThemeToggle label={rail.theme_to_dark} />
+  </div>
+</nav>
+
+<style>
+  .site-rail {
+    position: sticky;
+    top: 0;
+    flex: 0 0 264px;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40px 32px;
+    border-right: 1px solid var(--color-border);
+  }
+  .site-rail__wordmark {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 23px;
+    letter-spacing: -0.006em;
+  }
+  .site-rail__wordmark a {
+    text-decoration: none;
+  }
+  .site-rail__wordmark a:hover {
+    color: var(--color-accent);
+  }
+  .site-rail__role {
+    font-size: 14px;
+    color: var(--color-ink-muted);
+    margin-top: 7px;
+    line-height: 1.5;
+  }
+  .site-rail__location {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--color-ink-faint);
+    margin-top: 14px;
+    line-height: 1.5;
+  }
+  .site-rail__location-tz {
+    display: block;
+    margin-top: 5px;
+  }
+  .site-rail__bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  @media (max-width: 1180px) {
+    .site-rail {
+      flex: 0 0 208px;
+      padding: 32px 24px;
+    }
+    .site-rail__wordmark {
+      font-size: 20px;
+    }
+    .site-rail__role {
+      font-size: 13px;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .site-rail {
+      position: static;
+      height: auto;
+      flex: 0 0 auto;
+      width: 100%;
+      flex-direction: row;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding: 20px 24px;
+      border-right: none;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .site-rail__identity {
+      flex: 0 0 auto;
+    }
+    .site-rail__role,
+    .site-rail__location {
+      display: none;
+    }
+    .site-rail__bottom {
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+      flex: 0 0 auto;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .site-rail__wordmark {
+      font-size: 18px;
+    }
+  }
+</style>

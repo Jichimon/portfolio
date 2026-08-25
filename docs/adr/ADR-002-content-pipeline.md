@@ -18,6 +18,16 @@
 
 The five universal keys (`slug`, `lang`, `type`, `title`, `confidentiality`) are the part of the frontmatter contract that is stable — new content types add extra keys, they don't change these five. Duplicating exactly that stable subset costs little and buys real value: Astro fails the build if a template's routing fields are missing, rather than rendering `undefined`. Everything type-conditional stays exclusively `check-content`'s job, so `guards.config.json`'s `byType` map — the part of the rule that actually changes when a new content `type` is introduced — has one owner, not two.
 
+#### ✏️ Note, 2026-08-24 — the method was renamed, the decision was not
+
+**Option C is unchanged and is what the content layer implements.** This note exists because the sentence above names a Zod method that is deprecated in the version actually installed, and an ADR naming a deprecated API is one the next reader believes and applies wrongly.
+
+This document was written on 2026-08-19 against Zod 3 documentation, before anything was installed. `astro@7.2.5` depends on `zod@^4.3.6` and resolves `4.4.3`, where `.passthrough()` still works but carries `@deprecated Use z.looseObject() or .loose() instead` — read from `site/node_modules/zod/v4/classic/schemas.d.cts`, not from a release page (`C-01`). Astro itself imports `zod/v4`, so the `z` a collection schema is built with is the v4 API.
+
+The loose form is therefore written `z.looseObject`. Same shape, same five keys, same split of ownership with `check-content`: only the method name moved.
+
+**One thing this note deliberately does not do is widen the schema.** The work-item register's own constraint for the content layer reads *"five universal keys plus per-type required keys"* — which is Option A above, considered here and rejected. Where the register and this ADR disagree, this ADR governs, and the register's real requirement — an unknown `type` is a build failure rather than a pass — is met by pinning `type` to a literal union per collection, which needs no per-type key duplication at all.
+
 ## Sub-decision 2 — `:::diagram{id} → /diagrams/{id}.svg` resolution
 
 ### Options considered

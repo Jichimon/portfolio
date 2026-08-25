@@ -1,0 +1,136 @@
+---
+// The one shell every page shares: fonts, the token stylesheet, the rail, the main
+// slot, and the footer. Zero islands — the rail is server-rendered so it works with
+// scripting off, and nothing here calls the content API. The page that renders this
+// layout has already loaded whatever it needed and hands it down as props, so this
+// file stays a pure composition and every future page reuses it the same way.
+import '@fontsource/space-grotesk/500.css';
+import '@fontsource/space-grotesk/600.css';
+import '@fontsource/ibm-plex-sans/400.css';
+import '@fontsource/ibm-plex-sans/600.css';
+import '@fontsource/ibm-plex-sans/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '../styles/tokens.css';
+import Rail from '../components/rail/Rail.astro';
+import Footer from '../components/Footer.astro';
+
+interface NavLabels {
+  work: string;
+  about: string;
+  experience: string;
+  contact: string;
+  writing: string;
+  architectures: string;
+  search: string;
+  soon_tag: string;
+}
+
+interface RailLabels {
+  role: string;
+  location: string;
+  timezone: string;
+  language_group: string;
+  theme_to_dark: string;
+  theme_to_light: string;
+  menu: string;
+}
+
+interface Props {
+  lang: 'en' | 'es';
+  title: string;
+  isIndexPage: boolean;
+  currentSlug: string;
+  nav: NavLabels;
+  rail: RailLabels;
+  alternateHref: string;
+  footerText: string;
+}
+
+const { lang, title, isIndexPage, currentSlug, nav, rail, alternateHref, footerText } = Astro.props;
+---
+
+<!doctype html>
+<html lang={lang} data-theme-label-dark={rail.theme_to_dark} data-theme-label-light={rail.theme_to_light}>
+  <head>
+    <!--
+      This mirrors the tested theme resolution kept elsewhere, duplicated only
+      because a bundled script runs after the first paint and this one cannot
+      wait that long. Keep both in agreement if the resolution rule changes.
+    -->
+    <script is:inline>
+      {
+        var storedTheme = null;
+        try {
+          storedTheme = window.localStorage.getItem('theme');
+        } catch (readError) {
+          storedTheme = null;
+        }
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var resolvedTheme = storedTheme === 'dark' || storedTheme === 'light' ? storedTheme : (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', resolvedTheme);
+      }
+    </script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <div class="page-shell">
+      <Rail
+        lang={lang}
+        isIndexPage={isIndexPage}
+        currentSlug={currentSlug}
+        nav={nav}
+        rail={rail}
+        alternateHref={alternateHref}
+      />
+      <main class="page-shell__main">
+        <slot />
+        <Footer text={footerText} />
+      </main>
+    </div>
+    <!--
+      Everything below runs after paint, so the theme toggle and scroll tracking
+      live here rather than in the block above. Both are read from the tested
+      modules rather than reimplemented, and this is why the rail beside it is
+      never an island: it already works before this ever runs.
+    -->
+    <script>
+      {
+        Promise.all([
+          import('../../lib/behavior/theme.mjs'),
+          import('../../lib/behavior/scroll-spy.mjs'),
+        ]).then(function (modules) {
+          var theme = modules[0];
+          var scrollSpy = modules[1];
+          var root = document.documentElement;
+          var toggle = document.querySelector('.site-rail__theme-toggle');
+          var toggleLabel = toggle ? toggle.querySelector('.site-rail__theme-toggle-label') : null;
+
+          function correctToggle() {
+            var current = root.getAttribute('data-theme');
+            var destination = theme.themeToggleDestination(current);
+            var nextLabel = destination === 'dark' ? root.dataset.themeLabelDark : root.dataset.themeLabelLight;
+            if (toggleLabel && nextLabel) toggleLabel.textContent = nextLabel;
+            if (toggle) toggle.setAttribute('aria-pressed', String(current === 'dark'));
+          }
+
+          correctToggle();
+
+          if (toggle) {
+            toggle.addEventListener('click', function () {
+              var current = root.getAttribute('data-theme');
+              var destination = theme.themeToggleDestination(current);
+              theme.applyTheme(root, destination);
+              theme.writeStoredTheme(window.localStorage, destination);
+              correctToggle();
+            });
+          }
+
+          scrollSpy.initScrollSpy(document);
+        });
+      }
+    </script>
+  </body>
+</html>

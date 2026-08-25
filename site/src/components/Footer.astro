@@ -1,0 +1,26 @@
+---
+interface Props {
+  text: string;
+}
+
+const { text } = Astro.props;
+---
+
+<footer class="site-footer">
+  <div class="site-footer__note">{text}</div>
+</footer>
+
+<style>
+  .site-footer {
+    padding: 32px 72px 56px;
+    border-top: 1px solid var(--color-border);
+  }
+  .site-footer__note {
+    max-width: 1032px;
+    margin-inline: auto;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-ink-muted);
+  }
+</style>

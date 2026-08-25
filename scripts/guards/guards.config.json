@@ -226,10 +226,6 @@
         "reason": "the registry's PRE-MOVE location, named in the KEEP/MODIFY matrix precisely to say that it moved to .claude/rules/. The reference is correct because the file is absent."
       },
       {
-        "ref": "site/src/content.config.ts",
-        "reason": "TASK 22's Deliverable in the work item register. A TODO item names the file it will create; that is what a deliverable IS, not a pointer that has gone stale. Self-clearing: the entry is reported as stale the day TASK 22 creates it."
-      },
-      {
         "ref": ".github/workflows/deploy.yml",
         "reason": "TASK 32's Deliverable. Same class. Note the sibling .github/workflows/harness.yml DOES exist and is checked normally, so this entry hides nothing that is currently checkable."
       },
@@ -247,7 +243,7 @@
       }
     ],
     "_ignoreRationale": "An EXCLUSION list, so forgetting an entry makes the check noisier and never blinder (INC-07). Every entry carries a reason, a reasonless one fails, and an entry whose target starts resolving is reported as stale so the list shrinks on its own.",
-    "_forwardLookingPathsNote": "Four of these five are one class: a `TODO` work item's Deliverable naming a file that does not exist YET. check-docs cannot distinguish 'planned' from 'stale' — both are a path that does not resolve — and teaching it to would mean parsing the register's entry shape inside a rung-2 guard, which is a work item with its own red-path battery (T-04), not a side edit. Until then this list carries them, and the self-staling property is what keeps that honest: every entry announces itself the moment its target appears. Added 2026-08-23, when the local-first re-cut found check-docs had been red behind check-trace's short-circuit for an unknown number of runs — three of these predate that session's edits. The ADR-007 entry was removed on 2026-08-23 the moment TASK 33 created its target — the self-staling property doing exactly what it was built to do, reported by check-docs rather than remembered."
+    "_forwardLookingPathsNote": "Every entry after the first is one class: a `TODO` work item's Deliverable naming a file that does not exist YET. Stated without a count on purpose - the previous wording said 'four of these five' and had already rotted twice by the time anyone read it, which is the same defect the site's own copy rule forbids: no visible string says how many of a growing thing there are. check-docs cannot distinguish 'planned' from 'stale' — both are a path that does not resolve — and teaching it to would mean parsing the register's entry shape inside a rung-2 guard, which is a work item with its own red-path battery (T-04), not a side edit. Until then this list carries them, and the self-staling property is what keeps that honest: every entry announces itself the moment its target appears. Added 2026-08-23, when the local-first re-cut found check-docs had been red behind check-trace's short-circuit for an unknown number of runs — three of these predate that session's edits. The ADR-007 entry was removed on 2026-08-23 the moment TASK 33 created its target — the self-staling property doing exactly what it was built to do, reported by check-docs rather than remembered."
   },
   "evals": {
     "caseDir": "evaluation-cases",
@@ -357,6 +353,19 @@
       "site/src/content.config.ts"
     ],
     "_gatewayNote": "The sole caller of getCollection (S-02). Everything downstream receives props, so a locale-join defect has one place to live. Declared as a SET because the gateway is not one folder by nature: Astro requires the collection definition at src/content.config.ts and requires it to import astro:content, so that file is part of the content-access layer by construction. Naming the set declares where the boundary runs; it is not a roster of components.",
+    "tokenStylesheet": "site/src/styles/tokens.css",
+  "_tokenStylesheetRationale": "S-05. THE declaration site for every colour, breakpoint and type step. The guard reads this file to learn which --* names exist and then requires every other stylesheet and component to name one instead of writing a literal - so a twelfth token costs no edit here and none in the guard (P-13). Declared as a PATH rather than derived, because 'the one stylesheet' is a decision somebody made, not a property of the tree: two files full of custom properties are indistinguishable from disk, and picking the larger one would be a heuristic that silently relocates the boundary. The canvas repeats its token block in all eleven .dc.html artboards, which is correct for independent mockups and is precisely what this stops from being carried across.",
+
+  "humanReadableAttributes": [
+    "aria-label",
+    "alt",
+    "title",
+    "placeholder"
+  ],
+  "_humanReadableAttributesRationale": "S-01. Attributes whose value a person READS - a screen reader speaks aria-label and alt, a browser shows title and placeholder - so a literal in one is a visible string declared outside resources/**, exactly like a text node. Four rather than every attribute: class, id, href, data-* and the rest carry structure, and scanning them would fire on every class name in the site. The text-node half needs no config at all; it is derived from the markup. Known and accepted gap: an attribute added to HTML next year is not covered until it is added here, which is the one roster-shaped thing in this check - the alternative, a heuristic for 'looks like prose', widens itself silently and would fire on href values.",
+
+  "routeDeclarationSites": [],
+    "_routeDeclarationSitesRationale": "Where a path-shaped literal naming a REAL content slug is allowed to appear. Empty, and that is the healthy state: the route set is derived from the collection, so no source file should need to spell one out. Declared as a SET rather than left implicit for the same reason `gateway` is - the day one legitimately needs an exception, it is written here with a reason instead of the guard being edited. The slug side is NOT here: check-site derives it from the filenames under the content roots, so a sixth case study is covered with no edit (P-13). What this catches is a page hardcoding `/case-studies/<a real slug>` instead of asking the collection.",
     "maxFilesPerDir": 6,
     "_threshold_rationale": "The author's convention, stated 2026-08-24 and recorded as theirs: at seven files a directory is split into context-named subfolders. No published style guide was found supporting a numeric cap and the search was not exhaustive (ADR-008, sub-decision 5) - so this is calibrated by judgment, not by a citation. Its known failure mode is a split that invents categories to absorb overflow, which is why S-03 also requires the subdivision to name a context.",
     "exclusions": [
@@ -368,7 +377,11 @@
     "_exclusionsRationale": "Generated or third-party trees. Counting them toward the cap would fail every directory forever and say nothing about the code anyone wrote.",
        "commentRecordIdPattern": "\\b(?:ADR|INC|EC|EVAL|SPEC)-\\d+\\b|\\bTASK[\\s-]\\d+\\b|\\b[HPCTGS]-\\d{2}\\b",
     "_commentRecordIdRationale": "S-08. The id shapes this repository actually mints: ADR/INC/EC/EVAL/SPEC records, work items, and the six rule surfaces of the registry. A PATTERN rather than a list of ids, so a rule written next month is caught without editing this. The sibling half of the reference set is not here at all - check-site derives it from the repository's own top-level entries, so a new directory needs no edit either (P-13).",
-    "sourceExtensions": [
+    "styleExtensions": [
+    ".css"
+  ],
+  "_styleExtensionsRationale": "Read for their CONTENT, like sources, but for a different reason: the token assertion has to read the stylesheet to derive the sanctioned colour and breakpoint set, and a file the walker hands over empty makes that guard deny (G-13) rather than evaluate - which is what it did the first time it ran. Kept separate from sourceExtensions rather than folded into it, because that list is scoped by a stated property - only these can carry an import - and widening it to make an unrelated check work would leave three import checks scanning files the rationale says they should not.",
+  "sourceExtensions": [
       ".astro",
       ".ts",
       ".tsx",

@@ -1,8 +1,8 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import { getPage, getUiStrings, getAlternateHref } from '../gateway/content-queries.ts';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPage, getUiStrings, getAlternateHref } from '../../gateway/content-queries.ts';
 
-const lang = 'en';
+const lang = 'es';
 const slug = 'home';
 
 const [page, ui, alternateHref] = await Promise.all([

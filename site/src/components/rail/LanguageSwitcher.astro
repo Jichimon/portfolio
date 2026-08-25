@@ -1,0 +1,57 @@
+---
+// Two locales, so this is a two-state switch and not a menu. The current locale is
+// marked and never a link; the other is always a link, and its target is handed in
+// already resolved to THIS page's counterpart — never derived here and never a
+// constant, so this file cannot reintroduce the "thrown back to home" defect even
+// by accident.
+interface Props {
+  lang: 'en' | 'es';
+  alternateHref: string;
+  groupLabel: string;
+}
+
+const { lang, alternateHref, groupLabel } = Astro.props;
+
+// The two-letter codes are a language tag, not copy: identical in either locale's
+// version of this page, so they are declared here as data rather than sourced from
+// the interface strings collection — the same status as the slash between them.
+const LOCALE_CODE: Record<'en' | 'es', string> = { en: 'EN', es: 'ES' };
+const alternateLang: 'en' | 'es' = lang === 'en' ? 'es' : 'en';
+---
+
+<div class="site-rail__lang" role="group" aria-label={groupLabel}>
+  <span class="site-rail__lang-current" lang={lang} aria-current="true">{LOCALE_CODE[lang]}</span>
+  <span class="site-rail__lang-separator" aria-hidden="true">/</span>
+  <a class="site-rail__lang-link" href={alternateHref} hreflang={alternateLang} lang={alternateLang}>
+    {LOCALE_CODE[alternateLang]}
+  </a>
+</div>
+
+<style>
+  .site-rail__lang {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+  .site-rail__lang-current {
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+  .site-rail__lang-separator {
+    color: var(--color-border-strong);
+  }
+  .site-rail__lang-link {
+    color: var(--color-ink-faint);
+  }
+  .site-rail__lang-link:hover {
+    color: var(--color-accent);
+  }
+  .site-rail__lang-link:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+</style>

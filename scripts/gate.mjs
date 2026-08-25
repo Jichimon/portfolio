@@ -9,11 +9,29 @@
 import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 
 import { runGate, formatSummary } from './guards/lib/gate.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+/**
+ * Does any file under `dir` end with `suffix`? A step whose runner is handed a glob cannot
+ * use existsSync — the glob is not a path — and "the directory exists" is a different
+ * question from "there is anything in it to run".
+ */
+function holdsFileEndingWith(dir, suffix) {
+  const absolute = join(ROOT, dir);
+  if (!existsSync(absolute)) return false;
+  for (const entry of readdirSync(absolute, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (holdsFileEndingWith(join(dir, entry.name), suffix)) return true;
+    } else if (entry.name.endsWith(suffix)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Each step names what it protects, so a failure reads as a broken guarantee
@@ -26,6 +44,32 @@ const STEPS = [
     cmd: ['node', '--test', 'scripts/guards/**/*.test.mjs'],
     // Node's runner takes a directory; if none exist yet the step declares itself skipped.
     skipIf: () => !existsSync(join(ROOT, 'scripts/guards/lib')),
+  },
+  {
+    name: 'site core tests',
+    protects: 'the site core has a runner, not only a Stryker glob (ADR-006, T-03) — and S-06 scopes the whole of site/lib/**, so the runner does too (TASK 42)',
+    cmd: ['node', '--test', 'site/lib/**/*.test.mjs'],
+    // A checkout without the core yet declares the gap out loud rather than
+    // passing on nothing (P-03) — same shape as the 'site structure' step below.
+    skipIf: () => !existsSync(join(ROOT, 'site/lib')),
+    skipNote: 'site/lib does not exist yet',
+  },
+  {
+    name: 'component tests',
+    protects: 'the DOM-requiring behaviour modules — scroll-spy tracking, theme persistence — are asserted on what the user observes, in a real DOM (ADR-006 amendment, T-07)',
+    // The npx form is what ADR-006 names and what a human types. gate.mjs resolves the binary
+    // directly for the same reason the mutation step does: spawnSync has no shell, and npx is
+    // a .cmd shim on Windows, so spawnSync('npx', ...) returns ENOENT and reads as a plain FAIL.
+    cmd: [process.execPath, join(ROOT, 'site/node_modules/vitest/vitest.mjs'), 'run'],
+    cwd: join(ROOT, 'site'),
+    // The tier is installed before the modules that need it, deliberately — a test tier
+    // installed inside the feature item that uses it is a tier whose own red path never gets
+    // proven. Until a module lands, the step declares the gap out loud rather than passing on
+    // nothing (P-03). passWithNoTests is deliberately off in vitest.config.ts, so this skip is
+    // the ONLY thing standing between an empty tier and a loud failure — which is the right
+    // way round: renaming the suffix makes the gate fail, not go quietly green.
+    skipIf: () => !holdsFileEndingWith('site/lib', '.component.test.ts'),
+    skipNote: 'no .component.test.ts exists yet — the behaviour modules arrive with the layout shell',
   },
   {
     name: 'mutation',
@@ -137,7 +181,11 @@ const STEPS = [
 const { results, failures, exitCode } = runGate(STEPS, (step) => {
   const [bin, ...args] = step.cmd;
   const exe = bin === 'node' ? process.execPath : bin;
-  return spawnSync(exe, args, { cwd: ROOT, stdio: 'inherit' }).status ?? 1;
+  // A step may declare its own working directory. Almost none do — the gate reads the
+  // repository from the root — but a package-scoped runner has to start inside its package
+  // to resolve its own config, and passing that as a flag would be a second way to say the
+  // same thing. ROOT stays the default, so nothing that does not ask is affected.
+  return spawnSync(exe, args, { cwd: step.cwd ?? ROOT, stdio: 'inherit' }).status ?? 1;
 });
 
 console.log('\n' + '-'.repeat(60));
