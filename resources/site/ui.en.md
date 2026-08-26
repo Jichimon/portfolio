@@ -32,6 +32,7 @@ socials:
     url: "https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/"
 
 home:
+  standalone_label: "Not part of the platform — a different employer, a different system"
   employers_heading: "Where I've worked"
   work_heading: "What I've built"
   stack_heading: "Technologies I've worked with"
@@ -117,7 +118,7 @@ Every value above is lifted from an artboard in `docs/design/canvas/src/`. Nothi
 
 **`not_found.status_code` and `status_word` are split on purpose.** The artboard prints one line — `HTTP 404 · not found · no encontrado` — which the template composes from both locales. Carrying the whole line in both files would be one datum declared twice.
 
-**`contact_form` is not rendered yet.** Contact is a `mailto:` link at launch; the designed form arrives with the contact Worker. The strings are here because they exist on the artboard and are traceable today, so no second review round is needed later.
+**`contact_form` renders at launch with `action="mailto:"`** The designed `sending` / `sent` / `error` states stay unused until the contact Worker exists — a form that cannot know whether the message left must not claim it did.
 
 ## What is deliberately absent
 

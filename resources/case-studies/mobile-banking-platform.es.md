@@ -7,10 +7,12 @@ subtitle: "Reemplazar la app bancaria de un proveedor por una plataforma cloud-n
 role: "Backend Engineer → Solution Architect"
 context: "Banco regulado · Latinoamérica"
 period: "2023–2025"
-scale: "Cientos de miles de usuarios activos"
+scale: "+100.000s"
+scale_caption: "usuarios activos"
 stack: [".NET", "AWS", "SNS/SQS", "MassTransit", "Polly", "SQL Server", "BIAN"]
 skills: [sistemas-distribuidos, integracion-legacy, diseño-de-apis, mensajeria-asincrona, entornos-regulados]
 featured: true
+order: 1
 confidentiality: sanitized
 ---
 

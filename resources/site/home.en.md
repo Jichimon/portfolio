@@ -4,6 +4,7 @@ lang: en
 type: page
 title: "Luis Antelo — Senior Software Engineer"
 confidentiality: sanitized
+thesis: "When a system is too critical to touch and too old to ignore, that's my problem to solve."
 ---
 
 Senior Software Engineer · Cochabamba, Bolivia (GMT-4, full overlap with US business hours) · Open to remote or hybrid/relocation

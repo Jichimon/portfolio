@@ -11,6 +11,7 @@ outcome: "100.000 usuarios en los primeros tres meses"
 stack: [".NET", "AWS", "BFF", "microservicios BIAN"]
 skills: [modelado-de-dominio, diseño-de-autorizacion, integracion-legacy, product-ownership]
 featured: true
+order: 2
 confidentiality: sanitized
 ---
 

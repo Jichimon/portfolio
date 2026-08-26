@@ -4,9 +4,18 @@ import {
   findEntryBySlugAndLang,
   findAlternateLocaleEntry,
   assertEverySlugHasBothLocales,
+  assertEveryPairAgreesOnOrder,
 } from '../../lib/content/entries/locale-pair.mjs';
-import { listCaseStudyEntriesForLang } from '../../lib/content/entries/case-study-catalog.mjs';
-import { deriveRouteSetFromEntries } from '../../lib/content/routes/route-set.mjs';
+import {
+  listCaseStudyEntriesForLang,
+  listCaseStudyStackForLang,
+  deriveHomeTiles,
+} from '../../lib/content/entries/case-study-catalog.mjs';
+import {
+  deriveRouteSetFromEntries,
+  ROUTED_PAGE_SLUGS,
+  INDEX_PAGE_SLUG,
+} from '../../lib/content/routes/route-set.mjs';
 import { NAV_ITEMS } from '../../lib/nav/nav-structure.mjs';
 
 export type Locale = 'en' | 'es';
@@ -46,6 +55,7 @@ interface SocialLink {
 interface HomeStrings {
   employers_heading: string;
   work_heading: string;
+  standalone_label: string;
   stack_heading: string;
   contact_heading: string;
   contact_invite: string;
@@ -134,6 +144,7 @@ async function loadPageEntries() {
 async function loadCaseStudyEntries() {
   const entries = await getCollection('caseStudies');
   assertEverySlugHasBothLocales(entries);
+  assertEveryPairAgreesOnOrder(entries);
   return entries;
 }
 
@@ -174,16 +185,60 @@ export async function getAlternateHref(slug: string, lang: Locale) {
   return alternateRoute.path;
 }
 
+export async function listStack(lang: Locale) {
+  return listCaseStudyStackForLang(await loadCaseStudyEntries(), lang);
+}
+
+// The core derives a tile's shape and its copy; it cannot derive the tile's href,
+// because a path is a routing fact and site/lib/nav has no view of the collection.
+// Joining the two here means a page receives tiles it can render directly, and a
+// tile whose case study has no route in its own locale fails the build rather than
+// shipping a dead link.
+// The core is framework-free .mjs and carries no types, so the tile shape it returns
+// is described once here — the same single-cast-at-the-boundary pattern the interface
+// strings use above, and for the same reason: a component should never have to assert
+// what it was handed.
+export interface HomeTile {
+  slug: string;
+  title: string;
+  variant: 'anchor' | 'numbered' | 'full';
+  href: string;
+  summaryText?: string;
+  scaleFigure?: string;
+  scaleCaption?: string;
+  roleLine?: string;
+  highlightLine?: string;
+  positionNumber?: number;
+}
+
+export async function listHomeTiles(
+  lang: Locale,
+): Promise<{ featured: HomeTile[]; standalone: HomeTile[] }> {
+  const entries = await loadCaseStudyEntries();
+  // The core hands back a plain object literal, so TypeScript widens `variant` to
+  // string. The cast lands here, once, at the boundary that knows what the core
+  // returns — the same reason the interface strings are cast here and nowhere else.
+  const { featured, standalone } = deriveHomeTiles(entries, lang) as {
+    featured: Omit<HomeTile, 'href'>[];
+    standalone: Omit<HomeTile, 'href'>[];
+  };
+  const routes = await listRoutes();
+
+  const withHref = (tile: Omit<HomeTile, 'href'>): HomeTile => {
+    const route = routes.find((candidate) => candidate.slug === tile.slug && candidate.lang === lang);
+    if (!route) {
+      throw new Error(`case study "${tile.slug}" has no routed page in locale "${lang}"`);
+    }
+    return { ...tile, href: route.path };
+  };
+
+  return { featured: featured.map(withHref), standalone: standalone.map(withHref) };
+}
+
 export async function getUiStrings(lang: Locale): Promise<UiStringsEntry> {
   const entry = findEntryBySlugAndLang(await loadUiEntries(), 'ui', lang);
   return entry as unknown as UiStringsEntry;
 }
-
-// Contact renders as a section of the home page and interface strings are chrome, so
-// neither carries its own route. Nothing about the collection tells routed apart from
-// not-routed, so which page slugs route, and which one is the index, is stated here.
-const ROUTED_PAGE_SLUGS = ['home', 'about', 'experience'];
-const INDEX_PAGE_SLUG = 'home';
 
 // nav-structure.mjs is framework-free and cannot see the content collection, so a
 // route item's slug can silently point at a page that does not exist there — it

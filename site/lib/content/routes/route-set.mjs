@@ -1,3 +1,12 @@
+// Which page slugs get a routed page, and which one is the index. Neither is
+// derivable from the content files: every page entry looks the same on disk, and
+// nothing in a frontmatter block says "this one is the home page". So it is a
+// decision, and it lives beside the derivation that consumes it rather than in
+// each caller — the build and the smoke suite both read these, and a slug routed
+// on one side but not the other is precisely the drift that would ship a 404.
+export const ROUTED_PAGE_SLUGS = ['home', 'about', 'experience'];
+export const INDEX_PAGE_SLUG = 'home';
+
 const KNOWN_LOCALES = ['en', 'es'];
 const CASE_STUDY_ROUTE_TYPES = ['case-study', 'platform'];
 

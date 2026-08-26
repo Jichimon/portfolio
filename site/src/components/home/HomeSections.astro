@@ -1,0 +1,62 @@
+---
+import { getPage, getUiStrings, listStack, listHomeTiles } from '../../gateway/content-queries.ts';
+import type { Locale } from '../../gateway/content-queries.ts';
+import Hero from './Hero.astro';
+import HeroBackdrop from './HeroBackdrop.astro';
+import WorkBento from './work/WorkBento.astro';
+import StackStrip from './StackStrip.astro';
+import ContactSection from './ContactSection.astro';
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+
+// This is the home page's body, not a reusable component — the two locale routes are
+// the same page twice, and composing it once here is what stops them drifting into two
+// different pages. It asks the gateway for its own data for the same reason: the
+// alternative is both route files repeating these four calls and the mapping between
+// them, which is the duplication this file exists to remove.
+const [page, ui, technologies, tiles] = await Promise.all([
+  getPage('home', lang),
+  getUiStrings(lang),
+  listStack(lang),
+  listHomeTiles(lang),
+]);
+
+const { thesis } = page.data as { thesis?: string };
+const contactAddress = 'luis.antm@hotmail.com';
+---
+
+{thesis !== undefined && (
+  <Hero thesis={thesis}>
+    <HeroBackdrop />
+  </Hero>
+)}
+
+<WorkBento
+  heading={ui.data.home.work_heading}
+  standaloneLabel={ui.data.home.standalone_label}
+  platformTag={ui.data.article.platform_tag}
+  caseStudyTag={ui.data.article.case_study_tag}
+  featured={tiles.featured}
+  standalone={tiles.standalone}
+/>
+
+<StackStrip heading={ui.data.home.stack_heading} technologies={technologies} />
+
+<ContactSection
+  heading={ui.data.home.contact_heading}
+  invite={ui.data.home.contact_invite}
+  note={ui.data.home.contact_note}
+  mailtoAddress={contactAddress}
+  emailLabel={ui.data.contact_form.email_label}
+  emailPlaceholder={ui.data.contact_form.email_placeholder}
+  aboutLabel={ui.data.contact_form.subject_label}
+  aboutPlaceholder={ui.data.contact_form.subject_placeholder}
+  messageLabel={ui.data.contact_form.message_label}
+  messagePlaceholder={ui.data.contact_form.message_placeholder}
+  submitLabel={ui.data.contact_form.submit}
+  links={ui.data.socials}
+/>

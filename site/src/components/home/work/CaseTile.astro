@@ -1,0 +1,269 @@
+---
+interface Props {
+  href: string;
+  title: string;
+  variant: 'anchor' | 'numbered' | 'full';
+  columnSpan: number;
+  columnSpanNarrow: number;
+  summaryText?: string;
+  tagText?: string;
+  positionNumber?: number;
+  scaleFigure?: string;
+  scaleCaption?: string;
+  roleLine?: string;
+  highlightLine?: string;
+}
+
+const {
+  href,
+  title,
+  variant,
+  columnSpan,
+  columnSpanNarrow,
+  summaryText,
+  tagText,
+  positionNumber,
+  scaleFigure,
+  scaleCaption,
+  roleLine,
+  highlightLine,
+} = Astro.props;
+
+const isAnchor = variant === 'anchor';
+const isNumbered = variant === 'numbered';
+const isFull = variant === 'full';
+
+const hasFoot =
+  roleLine !== undefined ||
+  highlightLine !== undefined ||
+  scaleFigure !== undefined ||
+  scaleCaption !== undefined;
+
+const paddedPosition =
+  positionNumber !== undefined ? String(positionNumber).padStart(2, '0') : undefined;
+---
+
+<a
+  class:list={[
+    'case-tile',
+    { 'case-tile--anchor': isAnchor, 'case-tile--full': isFull },
+  ]}
+  href={href}
+  style={`--tile-span: ${columnSpan}; --tile-span-narrow: ${columnSpanNarrow}`}
+>
+  <slot />
+
+  {isFull ? (
+    <div class="case-tile__body">
+      {tagText !== undefined && <span class="case-tile__tag">{tagText}</span>}
+      <h3 class="case-tile__title">{title}</h3>
+      {summaryText !== undefined && <p class="case-tile__summary">{summaryText}</p>}
+      {hasFoot && (
+        <div class="case-tile__foot">
+          {roleLine !== undefined && roleLine}
+          {highlightLine !== undefined && (
+            <span class="case-tile__highlight">{highlightLine}</span>
+          )}
+        </div>
+      )}
+    </div>
+  ) : (
+    <Fragment>
+      {isAnchor && tagText !== undefined && (
+        <span class="case-tile__tag">{tagText}</span>
+      )}
+      {isNumbered && paddedPosition !== undefined && (
+        <div class="case-tile__num">{paddedPosition}</div>
+      )}
+      <h3 class="case-tile__title">{title}</h3>
+      {summaryText !== undefined && <p class="case-tile__summary">{summaryText}</p>}
+      {hasFoot && (
+        <div class="case-tile__foot">
+          {isAnchor ? (
+            <Fragment>
+              {scaleFigure !== undefined && (
+                <span class="case-tile__scale">
+                  {scaleFigure}
+                  {scaleCaption !== undefined && (
+                    <small class="case-tile__scale-caption">{scaleCaption}</small>
+                  )}
+                </span>
+              )}
+              {roleLine !== undefined && (
+                <span class="case-tile__roles">
+                  {roleLine}
+                  {highlightLine !== undefined && (
+                    <span class="case-tile__highlight">{highlightLine}</span>
+                  )}
+                </span>
+              )}
+            </Fragment>
+          ) : (
+            <Fragment>
+              {roleLine !== undefined && roleLine}
+              {highlightLine !== undefined && (
+                <span class="case-tile__highlight">{highlightLine}</span>
+              )}
+            </Fragment>
+          )}
+        </div>
+      )}
+    </Fragment>
+  )}
+</a>
+
+<style>
+  .case-tile {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+    border-radius: 5px;
+    padding: 24px 26px 26px;
+    background: var(--color-bg-elevated);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .case-tile:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+  }
+
+  /* No token in the ramp matches this exactly: 10px sits between no step and
+     --type-mono's 12.5px, and the weight is the browser default (400), not
+     --type-label's 500. Kept literal per the source rather than forced onto
+     a mismatched step. */
+  .case-tile__tag {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 10px;
+  }
+
+  /* --type-label's size matches (11px) but its weight (500) does not — the
+     source renders this at the default 400, so the literal is kept. */
+  .case-tile__num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--color-ink-faint);
+    margin-bottom: 10px;
+  }
+  .case-tile:hover .case-tile__num {
+    color: var(--color-accent);
+  }
+
+  .case-tile__title {
+    font: var(--type-title);
+    line-height: 1.32;
+    letter-spacing: -0.006em;
+    margin: 0 0 10px;
+  }
+  /* 28px matches neither --type-display-s (24px) nor --type-display-m
+     (30px), so the literal size is kept; family and weight follow the
+     display step's own family token. */
+  .case-tile--anchor .case-tile__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 28px;
+    line-height: 1.18;
+    letter-spacing: -0.014em;
+    margin-bottom: 12px;
+  }
+
+  .case-tile__summary {
+    font: var(--type-small);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+    margin: 0;
+  }
+  .case-tile--anchor .case-tile__summary {
+    font-size: 15px;
+    max-width: 520px;
+  }
+
+  /* 11px does not match --type-mono's 12.5px, so the literal is kept. */
+  .case-tile__foot {
+    margin-top: auto;
+    padding-top: 20px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.65;
+    color: var(--color-ink-faint);
+  }
+  .case-tile--anchor .case-tile__foot {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .case-tile--full .case-tile__foot {
+    margin-top: 14px;
+    padding-top: 0;
+  }
+
+  .case-tile__highlight {
+    display: block;
+    color: var(--color-label);
+  }
+
+  /* 30px matches --type-display-m's size but not its weight (600 vs the
+     source's 700), so the literal is kept. */
+  .case-tile__scale {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 30px;
+    line-height: 1;
+    color: var(--color-accent);
+  }
+  .case-tile__scale-caption {
+    display: block;
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--color-ink-faint);
+    margin-top: 7px;
+  }
+
+  .case-tile__roles {
+    text-align: right;
+  }
+
+  .case-tile__body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .case-tile--full {
+    flex-direction: row;
+    align-items: center;
+    gap: 32px;
+  }
+
+  @media (max-width: 1180px) {
+    .case-tile--full {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
+    }
+  }
+
+  /* Below this width the anchor is no longer wider than its siblings, so the two
+     treatments that only made sense while it was — a display-sized heading and a
+     foot split across the tile — stand down. */
+  @media (max-width: 820px) {
+    .case-tile--anchor .case-tile__title {
+      font-size: 23px;
+    }
+    .case-tile--anchor .case-tile__foot {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .case-tile__roles {
+      text-align: left;
+    }
+  }
+</style>

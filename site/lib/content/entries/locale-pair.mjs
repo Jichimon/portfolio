@@ -42,3 +42,30 @@ export function assertEverySlugHasBothLocales(entries, locales = KNOWN_LOCALES) 
     }
   }
 }
+
+// The catalog listing sees one locale at a time, so it can prove that locale's own
+// order is complete and unique and still miss the case where the two halves of a pair
+// disagree — which renders the same list in two different sequences, each internally
+// plausible. This is the only function that holds both halves at once, so the check
+// belongs here rather than in the listing that consumes the result.
+export function assertEveryPairAgreesOnOrder(entries, locales = KNOWN_LOCALES) {
+  const orderByLocaleBySlug = new Map();
+  for (const entry of entries) {
+    const { slug, lang, order } = entry.data;
+    if (typeof order !== 'number') continue;
+    const orderByLocale = orderByLocaleBySlug.get(slug) ?? new Map();
+    orderByLocale.set(lang, order);
+    orderByLocaleBySlug.set(slug, orderByLocale);
+  }
+
+  for (const [slug, orderByLocale] of orderByLocaleBySlug) {
+    const [firstLocale, ...remainingLocales] = locales.filter((locale) => orderByLocale.has(locale));
+    for (const locale of remainingLocales) {
+      if (orderByLocale.get(locale) !== orderByLocale.get(firstLocale)) {
+        throw new Error(
+          `slug "${slug}" carries order ${orderByLocale.get(firstLocale)} in "${firstLocale}" and ${orderByLocale.get(locale)} in "${locale}"`,
+        );
+      }
+    }
+  }
+}

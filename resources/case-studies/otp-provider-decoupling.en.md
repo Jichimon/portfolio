@@ -11,6 +11,7 @@ outcome: "Approved decomposition plan, execution begun; OTP cutover not complete
 stack: [".NET", "AWS Fargate", "AWS Lambda", "DynamoDB", "Aurora", "SNS/SQS"]
 skills: [architecture-decision-records, cost-engineering, service-decomposition, latency-analysis]
 featured: true
+order: 3
 confidentiality: sanitized
 ---
 

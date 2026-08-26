@@ -1,0 +1,241 @@
+---
+interface ContactLink {
+  name: string;
+  url: string;
+}
+
+interface Props {
+  heading: string;
+  invite: string;
+  note: string;
+  mailtoAddress: string;
+  emailLabel: string;
+  emailPlaceholder: string;
+  aboutLabel: string;
+  aboutPlaceholder: string;
+  messageLabel: string;
+  messagePlaceholder: string;
+  submitLabel: string;
+  links: ContactLink[];
+}
+
+const {
+  heading,
+  invite,
+  note,
+  mailtoAddress,
+  emailLabel,
+  emailPlaceholder,
+  aboutLabel,
+  aboutPlaceholder,
+  messageLabel,
+  messagePlaceholder,
+  submitLabel,
+  links,
+} = Astro.props;
+---
+
+<section class="contact-section" id="contact">
+  <div class="contact-section__main">
+    <h2 class="contact-section__heading">{heading}</h2>
+    <p class="contact-section__invite">{invite}</p>
+
+    <!--
+      The mailto action is the whole submission path: nothing here can know
+      whether the visitor's mail client ever sent the message, so no sending,
+      sent or error state is rendered. That state arrives once a real backend
+      does.
+    -->
+    <form class="contact-section__form" action={`mailto:${mailtoAddress}`} method="post">
+      <div class="contact-section__field">
+        <label class="contact-section__label" for="contact-section-email">{emailLabel}</label>
+        <input
+          class="contact-section__input"
+          id="contact-section-email"
+          name="email"
+          type="email"
+          placeholder={emailPlaceholder}
+        />
+      </div>
+      <div class="contact-section__field">
+        <label class="contact-section__label" for="contact-section-about">{aboutLabel}</label>
+        <input
+          class="contact-section__input"
+          id="contact-section-about"
+          name="about"
+          type="text"
+          placeholder={aboutPlaceholder}
+        />
+      </div>
+      <div class="contact-section__field">
+        <label class="contact-section__label" for="contact-section-message">{messageLabel}</label>
+        <textarea
+          class="contact-section__textarea"
+          id="contact-section-message"
+          name="message"
+          placeholder={messagePlaceholder}
+        ></textarea>
+      </div>
+      <button class="contact-section__submit" type="submit">{submitLabel}</button>
+    </form>
+
+    <div class="contact-section__footer">
+      <p class="contact-section__note">{note}</p>
+      <ul class="contact-section__links">
+        {links.map((link) => (
+          <li class="contact-section__link">
+            <a href={link.url}>{link.name}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .contact-section {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+
+  /* The design gives this column a measure of its own, beside a testimonials column
+     that has no content to render yet. Dropping the second column is right; letting
+     the first one grow into the space it left is not — a text input the full width
+     of the page is nobody's idea of a form. The measure stays whether or not
+     anything ever sits next to it. */
+  .contact-section__main {
+    max-width: 520px;
+  }
+
+  .contact-section__heading {
+    font: var(--type-display-m);
+    /* The type tokens carry family, weight and size only — tokens.css states that
+       letter spacing is a separate declaration wherever the design gives a figure,
+       and this heading is one of the places it does. */
+    letter-spacing: -0.008em;
+    color: var(--color-ink);
+    margin: 0 0 22px;
+  }
+
+  /* Literal, not a token: this step of the type ramp has no matching
+     shorthand, so the size and line-height are named directly rather
+     than borrowing a token that would silently change them. */
+  .contact-section__invite {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+    margin: 0 0 32px;
+  }
+
+  .contact-section__form {
+    margin: 0 0 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .contact-section__field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .contact-section__label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-label);
+  }
+
+  .contact-section__input,
+  .contact-section__textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    color: var(--color-ink);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--color-border-strong);
+    padding: 8px 2px;
+    border-radius: 0;
+  }
+
+  .contact-section__input:focus,
+  .contact-section__textarea:focus {
+    outline: none;
+    border-bottom-color: var(--color-accent);
+  }
+
+  .contact-section__textarea {
+    min-height: 84px;
+    resize: vertical;
+    font-family: inherit;
+  }
+
+  .contact-section__submit {
+    align-self: flex-start;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--color-bg);
+    background: var(--color-ink);
+    border: none;
+    padding: 12px 28px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .contact-section__submit:hover {
+    background: var(--color-accent);
+  }
+
+  .contact-section__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding-top: 22px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .contact-section__note {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--color-ink-faint);
+    margin: 0;
+  }
+
+  /* The separator is a CSS pseudo-element rather than a text node, which is how the
+     rail already draws the same row: punctuation is not copy, it carries no meaning
+     to translate, and generating it means the list never needs a separator prop. */
+  .contact-section__link:not(:first-child)::before {
+    content: '·';
+    color: var(--color-border-strong);
+    margin-right: 14px;
+  }
+
+  .contact-section__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--color-ink-muted);
+  }
+
+  .contact-section__link a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .contact-section__link a:hover {
+    color: var(--color-accent);
+  }
+</style>

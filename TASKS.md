@@ -267,6 +267,28 @@ The one that matters most: **a run stopped by `maxTurns` is recorded as `COMPLET
 
 **So reordering the brief does not solve this, and that is the finding.** Moving the fragile step earlier just changes which step is lost. What the five runs share is not an ordering but a shape: **every one of them was briefed to do work AND to prove it in the same run**, and the budget fits one of those, not both. The candidates that remain are a larger budget, or splitting proof from work into two runs — and this item owns the re-measurement that would decide between them. Neither is decided in passing.
 
+**An eighth specimen, 2026-08-25, and it is the first one that is NOT this entry's shape at all.** A component slice owning **two files** was cut at **~100k tokens across 30 tool calls** having produced **zero files**. Its last message was *"Now let's find the relevant CSS rules for `.hero`, `.hero-bg`, …"* — it was still **reading**.
+
+**Every specimen before this one lost its output. This one never reached its output, because the input was too expensive.** The brief pointed it at `docs/design/canvas/src/Main.dc.html`, a 790-line artboard whose `<style>` block runs from line 11 to line 419, and the agent spent its whole budget grepping around inside it for the rules belonging to two sections. The file-count heuristic this entry records says two files completes; two files did not complete, and the reason has nothing to do with how many files were owned.
+
+**So the datum needs a second axis, and it is one the orchestrator also controls.** `P-09` says to enumerate objects rather than surfaces and to cut scope when a slice will not fit — stated entirely in terms of what the agent must *produce*. This says the same discipline applies to what the agent must *consume*: a brief that names a large artifact and expects the agent to find the relevant part of it has handed over an unbounded read. **The fix that worked was the orchestrator doing the expensive read once** — the hero and marquee markup and CSS extracted to a 209-line working file, the brief pointed at that and explicitly forbidden from opening the artboard, and the scope cut from two components to one.
+
+**This is the design canvas's problem specifically, and every remaining page item will hit it.** Eleven artboards, each repeating the full token block, each 790–806 lines. Three page items are still open and all three are briefed against them.
+
+**The extraction has its own failure mode, and it was hit the same day.** Cutting an artboard into per-component slices silently drops the rules that belong to **no** component — the artboard's `section { padding: 0 72px; max-width: 1176px; margin-inline: auto; }` applies to every section on every page, so it appeared in none of the three extracts and reached none of the five components. The home page shipped with **no horizontal inset at all**, edge to edge, and every automated check passed: `astro check`, `check-site`, the smoke tier and the mutation gate are all blind to it, because nothing is wrong with the code. **The author found it by looking at the page.**
+
+**It was hit again the same day, on the same page, four more times — so the failure mode is systematic rather than a one-off.** The author compared the built home page against the design and reported that the cards matched neither the layout nor the art. What that one look surfaced: the **five per-tile motifs did not exist at all** (the slice that owned them was never run, and its behavior sat at `planned` while the item approached closure); the **bento left a hole** where the design's `tile-wide` class would have gone; **three entire responsive stages** were absent — the one-column bento, the anchor tile's smaller heading and stacked foot, and the thesis stepping 40 → 30 → 25; and the **contact form ran 1032px wide** where the design gives its column a 520px measure. Every automated check was green through all four.
+
+Three of them were **predicted in this repository's own logs before they shipped** — the contact slice wrote down that it was building no width constraint and flagged it as a loose end. That is the sharper finding: **a flagged loose end nobody converts into a work item is indistinguishable from one nobody noticed** (`P-06`). The flag cost the agent a paragraph and bought nothing.
+
+So the technique's rule is: **extract the element-level CSS per component, and extract the global and shell-level rules once, separately.** A selector that names a bare element (`section`, `main`, `[id]`) or the page shell belongs to composition, and composition is the one stylesheet's job, not a component's. This is also `INC-03`'s exact shape — a defect invisible to every check and visible to a human on first look — which is what the design-fidelity item exists to mechanize.
+
+**A seventh specimen, 2026-08-25, and it is the first one where the proposed mitigation was actually applied.** The smoke-tier slice was briefed with verification **removed from its scope** — three files, log-first, and the gate run, the red path and `astro check` all explicitly reserved for the orchestrator. It was cut anyway, at **38 tool calls and ~64k tokens**, with its final message reading *"Now let's run `npx astro check` first, then try building and running the playwright suite."*
+
+**So excluding the proof from the brief does not prevent the cut either.** It changes *what is lost*: all three files had landed and were of good quality, so the loss was the account of the work rather than the work. That is a better failure than the layout-shell specimen's one-partially-written-file-of-seven, and it is still a run that reported nothing. Set beside the fifth specimen — briefed to measure first, and cut having produced zero tests — the two together say the cut lands on **whatever is last**, and that no reordering removes it. The candidates remaining are unchanged: a larger budget, or two runs.
+
+**What it cost, measured rather than estimated:** one orchestrator verification pass, which found two defects the slice's own report would have claimed clean — a suite passing against a stale server, and a `webServer` race with the preview daemon. Recoverable when someone is watching, as this entry already records, and worth nothing when nobody is.
+
 **A sixth data point, from the orchestrator rather than an agent.** All five runs were re-driven to completion by `SendMessage`, cheaply, because the orchestrator could see the tree and tell each one exactly what already existed. That is not a fix — it needs a human-supervised session and does nothing for an unattended run — but it does say the loss is **recoverable when someone is watching**, which is a different cost from `INC-06`'s *the agent delivers zero*.
 
 
@@ -531,7 +553,23 @@ And `check-docs` rejected the ADR for citing a module path under the content cor
 
 ---
 
-## TASK 41 — Playwright smoke tier · `harness` · `TODO`
+## TASK 41 — Playwright smoke tier · `harness` · `DONE` · **ran eleventh**
+
+**Closed 2026-08-25.** The gate runs **19 steps** and passes 18; the one red is `evidence trace`, which `H-03` puts outside every agent's reach and which every item since the content layer has closed the same way. **54 smoke tests across chromium, firefox and webkit in ~51s**, every route derived from the content source, zero route strings in the spec file.
+
+**The item's Done was not reachable as written, and that is this session's finding rather than a status update.** `listRoutes()` derives sixteen routes; two have page modules. Asserting 200 over all sixteen would have added a knowingly-red nineteenth step — the exact blindness `TASK 34` and `TASK 39` exist to remove. Resolved with a **self-staling `site.pendingRoutes` list**, seven slugs each carrying a reason: expected-200 is *derived minus pending*, **and every pending route must still 404**, so the day a page item routes one the suite fails and forces the entry out. A skip list would never have expired. Keyed by slug rather than route, so a locale added later costs no edit (`P-13`).
+
+**Two red paths were run and the first one found that the suite as delivered proved nothing.** With `src/pages/index.astro` renamed out of the tree, the suite returned **18 passed** — Playwright's default `reuseExistingServer` had attached it to a preview server left running from an earlier run, serving a `dist/` twenty minutes old. That is `T-02` verbatim: a test that passes with the thing under test disabled. `P-14` earned its place again, on a suite whose only prior evidence was a green run.
+
+**The cause underneath it is worth recording, because it is a property of the toolchain and not of this item.** This Astro version's `astro preview` is a **background daemon** — it reports `(background)` unasked and the parent returns once it has forked. Playwright's `webServer` manages a foreground process and reads that exit as a failure, so a run's fate depended on whether the URL answered before Playwright noticed the exit: **observed both ways within one session**, once passing 54/54 and four times dying with `exited early`. `T-06` says a flake is a finding. The lifecycle moved into `globalSetup`, which stops any daemon, builds, starts one, polls until it answers, and returns a teardown — deterministic, and it stops a run leaking a daemon into the next one. `30-testing.md`'s sub-gate row is corrected accordingly (`G-11`).
+
+**A duplication arrived with the delivered code and was removed rather than rationalised.** `ROUTED_PAGE_SLUGS` and `INDEX_PAGE_SLUG` were declared in the gateway *and* again in the smoke spec, with a comment explaining why the copy was acceptable. Two declaration sites for one datum is criterion 4's exact prohibition, and the explanatory comment was the tell. Both now import them from `route-set.mjs`, beside the derivation that consumes them.
+
+**The seventh cut-off specimen, and it is the informative one for `TASK 12`.** The single delegated slice was briefed with verification **excluded** — the mitigation that item's entry proposes — and it was cut anyway, at 38 tool calls, on the sentence that begins the proof. All three files had landed and were good. Moving proof out of the brief did not prevent the cut; it changed what was lost from *the work* to *nothing*, because the orchestrator was watching. `astro check` had never run and carried **five** type errors — the second consecutive item where a slice closed without it.
+
+Detail: `progress/2026-08-25-08-task41-playwright-smoke-tier.md`.
+
+**Superseded opening note follows, kept for the trail.**
 
 Split from `TASK 27` on 2026-08-24, with the author. `TASK 27` bundled two things of very different cost: verifying that the site actually works, and building a three-way component-level diffing framework. The first belongs beside the pages; the second does not block the milestone and now runs after it.
 
@@ -760,7 +798,7 @@ Nineteen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-08
 | — | ~~`TASK 42`~~ — the test and mutation globs cover the core | `bugfix` | no | **DONE 2026-08-24. Pulled in.** The item below creates `site/lib/nav/`, and the globs stopped at `site/lib/content/**` — so that file would have been outside the gate step and outside the mutation run, silently. Proven in red: the old glob exited **0** with a failing test in the tree |
 | — | ~~`TASK 44`~~ — component test tier | `harness` | no | **DONE 2026-08-24. Pulled in.** The item below lands the first two DOM-requiring modules. A tier installed inside the feature item that uses it is a tier whose own red path never gets proven |
 | 10 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |
-| 11 | `TASK 41` — Playwright smoke tier | `harness` | no | The half of the fidelity harness that verifies the site rather than building diffing infrastructure. Runs with the pages, not before them |
+| 11 | ~~`TASK 41`~~ — Playwright smoke tier | `harness` | no | **DONE 2026-08-25.** The half of the fidelity harness that verifies the site rather than building diffing infrastructure. Its Done was unreachable at this position — sixteen derived routes, two built — so it ships a self-staling pending-routes list that fails the day a page item routes one. Found, by running the red path, that the suite as delivered passed with the home page removed |
 | 12 | `TASK 24` — home | `feature` | yes | |
 | 13 | `TASK 25` — case study and platform templates | `feature` | yes | |
 | 14 | `TASK 26` — About, Experience and 404 | `feature` | yes | |
@@ -1097,6 +1135,100 @@ Everything every page shares: the `oklch` token set and its `data-theme` swap, t
 - Tracking is a **progressive enhancement**, never the mechanism. **No-JS is a supported state, not a degraded one.** Per `ADR-007` this is *not* a Preact island: the rail is server-rendered markup because it has to work without JavaScript, and the tracking is a script attached to it. The theme toggle is the same shape, and for a sharper reason — it must resolve before first paint, which hydration cannot do.
 - Three states: wide >1180, medium 820–1180, narrow <820 where the rail becomes a top bar. No fixed width floor.
 - The theme choice must not flash on load — set it before first paint, or accept a flash and say so.
+
+---
+
+## TASK 47 — `site/` is at the file cap, and the next config file forces a split · `maintenance` · `TODO`
+
+Opened 2026-08-25 by the smoke-tier item. `site/` holds **six** files at its root — `astro.config.mjs`, `package.json`, `package-lock.json`, `tsconfig.json`, `vitest.config.ts`, `playwright.config.ts` — and `maxFilesPerDir` is **6**. It passes today with zero headroom, so the next root-level config file fails `check-site` (`S-03`).
+
+That is the rule working, not a defect. It is tracked because the failure will arrive attached to some unrelated item, whose author will then be choosing a directory layout under time pressure — which is how a folder that exists only to absorb overflow gets created, and `S-03` calls that a finding rather than compliance.
+
+**The smoke-tier item's own entry said `site/` "already holds four" when it held five.** A count in prose expires; this entry deliberately states the cap and the condition rather than the current number.
+
+**Done:** a decision, recorded, on where a seventh root-level config file goes — a named context subfolder, or a raised cap with its reason written at the number — taken before the item that needs it rather than inside it.
+
+**Constraints**
+
+- Not every tool tolerates its config being moved. Whatever is decided has to be checked against the tool's own documentation before it is written down (`C-01`, `S-07`).
+- Do not raise the cap merely to make this go away. It is the author's convention with a stated rationale, and a threshold that moves whenever it binds is not a threshold.
+
+---
+
+## TASK 48 — A delegated slice closes without `astro check` having run · `bugfix` · `TODO`
+
+Opened 2026-08-25 by the smoke-tier item, on its **second consecutive** occurrence. The layout-shell item closed its behaviour modules on Vitest and mutants without running `astro check`, which had accumulated **19** type errors. The smoke-tier slice landed three files and was cut off immediately before running it; it carried **five**.
+
+**Both were caught by the orchestrator, and that is the problem.** `astro check` is not a gate step — it is a command someone has to remember, and the evidence now says the person who remembers is never the one who wrote the code. `T-09` says the gate is one command and is CI parity; a type check that only runs when an orchestrator thinks of it is neither.
+
+**Done:** `astro check` runs as a gate step over `site/`, with a red path proving a planted type error fails it — or a recorded decision that it should not, naming what covers the same ground instead (`G-11`, `P-03`).
+
+**Constraints**
+
+- **Check whether the build already covers this before adding a step.** `astro build` may or may not type-check; `astro check` exists as a separate command, which suggests it does not, but that is an assumption and this item's first act is to test it against real state (`P-04`). A step that duplicates the build's own checking is a step that doubles gate time for nothing.
+- The step declares its gap out loud when `site/` is absent, the shape every site step in `gate.mjs` already uses (`P-03`).
+- 19 hints are currently reported and are **not** errors. Do not fail the gate on hints without deciding that separately — a step that fires on advisory output is a step people learn to ignore.
+
+---
+
+## TASK 49 — `home.{en,es}.md` carries a body the design does not render · `content` · `TODO` · **blocks the home page item**
+
+Opened 2026-08-25 by the home page item, which needs exactly one line out of this file and cannot address it.
+
+`home.{en,es}.md` was written before the design existed and reads as a full prose page. The design keeps **one** sentence of it — the thesis, which the hero prints — and that sentence sits in the markdown body, so reaching it means parsing prose for a bold paragraph. Everything else in the body has a declared home elsewhere and is rendered from there:
+
+| body element | where the site actually gets it |
+|---|---|
+| the role · location · timezone line | `ui.rail.role`, `.location`, `.timezone` |
+| **the thesis sentence** | **nowhere addressable — this is the gap** |
+| the five-years paragraph | not on the home artboard; About's material |
+| the four "Evidence, not adjectives" bullets | the work bento, derived from the case studies |
+| "What I'm looking for" | not on the artboard |
+| "Get in touch" + the two links | `ui.home.contact_*` and `ui.socials` |
+
+**An unrendered content file is worse than an absent one.** It looks published, it is not, and it drifts against the thing that really renders — which is the same defect class as a count in visible copy: nothing breaks, it just quietly stops being true.
+
+**Done:** `home.{en,es}.md` carries a `thesis` key in frontmatter, its body no longer duplicates anything the site renders from another source, and `check-content` and `check-terms` pass.
+
+**Constraints**
+
+- **The author makes the edit.** `H-02` puts `resources/**` outside every agent's reach, so this item's shape is: the orchestrator hands over the exact content, the author pastes it, and that hand-off is a checkpoint. Agreed with the author 2026-08-25 as the working pattern for this class of item.
+- Locale parity in the same change (`C-09`). The Spanish is first-class content, not a translation artifact.
+- **This does not apply to About or Experience.** Both artboards render their markdown bodies as prose — checked, not assumed — so their bodies stay prose. What they need is structure *around* the prose, and the About/Experience split item already owns that.
+
+---
+
+## TASK 50 — `contact.{en,es}.md` is superseded and routes nowhere · `content` · `TODO`
+
+Opened 2026-08-25 alongside its sibling above, and separated from it because it is a different deliverable with a different done (`P-01`).
+
+Contact is **a section of the home page**, not a page. It carries no route — `ROUTED_PAGE_SLUGS` names `home`, `about` and `experience` — and every string it renders comes from `ui.home.contact_*`, `ui.contact_form` and `ui.socials`. So `contact.{en,es}.md` is loaded by the collection, validated by the schema, counted by the parity guard, and rendered by nothing.
+
+**Done:** a decision, recorded, on whether `contact.{en,es}.md` is retired or given a routed page — and if retired, the pair is gone, `check-content` and `check-docs` still pass, and nothing in the collection loads a file with no consumer.
+
+**Constraints**
+
+- The author makes the edit (`H-02`), same hand-off shape as the item above.
+- **Retiring is not obviously right.** A `/contact` page is a normal thing for a portfolio to have, and the design simply did not draw one. Deciding to retire it is a design decision, not a cleanup.
+- Whatever is decided, the pair moves together (`C-09`).
+
+---
+
+## TASK 51 — The smoke tier's screenshots were dropped without being declared · `harness` · `TODO`
+
+Opened 2026-08-25, while fixing the home page's design-fidelity gaps.
+
+The Playwright item's Done named four things. Three were delivered and reported. The fourth — *"screenshots are captured at 1440 / 1024 / 390 in both themes for the author to judge"* — was **not built and not mentioned**. There is no `screenshots.smoke.spec.ts`; `site/tests/e2e/` holds the lifecycle and one spec. The closing entry does not claim the screenshots exist, so nothing in the register is false — it simply says nothing, and `P-03` is explicit that **silence reads as coverage**.
+
+**What makes this worth an item rather than a note.** The dropped dimension is the *only* one of the four whose output a human was meant to look at. Hours later the author compared the built home page against the design by eye and found five fidelity defects — missing art, a hole in the grid, three absent responsive stages, a form at twice its intended width — every one of them invisible to `astro check`, `check-site`, the smoke tier and the mutation gate. **The deliverable that would have surfaced them is the one that was silently skipped.** That is `INC-03`'s shape arriving through a new door: not *dev ≠ prod*, but *nobody looked*.
+
+**Done:** `site/tests/e2e/screenshots.smoke.spec.ts` captures both routes at the three sanctioned widths in both themes, writes them to a path that is declared rather than defaulted, and the gate step names where they landed. Proven by deleting the output directory and re-running.
+
+**Constraints**
+
+- **Not the fidelity diff.** No artboard comparison and no tolerance — that stays with the diffing item. This produces images for a human, which is a different and much cheaper deliverable.
+- The output directory is gitignored and **named in one place**. A run of this session wrote three PNGs into `site/undefined/`, which is what an undefined path variable looks like when nothing asserts it.
+- `P-03`'s wider lesson belongs in the closing note of whichever item does this: a dimension that does not apply is **declared out loud with a reason**. Dropping one quietly is the failure this item exists to mark.
 
 ---
 

@@ -1,0 +1,111 @@
+---
+interface Props {
+  heading: string;
+  technologies: string[];
+}
+
+const { heading, technologies } = Astro.props;
+
+// The track is rendered twice so the loop closes on itself: the animation travels
+// exactly -50%, which lands the second copy where the first began. Duplicating here
+// rather than asking the caller for a doubled array keeps the seam an implementation
+// detail — a caller passing its list twice by hand would silently break the loop the
+// day the two copies drifted.
+const trackPasses = [0, 1];
+---
+
+{technologies.length > 0 && (
+  <section class="stack-strip">
+    <h2 class="stack-strip__heading">{heading}</h2>
+    <div class="stack-strip__frame">
+      <div class="stack-strip__track">
+        {trackPasses.map((pass) => technologies.map((technology) => (
+          <div class="stack-strip__chip" aria-hidden={pass === 1 ? 'true' : undefined}>
+            <span class="stack-strip__mark" />
+            <span class="stack-strip__name">{technology}</span>
+          </div>
+        )))}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .stack-strip {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  .stack-strip__heading {
+    font: var(--type-section-label);
+    letter-spacing: var(--type-section-label-tracking);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0 0 22px;
+  }
+
+  .stack-strip__frame {
+    overflow: hidden;
+  }
+
+  .stack-strip__track {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    width: max-content;
+    animation: stack-strip-scroll 46s linear infinite;
+  }
+
+  .stack-strip__chip {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  /* The dot is the mark slot in its no-logo state — a designed fallback, not a
+     gap. A placeholder box reads as breakage in a moving strip, where the same
+     placeholder is legible in a short static list. */
+  .stack-strip__mark {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--color-ink-faint);
+    flex: 0 0 auto;
+  }
+
+  /* Not --type-mono: the artboard sets this at 500/13px against that step's
+     400/12.5px, and overriding two thirds of a shorthand token is a worse lie
+     than naming the family and stating the two values the design gives. */
+  .stack-strip__name {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+  }
+
+  @keyframes stack-strip-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* A strip that scrolls forever is motion nobody asked for. Stopped, the second
+     pass would sit off-screen unreachable, so the track wraps instead and every
+     technology stays readable without it. */
+  @media (prefers-reduced-motion: reduce) {
+    .stack-strip__track {
+      animation: none;
+      flex-wrap: wrap;
+      width: auto;
+      row-gap: 14px;
+    }
+    .stack-strip__chip[aria-hidden='true'] {
+      display: none;
+    }
+  }
+</style>

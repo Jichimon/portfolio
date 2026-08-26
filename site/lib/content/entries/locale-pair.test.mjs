@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { findEntryBySlugAndLang, findAlternateLocaleEntry, assertEverySlugHasBothLocales } from './locale-pair.mjs';
+import {
+  findEntryBySlugAndLang,
+  findAlternateLocaleEntry,
+  assertEverySlugHasBothLocales,
+  assertEveryPairAgreesOnOrder,
+} from './locale-pair.mjs';
 
 const entry = (slug, lang, id) => ({
   id: id ?? `${slug}-${lang}`,
@@ -88,4 +93,37 @@ test('throws when the targeted query finds two entries for one slug in one local
     () => findEntryBySlugAndLang(entries, 'duplicate-query-target-sample', 'en'),
     /duplicated within locale "en"/,
   );
+});
+
+// A pair whose two halves disagree about `order` renders the same list in two
+// different sequences, one per locale. Nothing downstream can notice: each locale's
+// listing is internally consistent and plausible, which is the shape of defect this
+// repository keeps finding late. The pair is the only place both halves are visible.
+const orderedEntry = (slug, lang, order) => ({
+  id: `${slug}-${lang}`,
+  data: { slug, lang, type: 'case-study', title: `${slug} (${lang})`, confidentiality: 'sanitized', order },
+});
+
+test('throws naming the slug and both values when a pair disagrees about order', () => {
+  const entries = [
+    orderedEntry('order-mismatch-sample', 'en', 2),
+    orderedEntry('order-mismatch-sample', 'es', 3),
+  ];
+  assert.throws(
+    () => assertEveryPairAgreesOnOrder(entries),
+    /slug "order-mismatch-sample" carries order 2 in "en" and 3 in "es"/,
+  );
+});
+
+test('accepts a pair whose halves carry the same order', () => {
+  const entries = [
+    orderedEntry('order-agreement-sample', 'en', 4),
+    orderedEntry('order-agreement-sample', 'es', 4),
+  ];
+  assert.doesNotThrow(() => assertEveryPairAgreesOnOrder(entries));
+});
+
+test('ignores entries that carry no order, leaving that to the catalog listing', () => {
+  const entries = [entry('no-order-sample', 'en'), entry('no-order-sample', 'es')];
+  assert.doesNotThrow(() => assertEveryPairAgreesOnOrder(entries));
 });

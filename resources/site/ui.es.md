@@ -32,6 +32,7 @@ socials:
     url: "https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/"
 
 home:
+  standalone_label: "Fuera de la plataforma — otro empleador, otro sistema"
   employers_heading: "Dónde he trabajado"
   work_heading: "Lo que he construido"
   stack_heading: "Tecnologías con las que trabajé"

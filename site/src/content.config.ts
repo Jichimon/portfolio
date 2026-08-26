@@ -17,6 +17,13 @@ const caseStudyFrontmatterSchema = z.looseObject({
   type: z.union([z.literal('case-study'), z.literal('platform')]),
   title: z.string(),
   confidentiality: z.string(),
+  // Required, not optional, and that is the decision rather than an oversight. The
+  // published order is not derivable from anything else the frontmatter carries —
+  // two entries share a period — so an entry without this has no defined position.
+  // Falling back to some default would place it plausibly and wrongly, which is how
+  // the previous alphabetical ordering survived unnoticed. Failing the build names
+  // the file instead.
+  order: z.number().int().positive(),
 });
 
 const uiFrontmatterSchema = z.looseObject({

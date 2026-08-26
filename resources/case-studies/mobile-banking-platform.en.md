@@ -7,10 +7,12 @@ subtitle: "Replacing a vendor banking app with a cloud-native platform bridging 
 role: "Backend Engineer → Solution Architect"
 context: "Regulated bank · Latin America"
 period: "2023–2025"
-scale: "Hundreds of thousands of active users"
+scale: "+100,000s"
+scale_caption: "active users"
 stack: [".NET", "AWS", "SNS/SQS", "MassTransit", "Polly", "SQL Server", "BIAN"]
 skills: [distributed-systems, legacy-integration, api-design, async-messaging, regulated-environments]
 featured: true
+order: 1
 confidentiality: sanitized
 ---
 

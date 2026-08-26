@@ -1,0 +1,80 @@
+---
+interface Props {
+  thesis: string;
+}
+
+const { thesis } = Astro.props;
+---
+
+<section class="home-hero">
+  <div class="home-hero__bg" aria-hidden="true">
+    <slot />
+  </div>
+  <div class="home-hero__content">
+    <p class="home-hero__thesis">{thesis}</p>
+  </div>
+</section>
+
+<style>
+  /* Opts out of the shared CAP only, never the shared inset. The background has to
+     span the full width of main, which the cap would stop short — but the horizontal
+     padding stays, so the thesis lands on the same left edge as every section below.
+     The backdrop still bleeds across it: an absolutely positioned inset:0 resolves
+     against the padding box, not the content box. */
+  .home-hero {
+    max-width: none;
+    position: relative;
+    min-height: 560px;
+    padding-top: 76px;
+    padding-bottom: 64px;
+    overflow: hidden;
+  }
+
+  /* Positioned to fill the section so the slotted composition can bleed
+     under the copy without the caller having to know the section's size. */
+  .home-hero__bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .home-hero__content {
+    position: relative;
+    z-index: 2;
+    padding-top: 340px;
+    max-width: 1032px;
+    margin-inline: auto;
+  }
+
+  .home-hero__thesis {
+    font: var(--type-thesis);
+    line-height: 1.22;
+    letter-spacing: -0.012em;
+    max-width: 800px;
+    margin: 0;
+  }
+
+  @media (max-width: 820px) {
+    .home-hero {
+      min-height: 420px;
+      padding-top: 40px;
+      padding-bottom: 40px;
+    }
+    .home-hero__content {
+      padding-top: 190px;
+    }
+    /* The thesis is the one line on the page that has to survive every width, and
+       the design steps it down twice rather than letting it wrap into a wall. The
+       token carries the widest step, so the two below it are named here. */
+    .home-hero__thesis {
+      font-size: 30px;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .home-hero__thesis {
+      font-size: 25px;
+    }
+  }
+</style>

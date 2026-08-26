@@ -72,6 +72,19 @@ const STEPS = [
     skipNote: 'no .component.test.ts exists yet — the behaviour modules arrive with the layout shell',
   },
   {
+    name: 'e2e smoke',
+    protects: 'every route the collection derives is actually served, and a route that is not yet built says so out loud instead of 404ing in production (T-02, INC-03)',
+    // Playwright's own bin through node, for the reason the two steps around this one
+    // already carry: spawnSync has no shell and npx is a .cmd shim on Windows.
+    cmd: [process.execPath, join(ROOT, 'site/node_modules/@playwright/test/cli.js'), 'test'],
+    cwd: join(ROOT, 'site'),
+    // The suite builds and serves dist/ itself, so this step is the production build's
+    // only automated verification. It declares the gap out loud rather than passing on
+    // nothing when the suite is absent (P-03) — same shape as the two steps above.
+    skipIf: () => !existsSync(join(ROOT, 'site/tests/e2e')),
+    skipNote: 'site/tests/e2e does not exist yet',
+  },
+  {
     name: 'mutation',
     protects: 'a surviving mutant is observable proof that a test proves nothing (T-03, D3)',
     // Stryker's own bin through node, NOT `npx stryker run`. ADR-006 names the npx form and

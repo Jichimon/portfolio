@@ -37,6 +37,14 @@
      display steps are noted there only as a range, so no per-step number is
      invented here — a component setting one of those three reads the range
      off the same source this file was read from. */
+  /* The home hero's thesis line, and the one step the component sheet's own ramp
+     does not carry. It is 600 40px in all three home artboards and in the three
+     direction explorations, so it is a real recurring treatment rather than a
+     one-off — it simply never got promoted into the sheet's eight .ty-* classes.
+     Declared here rather than written as a literal in the hero, because the next
+     screen that wants the site's largest statement should get this one and not a
+     number somebody re-measured. */
+  --type-thesis: 600 40px var(--font-display);
   --type-display-l: 500 42px var(--font-display);
   --type-display-m: 600 30px var(--font-display);
   --type-display-s: 600 24px var(--font-display);
@@ -46,6 +54,14 @@
   --type-mono: 400 12.5px var(--font-mono);
   --type-label: 500 11px var(--font-mono);
   --type-label-tracking: 0.09em;
+  /* The heading every page section opens with. The component sheet names it
+     `.section-label` and the home artboards apply it to three separate section
+     headings, so it is a shared treatment that simply was not carried into the
+     ramp when this file was written — the same gap as the thesis step above. Its
+     tracking differs from --type-label-tracking by a hundredth, which is small
+     enough to look like a typo and is what the sheet says. */
+  --type-section-label: 700 13px var(--font-body);
+  --type-section-label-tracking: 0.08em;
 }
 
 :root[data-theme='dark'] {
@@ -117,9 +133,40 @@ a:hover {
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* The shared measure every section sits on. `main` is deliberately NOT capped: the
+   hero has to bleed from the rail to the right edge of the window, and a cap on main
+   would stop its background art short of it. The cap lives on the section instead, so
+   every block shares one measure and one left edge while the hero's atmosphere spans
+   everything behind them.
+
+   It also lives here rather than in each component because it is composition — the
+   page shell's job — and repeating it per section is how five components end up
+   disagreeing about where the page's left edge is. */
+.page-shell__main section {
+  padding-inline: 72px;
+  max-width: 1176px;
+  margin-inline: auto;
+}
+
+@media (max-width: 1180px) {
+  .page-shell__main section {
+    padding-inline: 48px;
+  }
+}
+
 @media (max-width: 820px) {
   .page-shell {
     flex-direction: column;
     align-items: stretch;
+  }
+  .page-shell__main section {
+    padding-inline: 24px;
+  }
+}
+
+@media (max-width: 560px) {
+  .page-shell__main section {
+    padding-inline: 18px;
   }
 }

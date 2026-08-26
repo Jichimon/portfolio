@@ -11,6 +11,7 @@ outcome: "Production across multiple companies, thousands of employees"
 stack: [".NET", "Entity Framework", "Angular", "biometric terminals", "C4 model"]
 skills: [multi-tenancy, systems-integration, architecture-documentation, modular-monolith]
 featured: false
+order: 5
 confidentiality: sanitized
 ---
 

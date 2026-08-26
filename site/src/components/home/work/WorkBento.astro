@@ -1,0 +1,162 @@
+---
+import CaseTile from './CaseTile.astro';
+import CaseMotif from './CaseMotif.astro';
+import { fillLastRow } from '../../../../lib/layout/bento-spans.mjs';
+
+interface Tile {
+  slug: string;
+  title: string;
+  variant: 'anchor' | 'numbered' | 'full';
+  summaryText?: string;
+  scaleFigure?: string;
+  scaleCaption?: string;
+  roleLine?: string;
+  highlightLine?: string;
+  positionNumber?: number;
+  href: string;
+}
+
+interface Props {
+  heading: string;
+  standaloneLabel: string;
+  platformTag: string;
+  caseStudyTag: string;
+  featured: Tile[];
+  standalone: Tile[];
+}
+
+const { heading, standaloneLabel, platformTag, caseStudyTag, featured, standalone } = Astro.props;
+
+const tagFor = (tile: Tile) => (tile.variant === 'anchor' ? platformTag : caseStudyTag);
+
+// The grid is three columns wide, two below the medium breakpoint, and how many of
+// them a tile takes is the grid's decision rather than the tile's — so it is settled
+// here, where the column counts are declared, and handed down as a number the tile
+// only reports. The last tile of a group grows into whatever its row has left, which
+// is why a group of any size lands without a hole beside it.
+const WIDE_COLUMNS = 3;
+const NARROW_COLUMNS = 2;
+
+const baseSpanFor = (tile: Tile, columns: number) =>
+  tile.variant === 'full' ? columns : tile.variant === 'anchor' ? 2 : 1;
+
+const spansFor = (tiles: Tile[], columns: number) =>
+  fillLastRow(tiles.map((tile) => baseSpanFor(tile, columns)), columns) as number[];
+
+const featuredSpans = spansFor(featured, WIDE_COLUMNS);
+const featuredSpansNarrow = spansFor(featured, NARROW_COLUMNS);
+const standaloneSpans = spansFor(standalone, WIDE_COLUMNS);
+const standaloneSpansNarrow = spansFor(standalone, NARROW_COLUMNS);
+---
+
+{(featured.length > 0 || standalone.length > 0) && (
+  <section class="work-bento" id="work">
+    <h2 class="work-bento__heading">{heading}</h2>
+
+    {featured.length > 0 && (
+      <div class="work-bento__grid">
+        {featured.map((tile, index) => (
+          <CaseTile
+            href={tile.href}
+            title={tile.title}
+            variant={tile.variant}
+            columnSpan={featuredSpans[index]}
+            columnSpanNarrow={featuredSpansNarrow[index]}
+            summaryText={tile.summaryText}
+            tagText={tile.variant === 'anchor' ? tagFor(tile) : undefined}
+            positionNumber={tile.positionNumber}
+            scaleFigure={tile.scaleFigure}
+            scaleCaption={tile.scaleCaption}
+            roleLine={tile.roleLine}
+            highlightLine={tile.highlightLine}
+          >
+            <CaseMotif slug={tile.slug} />
+          </CaseTile>
+        ))}
+      </div>
+    )}
+
+    {standalone.length > 0 && (
+      <>
+        <p class="work-bento__standalone-label">{standaloneLabel}</p>
+        <div class="work-bento__grid">
+          {standalone.map((tile, index) => (
+            <CaseTile
+              href={tile.href}
+              title={tile.title}
+              variant={tile.variant}
+              columnSpan={standaloneSpans[index]}
+              columnSpanNarrow={standaloneSpansNarrow[index]}
+              summaryText={tile.summaryText}
+              tagText={tagFor(tile)}
+              scaleFigure={tile.scaleFigure}
+              scaleCaption={tile.scaleCaption}
+              roleLine={tile.roleLine}
+              highlightLine={tile.highlightLine}
+            >
+              <CaseMotif slug={tile.slug} />
+            </CaseTile>
+          ))}
+        </div>
+      </>
+    )}
+  </section>
+)}
+
+<style>
+  .work-bento {
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+
+  .work-bento__heading {
+    font: var(--type-section-label);
+    letter-spacing: var(--type-section-label-tracking);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0 0 24px;
+  }
+
+  .work-bento__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  .work-bento__standalone-label {
+    font: var(--type-label);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-label);
+    margin: 44px 0 16px;
+  }
+
+  /* Each tile carries its span as a custom property and this grid is what reads it,
+     which keeps the two column counts declared in exactly one place each — here, and
+     in the frontmatter that computed the numbers against them. Scoped under the grid
+     so it can only ever affect tiles inside it. */
+  .work-bento__grid :global(.case-tile) {
+    grid-column: span var(--tile-span, 1);
+  }
+
+  @media (max-width: 1180px) {
+    .work-bento__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .work-bento__grid :global(.case-tile) {
+      grid-column: span var(--tile-span-narrow, 1);
+    }
+  }
+
+  /* One column, so every tile spans the only one there is — no computed value can
+     say anything else here, which is why this stage names the span outright rather
+     than carrying a third custom property that could only ever hold 1. */
+  @media (max-width: 820px) {
+    .work-bento__grid {
+      grid-template-columns: 1fr;
+    }
+    .work-bento__grid :global(.case-tile) {
+      grid-column: span 1;
+    }
+  }
+</style>

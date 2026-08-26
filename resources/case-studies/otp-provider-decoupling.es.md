@@ -11,6 +11,7 @@ outcome: "Plan de descomposición aprobado, ejecución arrancada; el corte de OT
 stack: [".NET", "AWS Fargate", "AWS Lambda", "DynamoDB", "Aurora", "SNS/SQS"]
 skills: [architecture-decision-records, cost-engineering, descomposicion-de-servicios, analisis-de-latencia]
 featured: true
+order: 3
 confidentiality: sanitized
 ---
 

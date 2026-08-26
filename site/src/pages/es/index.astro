@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import HomeSections from '../../components/home/HomeSections.astro';
 import { getPage, getUiStrings, getAlternateHref } from '../../gateway/content-queries.ts';
 
 const lang = 'es';
@@ -22,4 +23,6 @@ const [page, ui, alternateHref] = await Promise.all([
   socials={ui.data.socials}
   alternateHref={alternateHref}
   footerText={ui.data.footer.metrics_slot}
-/>
+>
+  <HomeSections lang={lang} />
+</BaseLayout>
