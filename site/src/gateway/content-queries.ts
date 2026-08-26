@@ -60,6 +60,7 @@ interface HomeStrings {
   contact_heading: string;
   contact_invite: string;
   contact_note: string;
+  contact_email: string;
   seam_legacy: string;
   seam_modern: string;
 }

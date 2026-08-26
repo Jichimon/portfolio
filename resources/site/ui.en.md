@@ -39,6 +39,7 @@ home:
   contact_heading: "Get in touch"
   contact_invite: "Got a system that's hard to explain — or an idea you don't yet know how to build? Let's work it out together."
   contact_note: "Open to remote or hybrid/relocation."
+  contact_email: "luis.antm@hotmail.com"
   seam_legacy: "Legacy, dense"
   seam_modern: "Modern, open"
 

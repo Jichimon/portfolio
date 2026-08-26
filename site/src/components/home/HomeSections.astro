@@ -26,7 +26,6 @@ const [page, ui, technologies, tiles] = await Promise.all([
 ]);
 
 const { thesis } = page.data as { thesis?: string };
-const contactAddress = 'luis.antm@hotmail.com';
 ---
 
 {thesis !== undefined && (
@@ -50,7 +49,7 @@ const contactAddress = 'luis.antm@hotmail.com';
   heading={ui.data.home.contact_heading}
   invite={ui.data.home.contact_invite}
   note={ui.data.home.contact_note}
-  mailtoAddress={contactAddress}
+  mailtoAddress={ui.data.home.contact_email}
   emailLabel={ui.data.contact_form.email_label}
   emailPlaceholder={ui.data.contact_form.email_placeholder}
   aboutLabel={ui.data.contact_form.subject_label}

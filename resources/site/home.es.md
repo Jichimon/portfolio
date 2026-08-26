@@ -7,25 +7,18 @@ confidentiality: sanitized
 thesis: "Cuando un sistema es demasiado crítico para tocar y demasiado viejo para ignorar, ese es mi problema."
 ---
 
-Senior Software Engineer · Cochabamba, Bolivia (GMT-4, con solapamiento completo con el horario laboral de EE. UU.) · Abierto a remoto o híbrido/relocation
+Este archivo se lee por su frontmatter. La home renderiza `title` y `thesis`; el cuerpo no lo renderiza nada, y eso es una decisión, no un descuido.
 
-**Cuando un sistema es demasiado crítico para tocar y demasiado viejo para ignorar, ese es mi problema.**
+Queda anotado acá para que quien abra el archivo más adelante no reponga la prosa. Todo lo que el cuerpo traía tiene dirección propia en algún lugar que el sitio sí lee:
 
-Cinco años, cuatro empleadores, la misma versión de ese problema cada vez: un core bancario on-premise, un sistema Oracle EBS, una plataforma legacy en PHP — ninguno se podía mover, todos necesitaban hablar con algo nuevo. Siempre termino a cargo de los dos lados: la arquitectura completa, no solo el código de una parte.
+| qué era | dónde vive ahora |
+|---|---|
+| la línea de rol · ubicación · zona horaria | `ui.rail.role`, `ui.rail.location`, `ui.rail.timezone` |
+| la frase de tesis | la clave `thesis` de arriba, que el hero imprime |
+| los cuatro puntos de evidencia | la sección de trabajo, derivada de los propios casos |
+| "Hablemos" y los dos enlaces de perfil | `ui.home.contact_*` y `ui.socials` |
+| el párrafo de los cinco años | `about.es.md`, que ya cuenta esa historia con detalle |
 
-## Evidencia, no adjetivos
+"Lo que busco" no tiene dónde vivir. El diseño no lo dibuja en ninguna página, así que no se publica en vez de publicarse dos veces.
 
-- **~70% de reducción proyectada en costo mensual de operación.** Un servicio OTP se había convertido en el punto único de falla de todos los canales salientes de la app móvil de un banco. Diseñé el desacoplamiento y dejé la ejecución en marcha antes de irme. → [Recuperar el segundo factor de autenticación de manos de un proveedor](/case-studies/otp-provider-decoupling)
-- **100.000 usuarios en tres meses.** Permití que comercios sin cuenta bancaria empresarial cobraran a través de los rieles QR del propio banco. → [Permitir que comercios deleguen el cobro en personas sin cuenta bancaria](/case-studies/qr-collections-for-merchants)
-- **Millones de registros, cero incidentes en producción.** Migré los datos de pagos del core de un banco a una plataforma nueva, bajo un modelo de gobernanza donde "revertir y reintentar" no era una opción. → [Migrar datos de pagos desde un sistema que nadie entendía](/case-studies/legacy-payment-data-migration)
-- **Millones de usuarios, una sola plataforma.** Más recientemente, Senior Software Engineer en NICE, construyendo funcionalidades multitenant y mejoras de performance para una plataforma CX empresarial distribuida globalmente.
-
-## Lo que busco
-
-Senior Software Engineer, Senior Backend Engineer o Solution Architect — remoto, internacional.
-
-## Hablemos
-
-¿Tenés un problema como los de arriba? [Escribime](mailto:luis.antm@hotmail.com).
-
-[GitHub](https://github.com/Jichimon) · [LinkedIn](https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/)
+Un archivo que duplica lo que otro renderiza se desfasa en silencio: no se rompe nada, simplemente deja de ser cierto.

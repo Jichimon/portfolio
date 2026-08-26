@@ -4,7 +4,7 @@
 spec_id: SPEC-TASK-24
 title: Home
 status: active
-version: 1.0
+version: 1.1
 date: 2026-08-25
 approved_version: 1.0
 work_item: TASK-24
@@ -33,7 +33,7 @@ behaviors:
     when: "the home page asks the content layer for the case-study catalog"
     then: "entries come back ascending by `order`, not alphabetically by slug"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "a case study missing `order` fails the build loudly, rather than sorting to an arbitrary position"
       - "two case studies sharing an `order` value fails the build — a tie is a content defect, not something to break silently"
@@ -49,7 +49,7 @@ behaviors:
     when: "the stack strip asks for the technology set"
     then: "it receives the union of every `stack` array, deduplicated by exact string, in a deterministic order"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "the same value in two case studies appears once"
       - "`AWS` and `AWS Fargate` are different strings and both appear — no alias map, decided 2026-08-25"
@@ -65,20 +65,20 @@ behaviors:
     when: "the work section renders"
     then: "entries with `featured: true` render in the primary bento and entries with `featured: false` render in a second group beneath the standalone label"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "if no entry is non-featured, the standalone label and its group are absent entirely — not an empty container"
       - "if no entry is featured, the primary bento is absent"
       - "the `type: platform` entry takes the wide tile treatment; `type: case-study` entries take the numbered tile"
     tests:
-      - "routes.smoke.spec.ts::home renders both bento groups"
+      - "home.smoke.spec.ts::home renders both bento groups in "<lang>""
 
   - id: HOME-004
     given: "the home page built from the five current case studies"
     when: "a sixth case-study pair is added to resources/ and the site is rebuilt"
     then: "the bento and the stack strip both include it, with no edit to any template or component"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "no visible string on the page states how many case studies, employers or technologies exist"
       - "a sixth entry with no motif renders without a motif rather than falling back to another entry's"
@@ -90,31 +90,31 @@ behaviors:
     when: "the home page renders"
     then: "the employers section is absent from the DOM entirely"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "absent means no section element, no heading and no empty row — not a hidden or placeholder block"
       - "the four employer names are not written into any template, in either locale"
     tests:
-      - "routes.smoke.spec.ts::home has no employers section"
+      - "home.smoke.spec.ts::home has no employers section in "<lang>""
 
   - id: HOME-006
     given: "no testimonials content file exists"
     when: "the contact section renders"
     then: "the testimonials column is absent and the contact column occupies the layout alone"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "no NEEDS INPUT marker reaches the rendered page in either locale"
       - "the contact column's own layout is correct with the column gone, at all three widths"
     tests:
-      - "routes.smoke.spec.ts::home has no testimonials block"
+      - "home.smoke.spec.ts::home has no testimonials block in "<lang>""
 
   - id: HOME-007
     given: "the hero background composition and the per-tile motifs are decorative SVG"
     when: "a component renders one"
     then: "it receives it as a prop, and a tile with no motif renders without one"
     priority: normal
-    status: planned
+    status: implemented
     tests:
       - "covered by HOME-004's build proof"
 
@@ -123,31 +123,45 @@ behaviors:
     when: "the contact form is submitted"
     then: "it opens the visitor's mail client via `mailto:`, and no sending, sent or error state is rendered"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "no success state is shown that the site cannot actually know occurred"
       - "the email address is read from content, never written into the template"
     tests:
-      - "routes.smoke.spec.ts::contact form targets mailto and renders no result state"
+      - "home.smoke.spec.ts::contact form targets mailto and renders no result state in "<lang>""
 
   - id: HOME-009
     given: "home.en.md and home.es.md"
     when: "`/` and `/es/` are built"
     then: "each renders from its own locale's content file and its own locale's interface strings, and the language switcher on each points at the other"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "the Spanish route is the length stress test — no overflow or clipped text at any of the three widths"
       - "in-body links in Spanish prose resolve to the /es/ route"
     tests:
-      - "routes.smoke.spec.ts::both index routes return 200 and cross-link"
+      - "home.smoke.spec.ts::both index routes return 200 and cross-link to each other"
+
+  - id: HOME-011
+    given: "a bento of three columns, and a featured group whose tiles carry different base widths"
+    when: "the group is laid out"
+    then: "the last tile grows into whatever its row has left, so no group of any size leaves a hole beside it"
+    priority: normal
+    status: implemented
+    edge_cases:
+      - "a group that already fills its rows exactly is left alone"
+      - "a lone tile takes the full width rather than a fraction of a row"
+      - "a base span wider than the grid is capped, never allowed to overflow its row"
+      - "one column is a real grid — the narrowest layout — not an error"
+    tests:
+      - "bento-spans.test.mjs, nine cases"
 
   - id: HOME-010
     given: "the new components"
     when: "`check-site` runs"
     then: "no visible string is declared outside resources/, no colour or breakpoint literal appears outside the token stylesheet, and no route literal naming a real slug appears in any source file"
     priority: critical
-    status: planned
+    status: implemented
     edge_cases:
       - "the tile numbers are digits, not letters, so the string guard does not fire — they are derived from position within the featured group, not typed"
       - "case-study tile links are built from the derived route set, never written out as a path naming a slug"
@@ -179,7 +193,7 @@ The item's real difficulty is not markup. It is that three of the six designed s
 
 ## Behaviors
 
-See the `behaviors:` block above. `HOME-001` and `HOME-002` land in `site/lib/`, which is the mutation-covered surface, so both are written test-first. `HOME-003` through `HOME-010` are presentation and are asserted by the build, `check-site` and the smoke tier.
+See the `behaviors:` block above. `HOME-001`, `HOME-002` and `HOME-011` land in `site/lib/`, which is the mutation-covered surface, so all three are written test-first. The remaining behaviors are presentation and are asserted by the build, `check-site` and the e2e tier. **`HOME-011` was added after approval** — it is listed here rather than left to be inferred from the drift log, because a reader who takes this sentence at face value would conclude the spec covers ten behaviors and that the span derivation is somebody's undocumented addition.
 
 ### How `HOME-004` is achieved, and what it does not require
 
@@ -218,21 +232,25 @@ See the `out_of_scope:` block. Three sections are omitted rather than faked, per
 
 | Test (file::name) | Type | Scenario covered | Behavior(s) | Status |
 |---|---|---|---|---|
-| `case-study-catalog.test.mjs::orders by the order field` | unit | five entries in scrambled input order come back 1..5 | HOME-001 | planned |
-| `case-study-catalog.test.mjs::throws when an entry has no order` | unit | one entry missing `order` | HOME-001 | planned |
-| `case-study-catalog.test.mjs::throws on a duplicate order` | unit | two entries carrying the same value | HOME-001 | planned |
-| `case-study-catalog.test.mjs::orders independently per locale` | unit | en and es catalogs both ordered | HOME-001 | planned |
-| `case-study-catalog.test.mjs::unions stack values across entries` | unit | three entries, overlapping arrays | HOME-002 | planned |
-| `case-study-catalog.test.mjs::deduplicates by exact string` | unit | a repeated value collapses; a longer variant of it does not | HOME-002 | planned |
-| `case-study-catalog.test.mjs::tolerates an entry with no stack` | unit | absent and empty array | HOME-002 | planned |
-| `case-study-catalog.test.mjs::returns a stable order` | unit | same input, same output, twice | HOME-002 | planned |
-| `routes.smoke.spec.ts::home renders both bento groups` | e2e | featured group and standalone group present, counts derived | HOME-003 | planned |
-| `routes.smoke.spec.ts::home has no employers section` | e2e | section absent from the DOM | HOME-005 | planned |
-| `routes.smoke.spec.ts::home has no testimonials block` | e2e | both locales, and no marker text | HOME-006 | planned |
-| `routes.smoke.spec.ts::contact form targets mailto and renders no result state` | e2e | both locales | HOME-008 | planned |
-| `routes.smoke.spec.ts::both index routes return 200 and cross-link` | e2e | switcher href on each points at the other | HOME-009 | planned |
-| `check-site` over the real tree | integration | string, token and route-literal assertions | HOME-010 | planned |
-| manual build proof, recorded in the work log | build | sixth pair added, bento and strip grow, pair removed | HOME-004, HOME-007 | planned |
+| `case-study-catalog.test.mjs::orders by the order field` | unit | five entries in scrambled input order come back 1..5 | HOME-001 | passing |
+| `case-study-catalog.test.mjs::throws when an entry has no order` | unit | one entry missing `order` | HOME-001 | passing |
+| `case-study-catalog.test.mjs::throws on a duplicate order` | unit | two entries carrying the same value | HOME-001 | passing |
+| `case-study-catalog.test.mjs::orders independently per locale` | unit | en and es catalogs both ordered | HOME-001 | passing |
+| `case-study-catalog.test.mjs::unions stack values across entries` | unit | three entries, overlapping arrays | HOME-002 | passing |
+| `case-study-catalog.test.mjs::deduplicates by exact string` | unit | a repeated value collapses; a longer variant of it does not | HOME-002 | passing |
+| `case-study-catalog.test.mjs::tolerates an entry with no stack` | unit | absent and empty array | HOME-002 | passing |
+| `case-study-catalog.test.mjs::returns a stable order` | unit | same input, same output, twice | HOME-002 | passing |
+| `home.smoke.spec.ts::home renders both bento groups in "<lang>"` | e2e | featured group and standalone group present, counts derived | HOME-003 | passing |
+| `home.smoke.spec.ts::home has no employers section in "<lang>"` | e2e | section absent from the DOM | HOME-005 | passing |
+| `home.smoke.spec.ts::home has no testimonials block in "<lang>"` | e2e | both locales, and no marker text | HOME-006 | passing |
+| `home.smoke.spec.ts::contact form targets mailto and renders no result state in "<lang>"` | e2e | both locales | HOME-008 | passing |
+| `home.smoke.spec.ts::both index routes return 200 and cross-link to each other` | e2e | switcher href on each points at the other | HOME-009 | passing |
+| `check-site` over the real tree | integration | string, token and route-literal assertions | HOME-010 | passing |
+| `bento-spans.test.mjs`, nine cases | unit | row filling at 1, 2, 3 and 4 columns; exact fits; a lone tile; a capped base span; a rejected column count | HOME-011 | passing |
+| `case-study-catalog.test.mjs::joins the outcome and the period` | unit | an entry carrying both | HOME-003 | passing |
+| `case-study-catalog.test.mjs::falls back to whichever exists alone` | unit | outcome only, period only, neither | HOME-003 | passing |
+| `case-study-catalog.test.mjs::carries the scale caption` | unit | figure with and without a caption | HOME-003 | passing |
+| manual build proof, recorded in the work log | build | sixth pair added, bento and strip grow, pair removed | HOME-004, HOME-007 | proven |
 
 **Coverage gaps**
 
@@ -244,19 +262,25 @@ See the `out_of_scope:` block. Three sections are omitted rather than faked, per
 
 | Behavior | Priority | Status | Test(s) | Test written first? | ADR |
 |---|---|---|---|---|---|
-| HOME-001 | critical | planned | 4 unit | pending | ADR-002 |
-| HOME-002 | critical | planned | 4 unit | pending | ADR-002 |
-| HOME-003 | critical | planned | 1 e2e | n/a — presentation | ADR-007 |
-| HOME-004 | critical | planned | build proof | n/a | ADR-008 |
-| HOME-005 | critical | planned | 1 e2e | n/a — presentation | ADR-008 |
-| HOME-006 | critical | planned | 1 e2e | n/a — presentation | ADR-008 |
-| HOME-007 | normal | planned | — | n/a | ADR-007 |
-| HOME-008 | critical | planned | 1 e2e | n/a — presentation | ADR-004 |
-| HOME-009 | critical | planned | 1 e2e | n/a — presentation | ADR-003 |
-| HOME-010 | critical | planned | check-site | n/a — guard exists | ADR-008 |
+| HOME-001 | critical | implemented | 4 unit | yes | ADR-002 |
+| HOME-002 | critical | implemented | 4 unit | yes | ADR-002 |
+| HOME-003 | critical | implemented | 1 e2e | n/a — presentation | ADR-007 |
+| HOME-004 | critical | implemented | build proof | n/a | ADR-008 |
+| HOME-005 | critical | implemented | 1 e2e | n/a — presentation | ADR-008 |
+| HOME-006 | critical | implemented | 1 e2e | n/a — presentation | ADR-008 |
+| HOME-007 | normal | implemented | — | n/a | ADR-007 |
+| HOME-008 | critical | implemented | 1 e2e | n/a — presentation | ADR-004 |
+| HOME-009 | critical | implemented | 1 e2e | n/a — presentation | ADR-003 |
+| HOME-011 | normal | implemented | 9 unit | yes | ADR-007 |
+| HOME-010 | critical | implemented | check-site | n/a — guard exists | ADR-008 |
 
 ## Drift log
 
 | Date | What diverged | Spec or code corrected | Note |
 |---|---|---|---|
+| 2026-08-26 | **Five of the fifteen scheduled tests did not exist.** The Test Plan named `home renders both bento groups`, `home has no employers section`, `home has no testimonials block`, `contact form targets mailto and renders no result state` and `both index routes return 200 and cross-link` — every one of them attributed to the route smoke suite, which contains none of them. Their behaviors would have been marked implemented on the strength of a table nobody checked against the file. | **Code.** `site/tests/e2e/home.smoke.spec.ts`, nine tests (five assertions, four of them run per locale), every expected count and string derived from `resources/` through the same functions the gateway calls. The Test Plan rows now name the file that holds them. | Found at close, by listing the real test names and diffing them against this table instead of trusting it. The suite went 54 → 81 across three engines. Proven load-bearing in red: with one featured tile removed from the render, the count assertion fails in both locales. |
+| 2026-08-26 | **`HOME-008`'s edge case — *"the email address is read from content, never written into the template"* — was violated.** `HomeSections.astro` held `const contactAddress = 'luis.antm@hotmail.com'`. | **Code and content.** The author added `home.contact_email` to both interface-strings files; the component reads it; the gateway types it. The new e2e test asserts the form's action equals `mailto:` plus the address *read from the content file*, so the literal cannot come back without failing. | The test was written before the fix and failed for exactly this reason — which is what a scheduled test buys that a written-down edge case does not. |
+| 2026-08-26 | **`HOME-007` — the per-tile motifs — was `planned` and unbuilt while the item was one step from closing.** The slice that owned them was never run, and nothing in the item's own machinery noticed a critical-adjacent behavior with no artifact behind it. | **Code.** `CaseMotif.astro`, five motifs extracted from the design by script with the token mapping applied and verified, rendering nothing for a slug it does not know. | The author found it by looking at the page. This is the same shape as the row below and the reason both are recorded rather than quietly fixed. |
+| 2026-08-26 | **Four design rules that belong to no single component were dropped**, because the artboard was cut into per-component slices: the bento's row-filling width, the one-column stage at 820, the anchor tile's narrow treatment, the thesis stepping 40 → 30 → 25, and the contact column's 520px measure. | **Code**, in the components that own each rule, plus `HOME-011` for the one that had to become a derivation rather than a copied class. | Every automated check was green through all of them — `astro check`, `check-site`, the smoke tier, the mutation gate. Nothing was wrong with the code. Recorded at length in the work log and in the trace-fidelity item, whose extraction technique caused it. |
+| 2026-08-26 | **`HOME-011` did not exist when this spec was approved.** The bento's column spans were expected to be copied from the design as a class; they had to become a derivation instead, because the design's own answer is only correct for exactly five case studies — proven by the sixth-entry build, where the correct layout is a different one. | **This spec**, `version` 1.0 → **1.1**. `approved_version` stays 1.0. | The version moves and the approval does not, which is the honest state: the code is built and green, and the author has not signed off on the added behavior. `H-05` blocks write-capable delegation until they do, which is exactly the protection it exists to give. |
 | 2026-08-25 | `HOME-001`'s fourth edge case — *"the en and es halves of a pair carry the same `order`; a mismatch fails the build"* — appeared in the prose edge-case list but in **neither** the behavior's own `tests:` list nor the Test Plan table. The spec asked for something it never scheduled a test for. | **Code**, plus this row. The check cannot live in `listCaseStudyEntriesForLang`, which is called once per locale and never holds both halves; it landed in `locale-pair.mjs` as `assertEveryPairAgreesOnOrder`, wired into the gateway's case-study load so it runs on every build. Three tests, written red first. | Found by the implementer of slice B1 and reported rather than quietly skipped, which is the outcome the brief asked for. The defect it prevents is the kind this repository keeps finding late: two locales each internally consistent, each plausible, rendering the same list in a different sequence. |

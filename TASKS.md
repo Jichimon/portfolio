@@ -250,6 +250,14 @@ From `EVAL-000` (`GAP-03`, `GAP-04`, `GAP-05`, `GAP-07`, `GAP-08`, `GAP-09`, `GA
 The one that matters most: **a run stopped by `maxTurns` is recorded as `COMPLETE`.** `G-06` promises `FAILED` with `budget_exhausted`; no footer on disk has ever said that. A failed delegation is currently indistinguishable from a successful one, which is `INC-06`'s lesson inverted — the agent delivers zero and the trace reports success.
 
 
+**A second defect on the same surface, measured at the home item's wrap-up 2026-08-26 and reported here because this item owns the writers.** The `evidence trace` gate step fails against **this repository's four most recent runs**, not only historical ones — 25 findings against the newest, all of the same shape: `tool.result has no matching tool.requested`.
+
+Characterized rather than guessed at. In the newest run's orchestrator file: 277 `tool.requested`, 278 `tool.result`, and **25 results whose `tool_use_id` never appears as a request**. Every orphan is a `Bash` call, every one `ok: true`. The sequence around them is the tell — at `seq 124` a `policy.decision` carries one id and at `seq 125` a result carries a different one — which is what interleaving looks like when **two tool calls run concurrently and the `PreToolUse` write is lost for one of them**. `seq` itself is dense in every file, so nothing is truncated; the counter is doing its job and the correlation is not.
+
+**This costs more than a red step.** The trace's whole claim is that it can distinguish *the agent tried something dangerous* from *something dangerous happened*, and that distinction is derived from correlating a request with its decision and its result. A request that never lands cannot be correlated with anything, so a denied call whose request write was lost would be **invisible** — not reported as allowed, simply absent. The unsafe-action metric is counted from exactly these events.
+
+For the record, the same run's two real attempts *were* captured: both `H-02` denials, `sed` aimed at `resources/`, both by the orchestrator, both recorded with request, decision and no result. The boundary held and the trace saw it. The question this raises is how many it did not see.
+
 **Two more specimens, 2026-08-25, and they narrow the cause rather than repeating it.** The same session that wrote the triage above delegated two `implementer` slices in parallel. **Both were cut off. Both were cut off inside their verification step, not inside the work.**
 
 | | slice A (`TASK 45`) | slice B (`TASK 39`) |
@@ -799,7 +807,7 @@ Nineteen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-08
 | — | ~~`TASK 44`~~ — component test tier | `harness` | no | **DONE 2026-08-24. Pulled in.** The item below lands the first two DOM-requiring modules. A tier installed inside the feature item that uses it is a tier whose own red path never gets proven |
 | 10 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |
 | 11 | ~~`TASK 41`~~ — Playwright smoke tier | `harness` | no | **DONE 2026-08-25.** The half of the fidelity harness that verifies the site rather than building diffing infrastructure. Its Done was unreachable at this position — sixteen derived routes, two built — so it ships a self-staling pending-routes list that fails the day a page item routes one. Found, by running the red path, that the suite as delivered passed with the home page removed |
-| 12 | `TASK 24` — home | `feature` | yes | |
+| 12 | ~~`TASK 24`~~ — home | `feature` | yes | **DONE 2026-08-26.** Both index routes render from content, 81 e2e across three engines, mutation 75.07. Its lesson is the one the register should carry forward: every automated check was green while five design defects shipped, and five of the fifteen tests this item scheduled had never been written |
 | 13 | `TASK 25` — case study and platform templates | `feature` | yes | |
 | 14 | `TASK 26` — About, Experience and 404 | `feature` | yes | |
 | — | **THE LOCALHOST MILESTONE** — the author judges the site; `harness-evaluator` scores the harness | | | |
@@ -1171,7 +1179,12 @@ Opened 2026-08-25 by the smoke-tier item, on its **second consecutive** occurren
 
 ---
 
-## TASK 49 — `home.{en,es}.md` carries a body the design does not render · `content` · `TODO` · **blocks the home page item**
+## TASK 49 — `home.{en,es}.md` carries a body the design does not render · `content` · `DONE`
+
+**Closed 2026-08-26.** The `thesis` key is in frontmatter and the hero prints it from there. Both bodies were replaced by a traceability note naming, per element, where the site now reads what the prose used to hold — the rail strings, the `thesis` key, the derived work section, `ui.home.contact_*` and `ui.socials`, and `about.{en,es}.md` for the five-years paragraph. **"What I'm looking for" is recorded as having no home:** the design draws it on no page, so it goes unpublished rather than published twice, and the note says so instead of leaving a reader to wonder where it went. The orchestrator handed over both files complete; the author pasted them (`H-02`). `check-content` and `check-terms` pass.
+
+**Superseded opening note follows, kept for the trail.**
+
 
 Opened 2026-08-25 by the home page item, which needs exactly one line out of this file and cannot address it.
 
@@ -1232,7 +1245,69 @@ The Playwright item's Done named four things. Three were delivered and reported.
 
 ---
 
-## TASK 24 — Home · `feature` · `TODO`
+## TASK 52 — A missing `run.footer` may be the cut-off signal `G-06` says does not exist · `harness` · `TODO`
+
+Opened 2026-08-26 at wrap-up, from the trace rather than from memory (`P-12`).
+
+`G-06` currently disclaims the ability to see a cut-off run at all: *"a budget-stopped run is indistinguishable from a successful one in the trace"*, amended downward on 2026-08-25 precisely because nothing observed had ever contradicted it. **This session's trace contradicts it, on a small sample.**
+
+Six trace files, three of them with no `run.footer`:
+
+| file | tool calls | footer | known outcome |
+|---|---|---|---|
+| `implementer-a3a18d…` | 8 | yes | completed, delivered |
+| `implementer-abaaba…` | 12 | yes | completed, delivered |
+| `-a7752c22c…` | 0 | yes | completed |
+| `implementer-a99ebc…` | 30 | **no** | **cut off, zero files delivered** |
+| `test-engineer-a56c7…` | 38 | **no** | **cut off mid-verification** |
+| `orchestrator` | 277 | **no** | still running — expected |
+
+Every delegated run that finished has a footer. Every delegated run known to have been cut does not. Five for five, and the two cut-offs were identified independently — by the orchestrator watching them stop, not by reading the trace.
+
+**Done:** either `G-06`'s claim is amended upward with the mechanism named and a red path behind it — a deliberately cut run producing no footer, and a completed run producing one — or the correlation is shown to be coincidental and *that* is recorded, so nobody re-derives it from the same six files.
+
+**Constraints**
+
+- **Two data points are not a mechanism.** The honest outcome may be "suggestive, not load-bearing", and `G-11` requires the claim to move only as far as the evidence does — this item is as free to conclude nothing as it is to conclude something.
+- A footer can plausibly go missing for reasons other than a cut — a crash, a killed process, a hook that did not fire. Those alternatives are the item's real work, not the happy path.
+- `evidence/**` is read here and never written (`H-03`).
+
+---
+
+## TASK 53 — `SPEC-TASK-24` sits at `version` 1.1 with `approved_version` 1.0 · `planning` · `TODO`
+
+Opened 2026-08-26 at wrap-up. A one-decision item, tracked rather than left as a sentence (`P-06`).
+
+The home item added `HOME-011` — the bento's derived column spans — which did not exist when the author approved that spec. The version moved; the approval did not. That is the honest state and it was left that way deliberately: the code is built, tested and green, and the author has not signed off on the added behavior.
+
+**It matters beyond bookkeeping.** `H-05` is a rung-1 boundary and it blocks write-capable delegation on any active spec whose `version` has moved past its `approved_version`. So the next item that wants to delegate an implementer against this spec will be denied — correctly, and confusingly, if nobody remembers why.
+
+**Done:** the author has read `HOME-011` and either moved `approved_version` to 1.1, or asked for the behavior to change and the version to move again. Recorded in the spec's drift log either way.
+
+**Constraints**
+
+- **Not an agent's decision.** An approval an agent grants itself is not an approval — that is `INC-05`, and `P-02` is explicit that a plan approval or a "go ahead" is not this gate.
+
+---
+
+## TASK 24 — Home · `feature` · `DONE` · **ran twelfth**
+
+**Closed 2026-08-26.** The gate runs 19 steps and passes 18; the one red is `evidence trace`, which `H-03` puts outside every agent's reach and which every item since the content layer has closed the same way. `/` and `/es/` render the hero, the work bento, the stack strip and the contact section entirely from `resources/`. **81 e2e tests across chromium, firefox and webkit** (54 before this item), 72 core unit tests, 15 component tests, `astro check` clean, **mutation 75.07 against a floor of 74.5** — up from 74.74, because the new tests raised the headroom rather than eating it.
+
+**`HOME-004` is proven, not asserted.** The author pasted a throwaway sixth case-study pair; the build ran; the pair came out. Every file under `site/src` and `site/lib` hashed identically before and after (`1ef17d06…565af0`), so the no-template-edit half is a fact rather than a claim. Featured tiles went 4 → 5, stack chips 40 → 44 in both locales, and the column spans recomputed from `2 · 1 · 1 · 2` to `2 · 1 · 1 · 1 · 1` — **a different layout, correctly, with nobody deciding it.** That last row is the item's best argument: the design resolves its own bento by hand-labelling one tile wide, which is right for exactly five case studies and wrong for six. Copying the class across would have been invisible until the sixth arrived.
+
+**The item's real finding is that the gate was green while the page was wrong.** The author compared the built home against the design and reported that the cards matched neither the layout nor the art. They were right about more than they named: the five per-tile motifs **did not exist at all** (`HOME-007` sat at `planned` while the item approached closure), the bento left a hole, **three entire responsive stages** were absent — the one-column bento, the anchor tile's narrow treatment, the thesis stepping 40 → 30 → 25 — and the contact form ran at twice its intended width. `astro check`, `check-site`, the smoke tier and the mutation gate were green through every one. Nothing was wrong with the code. **Three of the five had been written down as loose ends in this repository's own logs before they shipped**, which is the sharper half: a flagged loose end that nobody converts into a work item is indistinguishable from one nobody noticed (`P-06`).
+
+**Five of the fifteen tests this spec scheduled had never been written.** The Test Plan named them and attributed them to the route smoke suite, which contained none of them. Found at close by listing the real test names and diffing them against the table instead of trusting it — the same `P-11` move that keeps paying. They now live in `site/tests/e2e/home.smoke.spec.ts`, every expected count and string derived from `resources/`, and were proven load-bearing in red. One of them failed on arrival for a real reason: `HOME-008`'s edge case required the contact address to come from content, and `HomeSections.astro` was holding it as a literal.
+
+**The spec is at `version` 1.1 with `approved_version` 1.0, deliberately.** `HOME-011` — the derived bento spans — did not exist when the author approved this spec, and the honest state is that the code is built and green while the added behavior is unsigned. `H-05` blocks write-capable delegation until that is resolved, which is the protection working rather than an obstruction.
+
+**One dimension is `partial` and says so.** The author's design review happened at 1440 in the light theme; the re-review at three widths in both themes has not been run since the fixes landed. The artboard diff itself stays with the design-fidelity harness item.
+
+Detail: `progress/2026-08-25-09-task24-home.md`.
+
+**Superseded opening note follows, kept for the trail.**
+
 
 **Deliverable:** `/` and `/es/`, rendered from `home.{en,es}.md` and the case-study collection — hero, employers, work bento, stack strip, testimonials, contact.
 

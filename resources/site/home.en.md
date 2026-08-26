@@ -7,25 +7,18 @@ confidentiality: sanitized
 thesis: "When a system is too critical to touch and too old to ignore, that's my problem to solve."
 ---
 
-Senior Software Engineer · Cochabamba, Bolivia (GMT-4, full overlap with US business hours) · Open to remote or hybrid/relocation
+This file is read for its frontmatter. The home page renders `title` and `thesis`; nothing renders this body, and that is the decision rather than an oversight.
 
-**When a system is too critical to touch and too old to ignore, that's my problem to solve.**
+It is written down here so the next person to open the file does not restore the prose. Everything the body used to carry is addressable somewhere the site actually reads:
 
-Five years, four employers, one version of that problem each time: an on-premise banking core, an Oracle EBS system, a legacy PHP platform — none of them able to move, all of them needing to talk to something new. I keep ending up owning the seam: the architecture on both sides of it, not just the code on one.
+| what it was | where it lives now |
+|---|---|
+| the role · location · timezone line | `ui.rail.role`, `ui.rail.location`, `ui.rail.timezone` |
+| the thesis sentence | the `thesis` key above, which the hero prints |
+| the four evidence bullets | the work section, derived from the case studies themselves |
+| "Get in touch" and the two profile links | `ui.home.contact_*` and `ui.socials` |
+| the five-years paragraph | `about.en.md`, which already tells that story at length |
 
-## Evidence, not adjectives
+"What I'm looking for" has no home. The design draws it on no page, so it goes unpublished rather than published twice.
 
-- **~70% projected reduction in monthly run cost.** An OTP service had become a single point of failure for every outbound channel in a bank's mobile app. I designed the decoupling and got execution started before I moved on. → [Taking second-factor authentication back from a vendor](/case-studies/otp-provider-decoupling)
-- **100,000 users in three months.** Let merchants without a business bank account collect payments through the bank's own QR rails. → [Letting merchants delegate payment collection to people without bank accounts](/case-studies/qr-collections-for-merchants)
-- **Millions of records, zero production incidents.** Migrated a bank's core payment data onto a new platform, under a governance model where "roll back and retry" wasn't an option. → [Migrating payment data out of a system nobody understood](/case-studies/legacy-payment-data-migration)
-- **Millions of users, one platform.** Most recently Senior Software Engineer at NICE, shipping multitenant features and performance work for a globally distributed enterprise CX platform.
-
-## What I'm looking for
-
-Senior Software Engineer, Senior Backend Engineer, or Solution Architect — remote-first, internationally.
-
-## Get in touch
-
-Got a problem like the ones above? [Email me](mailto:luis.antm@hotmail.com).
-
-[GitHub](https://github.com/Jichimon) · [LinkedIn](https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/)
+A file that duplicates what another file renders drifts against it silently: nothing breaks, it just stops being true.
