@@ -17,6 +17,12 @@ export const NAV_ITEMS = [
   { key: 'contact', kind: 'anchor', target: '#contact' },
 ];
 
+// Which nav item an article page belongs under. An article is not itself a nav
+// destination — there is no "case studies" item and deliberately no index route — but a
+// reader who is inside one is inside the work section, and the design marks it. Declared
+// here, with the structure it is part of, so a page never spells the key out for itself.
+export const SECTION_NAV_KEY_FOR_ARTICLES = 'work';
+
 // The unambiguous "no link" value a reserved item resolves to. A reserved slot has
 // no href at all, so callers compare against this rather than against '#' or ''.
 export const NO_NAV_HREF = null;

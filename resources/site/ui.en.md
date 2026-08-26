@@ -54,6 +54,8 @@ article:
   platform_tag: "Platform · parent of the deep dives"
   case_study_tag: "Case study"
   deep_dives: "Deep dives"
+  part_of: "part of"
+  figure_prefix: "Fig."
 
 about:
   label: "About"
@@ -106,7 +108,7 @@ Every value above is lifted from an artboard in `docs/design/canvas/src/`. Nothi
 | `rail` | `Main.dc.html` 425–427, 439, 446 · `MobileSeam.dc.html` 99 for `menu`, which only appears in the narrow top bar |
 | `socials` | `Main.dc.html` 448 · the same two links the footer carries (`CaseStudiesIndex.dc.html` 343). Values are identical in both locales — a name and a URL, nothing to translate |
 | `home` | `Main.dc.html` 531, 542, 655, 667, 668, 687 · `MobileSeam.dc.html` 142 for the two seam labels |
-| `article` | `CaseStudyDetail.dc.html` 262, 287, 293–297 · `PlatformPage.dc.html` 264, 286 · `CaseStudiesIndex.dc.html` 334 |
+| `article` | `CaseStudyDetail.dc.html` 288 · `PlatformPage.dc.html` 286 · `CaseStudiesIndex.dc.html` 334 |
 | `about` | `About.dc.html` 266, 270–272 |
 | `experience` | `Experience.dc.html` 242 |
 | `contact_form` | `Main.dc.html` 672–683 |

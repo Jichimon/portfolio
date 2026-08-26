@@ -1,0 +1,14 @@
+---
+import ArticlePage from '../../../layouts/ArticlePage.astro';
+import { listCaseStudyRouteParams } from '../../../gateway/content-queries.ts';
+
+const lang = 'es';
+
+export async function getStaticPaths() {
+  return (await listCaseStudyRouteParams('es')).map((params) => ({ params }));
+}
+
+const { slug } = Astro.params;
+---
+
+<ArticlePage slug={slug as string} lang={lang} />

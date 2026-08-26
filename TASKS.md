@@ -808,7 +808,7 @@ Nineteen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-08
 | 10 | `TASK 23` — tokens and the layout shell | `feature` | yes | Every page item depends on it |
 | 11 | ~~`TASK 41`~~ — Playwright smoke tier | `harness` | no | **DONE 2026-08-25.** The half of the fidelity harness that verifies the site rather than building diffing infrastructure. Its Done was unreachable at this position — sixteen derived routes, two built — so it ships a self-staling pending-routes list that fails the day a page item routes one. Found, by running the red path, that the suite as delivered passed with the home page removed |
 | 12 | ~~`TASK 24`~~ — home | `feature` | yes | **DONE 2026-08-26.** Both index routes render from content, 81 e2e across three engines, mutation 75.07. Its lesson is the one the register should carry forward: every automated check was green while five design defects shipped, and five of the fifteen tests this item scheduled had never been written |
-| 13 | `TASK 25` — case study and platform templates | `feature` | yes | |
+| 13 | ~~`TASK 25`~~ — case study and platform templates | `feature` | yes | **DONE 2026-08-26.** Ten article routes through two type-keyed templates; the table of contents, the masthead rows, the diagram figures and the deep-dive grid are all derived from the entry's own frontmatter and body. Its finding is `TASK 54`: the e2e suite passed with both critical mechanisms deliberately broken, because the build was serving a cached render |
 | 14 | `TASK 26` — About, Experience and 404 | `feature` | yes | |
 | — | **THE LOCALHOST MILESTONE** — the author judges the site; `harness-evaluator` scores the harness | | | |
 | 15 | `TASK 30` — publish the repository to GitHub | `maintenance` | no | Nothing else can be automated until the code has a remote |
@@ -1227,7 +1227,7 @@ Contact is **a section of the home page**, not a page. It carries no route — `
 
 ---
 
-## TASK 51 — The smoke tier's screenshots were dropped without being declared · `harness` · `TODO`
+## TASK 51 — The smoke tier's screenshots were dropped without being declared · `harness` · `DONE`
 
 Opened 2026-08-25, while fixing the home page's design-fidelity gaps.
 
@@ -1242,6 +1242,12 @@ The Playwright item's Done named four things. Three were delivered and reported.
 - **Not the fidelity diff.** No artboard comparison and no tolerance — that stays with the diffing item. This produces images for a human, which is a different and much cheaper deliverable.
 - The output directory is gitignored and **named in one place**. A run of this session wrote three PNGs into `site/undefined/`, which is what an undefined path variable looks like when nothing asserts it.
 - `P-03`'s wider lesson belongs in the closing note of whichever item does this: a dimension that does not apply is **declared out loud with a reason**. Dropping one quietly is the failure this item exists to mark.
+
+**Closed 2026-08-26**, run in parallel with `TASK 25`. `site/tests/e2e/screenshots.smoke.spec.ts` captures every live route at 1440 / 1024 / 390 in both themes, from a route set derived from the content rather than listed in the file — **72 images**, which is what 12 live routes now costs, where the item was written when there were 2. The output directory is a single declared constant with an assertion behind it, so the `site/undefined/` failure cannot recur silently.
+
+**The delete-and-re-run proof was observed by the orchestrator rather than reported by the agent**, which ran out of budget before it got there: the directory was empty when the gate started and held all 72 when it finished.
+
+**One thing gitignoring did not cover, and it is the reusable half.** `check-site` walks the real tree, not git's index, so the 72-file output directory failed the file cap the first time the suite ran against the full route set — and `check-docs` then failed on the now-stale exemption that had been holding this item's place. Both are fixed in `guards.config.json`: `screenshots` is an excluded generated tree with its reason, and the exemption is gone. **A gitignore is not an exclusion**, and this is the item that found out.
 
 ---
 
@@ -1274,7 +1280,47 @@ Every delegated run that finished has a footer. Every delegated run known to hav
 
 ---
 
-## TASK 53 — `SPEC-TASK-24` sits at `version` 1.1 with `approved_version` 1.0 · `planning` · `TODO`
+## TASK 54 — A green gate can be measuring HTML the current code did not produce · `harness` · `TODO`
+
+Opened 2026-08-26 by `TASK 25`, from a red path that refused to go red.
+
+Both of that item's critical mechanisms were deliberately neutered — the diagram caption stopped dropping its private `Spec:` half, and the deep-dives strip was made a no-op — and the end-to-end suite was re-run. **All sixteen tests passed.** The tests were fine. `node_modules/.vite` and `node_modules/.astro` cache the markdown pipeline's output, keyed on the markdown; a change to a plugin under `site/lib/**` does not invalidate that cache, so the build reused HTML produced by the *previous* version of the code. Clearing both caches and rebuilding produced the defect immediately, and the suite then failed 6 of 16.
+
+**Why this is an item and not a note.** The consequence is general and silent. Any change to a content-pipeline plugin can pass a full green gate — `astro check`, `check-site`, the smoke tier, the mutation gate — against a build made from the code as it was before the change. Nothing anywhere says so. This is `INC-03`'s lesson arriving through its third door: not *dev ≠ prod*, not *nobody looked*, but **the build did not rebuild**, and the difference is invisible in every report.
+
+**Done:** a build that follows a change under `site/lib/**` renders that change, proven in red — the same neutering, an untouched cache, and a failing suite. Either the caches are keyed on the pipeline's own inputs as well as on the markdown, or the gate's build step clears them and the cost of doing so is measured and recorded.
+
+**Constraints**
+
+- **Measure the cost before choosing.** Clearing the cache on every gate run is the blunt fix and it lengthens the one command everybody types; a rebuild from cold took ~2.5s here against ~1.3s warm, on twelve pages, and that ratio is what changes as the site grows. Record the measurement, not an impression of it.
+- **The red path is the deliverable.** A fix that is only ever seen to pass is exactly what produced this item.
+- Whether `INC-03` gains a rule, or this stays a mechanism with no rule behind it, is a decision for whoever closes it — `docs/harness/architecture.md` §M already records the deliberate gap.
+
+---
+
+## TASK 55 — Five delegated runs, five turn budgets exhausted · `harness` · `TODO`
+
+Opened 2026-08-26 by `TASK 25`, which delegated five `implementer` slices and had all five cut off.
+
+Every slice owned exactly two files — the size `TASK 12`'s specimen set says completes, and the size `P-09` was re-cut to. Two delivered everything and were cut before reporting; one was cut mid-sentence while fixing its own finding; one delivered two of three exports and the orchestrator finished it; one delivered a complete implementation whose report never arrived. **So the artifacts were mostly fine and the reports were the casualty**, which is the failure mode nobody notices: the orchestrator gets a truncated summary and has to re-derive from the diff what the agent already knew.
+
+**What is different from `TASK 12`'s specimens.** Not the writing — the reading. Each brief required the content entries, two or three artboards, and a markdown-pipeline API nobody in this repository had used before. `maxTurns: 30` in `.claude/agents/implementer.md` was calibrated against slices whose context was already familiar.
+
+**Done:** either the budget is raised with the new number justified by measurement rather than by feel, or `P-09` gains the distinction this item found — that a slice is sized by *objects owned plus documents that must be read*, not by objects alone — or both, with the rejected option recorded.
+
+**Constraints**
+
+- **Do not simply raise the number.** A budget raised without a measured reason is a budget that gets raised again next time. `TASK 12` holds seven specimens and this item adds five; that is a sample worth reading before changing anything.
+- **The report is part of the deliverable, not a courtesy.** An agent that writes the code and never reports what it drifted on has delivered an artifact and lost the reasoning behind it, and `P-11` means the orchestrator then has to verify from scratch what the agent already checked.
+- The correlation `TASK 52` is chasing — a cut run leaves no `run.footer` — now has five more specimens. Whoever takes either item should read the other's evidence first.
+
+---
+
+## TASK 53 — `SPEC-TASK-24` sits at `version` 1.1 with `approved_version` 1.0 · `planning` · `DONE`
+
+**Closed 2026-08-26.** Author approved `HOME-011` (`normal` priority, fully implemented, green on all 9 of its unit tests in `bento-spans.test.mjs`). `SPEC-TASK-24`'s `approved_version` moved 1.0 → 1.1; drift log records the approval with today's date. `H-05` no longer blocks write-capable delegation against this spec.
+
+**Superseded opening note follows, kept for the trail.**
 
 Opened 2026-08-26 at wrap-up. A one-decision item, tracked rather than left as a sentence (`P-06`).
 
@@ -1325,7 +1371,7 @@ Detail: `progress/2026-08-25-09-task24-home.md`.
 
 ---
 
-## TASK 25 — Case study and platform templates · `feature` · `TODO`
+## TASK 25 — Case study and platform templates · `feature` · `DONE` · **ran thirteenth**
 
 The two article archetypes, and the five case studies routed through them.
 
@@ -1338,9 +1384,15 @@ The two article archetypes, and the five case studies routed through them.
 **Constraints**
 - `platform` gets the distinct treatment the design specifies — a scale figure instead of an outcome metric, a services grid, and Deep Dives styled as the card language its children use elsewhere.
 - **`/case-studies` (the index) is designed and deliberately not routed.** It ships when the list outgrows the home section, roughly eight items. Do not route it in this item.
-- **`scale` is one content string and the artboard prints it as two.** The platform page shows a large figure over a small caption; the frontmatter carries `"Hundreds of thousands of active users"`. No number is invented either way — it is already in the content, in words. Choose: split the field in two keys, or render the string whole and accept that the artboard's typographic split is not reproduced. State which.
-- **The platform-to-deep-dive relation has no structured field, and cannot get one.** `mobile-banking-platform` is the parent of three of the four case studies, and that relationship exists **only as prose links in the article body** — there is no `parent` or `children` key in any frontmatter, and `resources/**` is frozen (`H-02`), so one cannot be added. The only structured signal is `type: platform` versus `type: case-study`, which says a page *is* a parent but not *of what*. Decide how the Deep Dives grid gets its list — parse the body links, derive from `type` and accept showing all siblings, or ask the author for a content change — and say which. Found 2026-08-24 by `TASK 22`, which owns the collection and deliberately did not invent a relation the content does not carry.
-- **`skills` has no label in any artboard.** The five case studies carry the field and none of the eleven artboards shows it. Render it unlabelled or do not render it; **inventing a label the design does not have is what criterion 3 forbids.** Say which was chosen.
+- ~~**`scale` is one content string and the artboard prints it as two.**~~ **Stale when this item opened, and the entry was the thing that was wrong.** The home item had already split it: the frontmatter carries `scale: "+100,000s"` and `scale_caption: "active users"`, and both print verbatim. The artboard reads `100,000s` / `active users on the platform`; the content wins, and editing either would be a content change this item does not own.
+- ~~**The platform-to-deep-dive relation has no structured field, and cannot get one.**~~ **Answered: parse the body links, and make the parse do double duty.** The platform body's `## Deep dives` section is located *structurally* — the `##` heading whose following list has a single internal link in every item — never by its heading text, because the Spanish body writes that heading in English today and a text-keyed rule would break silently the day someone translates it. The pipeline lifts the section out and hands the slugs to the template, so the section cannot render twice; the template rebuilds each card from the linked entry's OWN frontmatter and re-derives the href from the route set, so the Spanish cards point at Spanish pages. The child-to-parent direction is the inverse of that same list, computed once — rejected: showing all siblings derived from `type`, which would have put an unrelated employer's case study under a bank platform.
+- ~~**`skills` has no label in any artboard.**~~ **Answered: rendered, unlabelled.** A chip list below the article body, with no heading, no `aria-label` and no caption — and an end-to-end test asserts the absence, so a later change cannot quietly invent one. The values print as the content carries them (`legacy-integration`), because a display mapping would be new copy outside the content.
+
+**Closed 2026-08-26.** Ten article routes, two type-keyed templates, six new core modules. `astro check` clean, **check-site PASS**, 34 end-to-end tests across three engines for these pages alone, and **the two assertions the author asked for by name are read off the built HTML rather than off a test's opinion of it**: no text beginning `Spec:` appears anywhere in any of the twelve built pages, and the deep-dives section renders exactly once — one grid, three cards, zero surviving list items, in both locales.
+
+**Its lesson is the one the register should carry forward, and it is not about this page.** The end-to-end suite was proven in red by neutering both critical mechanisms — and it passed, all sixteen. The build had served a cached render: `node_modules/.vite` and `node_modules/.astro` key the markdown pipeline's output on the markdown, so a change to a plugin under `site/lib/**` does not invalidate it. Cleared and rebuilt, the defect appeared instantly and the suite failed 6 of 16. **A green gate can be measuring HTML the current code did not produce.** That is `TASK 54`, and it is the third door `INC-03` has come through.
+
+Two `ui` strings are still owed by the author — `article.part_of` and `article.figure_prefix` — and both blocks ship shorter rather than approximated. `TASK 55` records that all five delegated runs exhausted their turn budget.
 
 ---
 

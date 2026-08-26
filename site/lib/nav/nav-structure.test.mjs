@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NAV_ITEMS, NO_NAV_HREF, resolveNavItemHref } from './nav-structure.mjs';
+import { NAV_ITEMS, NO_NAV_HREF, resolveNavItemHref, SECTION_NAV_KEY_FOR_ARTICLES } from './nav-structure.mjs';
 
 // --- Composition: does the resolver compose an href correctly for each kind? ---
 // Exercised with invented items carrying invented slugs and targets, never a real
@@ -158,4 +158,13 @@ test('data: the reserved slots form one contiguous block, and that block is neit
   }
   assert.notEqual(reservedIndices[0], 0);
   assert.notEqual(reservedIndices[reservedIndices.length - 1], NAV_ITEMS.length - 1);
+});
+
+test('data: the section an article belongs under names a real nav item', () => {
+  assert.equal(SECTION_NAV_KEY_FOR_ARTICLES, 'work');
+  assert.equal(
+    NAV_ITEMS.some((item) => item.key === SECTION_NAV_KEY_FOR_ARTICLES),
+    true,
+    'an article would otherwise be marked as belonging to a section the nav does not have',
+  );
 });

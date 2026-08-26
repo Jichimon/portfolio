@@ -1,0 +1,45 @@
+---
+// Unlabelled, deliberately. The entries carry a `skills` array and not one artboard
+// shows a heading for it, so none is written here — inventing a label is inventing
+// design. The values print as the content carries them, for the same reason: a
+// display mapping would be new copy, and copy is not declared in a component.
+interface Props {
+  skills: string[];
+}
+
+const { skills } = Astro.props;
+---
+
+{
+  skills.length > 0 && (
+    <ul class="skill-chips">
+      {skills.map((skill) => (
+        <li class="skill-chips__chip">{skill}</li>
+      ))}
+    </ul>
+  )
+}
+
+<style>
+  .skill-chips {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 44px 0 0;
+    padding: 0;
+    max-width: 780px;
+  }
+  /* The card vocabulary the rest of the article already uses, at chip scale: the
+     same border, the same 3px radius, the same mono label step. */
+  .skill-chips__chip {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-faint);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    padding: 5px 10px;
+    background: var(--color-bg-elevated);
+  }
+</style>

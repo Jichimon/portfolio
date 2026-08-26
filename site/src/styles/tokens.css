@@ -20,6 +20,13 @@
   --color-accent-line: oklch(42% 0.15 15 / 0.6);
   --color-label: oklch(52% 0.1 75);
 
+  /* The surface a diagram sits on. White in BOTH themes, deliberately: the diagram
+     assets are exported with their own light background baked in, so the frame is
+     matched to the asset rather than to the page. It is declared here, with its
+     reason, rather than written into the one component that needs it — and it stops
+     being a fixed colour the day the assets themselves become theme-aware. */
+  --color-diagram-surface: #ffffff;
+
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'IBM Plex Sans', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
@@ -76,6 +83,7 @@
   --color-accent-soft: oklch(70% 0.15 15 / 0.2);
   --color-accent-line: oklch(70% 0.15 15 / 0.65);
   --color-label: oklch(75% 0.11 75);
+  --color-diagram-surface: #ffffff;
 }
 
 /* Without a script, no explicit choice is ever recorded, so a dark system gets
@@ -95,6 +103,7 @@
     --color-accent-soft: oklch(70% 0.15 15 / 0.2);
     --color-accent-line: oklch(70% 0.15 15 / 0.65);
     --color-label: oklch(75% 0.11 75);
+  --color-diagram-surface: #ffffff;
   }
 }
 

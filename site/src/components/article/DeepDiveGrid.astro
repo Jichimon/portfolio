@@ -1,0 +1,93 @@
+---
+// The platform's children, in the same card language they get everywhere else. The
+// cards are built from each linked entry's own frontmatter and from the route set —
+// the body's link list supplied the slugs and nothing else, which is what keeps a
+// Spanish reader on Spanish pages.
+interface DeepDiveCard {
+  title: string;
+  meta?: string;
+  href: string;
+}
+
+interface Props {
+  heading: string;
+  headingId: string;
+  cards: DeepDiveCard[];
+}
+
+const { heading, headingId, cards } = Astro.props;
+---
+
+{
+  cards.length > 0 && (
+    <section class="deep-dives">
+      <h2 class="deep-dives__heading" id={headingId}>
+        {heading}
+      </h2>
+      <div class="deep-dives__row">
+        {cards.map((card) => (
+          <a class="deep-dive-card" href={card.href}>
+            <h3 class="deep-dive-card__title">{card.title}</h3>
+            {card.meta && <div class="deep-dive-card__meta">{card.meta}</div>}
+          </a>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+<style>
+  .deep-dives {
+    margin-top: 64px;
+  }
+  .deep-dives__heading {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+    margin: 0 0 20px;
+  }
+  .deep-dives__row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    max-width: 1080px;
+  }
+  .deep-dive-card {
+    display: block;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    padding: 22px 24px;
+    background: var(--color-bg-elevated);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease;
+  }
+  .deep-dive-card:hover {
+    border-color: var(--color-accent);
+  }
+  .deep-dive-card:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+  .deep-dive-card__title {
+    font-family: var(--font-body);
+    font-size: 15.5px;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 0 0 10px;
+  }
+  .deep-dive-card__meta {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--color-ink-faint);
+  }
+
+  @media (max-width: 820px) {
+    .deep-dives__row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

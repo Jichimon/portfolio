@@ -1,0 +1,83 @@
+---
+// Everything both article archetypes need, loaded once, then handed to whichever
+// template the entry's own `type` selects. The dispatch lives here rather than in the
+// two route files so it is written once; the templates below it receive finished props
+// and decide nothing about where their data came from.
+import CaseStudyDetail from './CaseStudyDetail.astro';
+import PlatformPage from './PlatformPage.astro';
+import {
+  renderCaseStudy,
+  getUiStrings,
+  getAlternateHref,
+  getBackToWorkHref,
+  getParentPlatformTitle,
+  listDeepDiveCards,
+} from '../gateway/content-queries.ts';
+import { deriveTableOfContents, deriveHeadingId } from '../../lib/content/articles/toc.mjs';
+import { buildArticleMasthead } from '../../lib/content/articles/article-masthead.mjs';
+
+interface Props {
+  slug: string;
+  lang: 'en' | 'es';
+}
+
+const { slug, lang } = Astro.props;
+
+const [{ entry, Content, headings, deepDiveSlugs }, ui, alternateHref] = await Promise.all([
+  renderCaseStudy(slug, lang),
+  getUiStrings(lang),
+  getAlternateHref(slug, lang),
+]);
+
+const article = ui.data.article;
+const deepDiveCards = await listDeepDiveCards(deepDiveSlugs, lang);
+
+// The grid's own heading is an anchor like any other section's, so it takes an id from
+// the same derivation the body's headings took theirs from — and is handed the ids
+// already spoken for, so it cannot collide with one of them.
+const deepDivesHeadingId = deriveHeadingId(article.deep_dives, new Set(headings.map((heading) => heading.slug)));
+
+const tableOfContents = deriveTableOfContents(headings);
+if (deepDiveCards.length > 0) {
+  tableOfContents.push({ id: deepDivesHeadingId, label: article.deep_dives });
+}
+
+// A case study extended with the platform that names it — but only when BOTH halves
+// exist. The connective is copy and lives in the interface strings; while it is absent
+// the bare tag ships rather than an approximation of the sentence it belongs to.
+const parentPlatformTitle = entry.data.type === 'platform' ? undefined : await getParentPlatformTitle(slug, lang);
+const partOfLabel = article.part_of;
+const parentClause = parentPlatformTitle && partOfLabel ? `${partOfLabel} ${parentPlatformTitle}` : undefined;
+
+const templateProps = {
+  lang,
+  entry,
+  article,
+  Content,
+  tableOfContents,
+  deepDiveCards,
+  deepDivesHeadingId,
+  parentClause,
+  mastheadRows: buildArticleMasthead(entry.data, article),
+  backHref: getBackToWorkHref(lang),
+  alternateHref,
+  nav: ui.data.nav,
+  rail: ui.data.rail,
+  socials: ui.data.socials,
+  footerText: ui.data.footer.metrics_slot,
+};
+
+const TEMPLATE_BY_TYPE = {
+  'case-study': CaseStudyDetail,
+  platform: PlatformPage,
+} as const;
+
+const Template = TEMPLATE_BY_TYPE[entry.data.type as keyof typeof TEMPLATE_BY_TYPE];
+if (!Template) {
+  throw new Error(
+    `entry "${slug}" (locale "${lang}") declares type "${entry.data.type}", which selects no article template`,
+  );
+}
+---
+
+<Template {...templateProps} />

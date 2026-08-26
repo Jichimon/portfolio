@@ -238,10 +238,6 @@
         "reason": "TASK 32's Deliverable. Same class. Note the sibling .github/workflows/harness.yml DOES exist and is checked normally, so this entry hides nothing that is currently checkable."
       },
       {
-        "ref": "site/tests/e2e/screenshots.smoke.spec.ts",
-        "reason": "TASK 51's Deliverable. Same class as the two below. The sibling site/tests/e2e/routes.smoke.spec.ts DOES exist and is checked normally, so this entry hides nothing that is currently checkable — and the entry goes the day the spec lands."
-      },
-      {
         "ref": "resources/testimonials.en.md",
         "reason": "TASK 19's Deliverable. Blocked on the author copying three real LinkedIn recommendations into resources/, which H-02 puts outside every agent's reach — so the file cannot be created here to satisfy the check."
       },
@@ -382,26 +378,6 @@
       {
         "slug": "experience",
         "reason": "TASK 26's Deliverable, same item and same shape as its sibling above."
-      },
-      {
-        "slug": "mobile-banking-platform",
-        "reason": "TASK 25's Deliverable — the platform template. Routed the day that item ships."
-      },
-      {
-        "slug": "qr-collections-for-merchants",
-        "reason": "TASK 25's Deliverable — the case-study template."
-      },
-      {
-        "slug": "otp-provider-decoupling",
-        "reason": "TASK 25's Deliverable — the case-study template."
-      },
-      {
-        "slug": "legacy-payment-data-migration",
-        "reason": "TASK 25's Deliverable — the case-study template."
-      },
-      {
-        "slug": "multi-tenant-biometric-attendance",
-        "reason": "TASK 25's Deliverable — the case-study template."
       }
     ],
     "_pendingRoutesRationale": "TASK 41. A slug whose route the collection already derives but which no page module serves yet. The smoke tier asserts 200 over (derived routes MINUS these) and asserts that every slug named here still 404s — so the list is SELF-STALING: the day a page item routes one, the second assertion fails and the entry has to be removed. That second half is the whole reason this is not a skip list. Written as SLUGS rather than routes because a slug covers both locales by construction, so a locale added later needs no edit here (P-13). Every entry carries a reason naming the item that will route it, and a reasonless entry fails the check — the same convention docs.ignore follows, and for the same reason: an exclusion that cannot explain itself becomes permanent. This list is expected to reach EMPTY, which is the healthy end state, not a defect.",
@@ -411,9 +387,10 @@
       "node_modules",
       "dist",
       ".astro",
-      ".wrangler"
+      ".wrangler",
+      "screenshots"
     ],
-    "_exclusionsRationale": "Generated or third-party trees. Counting them toward the cap would fail every directory forever and say nothing about the code anyone wrote.",
+    "_exclusionsRationale": "Generated or third-party trees. Counting them toward the cap would fail every directory forever and say nothing about the code anyone wrote. `screenshots` is the smoke tier's image deliverable: one PNG per route per width per theme, so it passes the cap the moment the site has more than one route and says nothing about anyone's code. Gitignoring it was NOT enough on its own — this guard walks the real tree, not git's index, which is how it fired the first time the suite ran against the full route set.",
        "commentRecordIdPattern": "\\b(?:ADR|INC|EC|EVAL|SPEC)-\\d+\\b|\\bTASK[\\s-]\\d+\\b|\\b[HPCTGS]-\\d{2}\\b",
     "_commentRecordIdRationale": "S-08. The id shapes this repository actually mints: ADR/INC/EC/EVAL/SPEC records, work items, and the six rule surfaces of the registry. A PATTERN rather than a list of ids, so a rule written next month is caught without editing this. The sibling half of the reference set is not here at all - check-site derives it from the repository's own top-level entries, so a new directory needs no edit either (P-13).",
     "styleExtensions": [

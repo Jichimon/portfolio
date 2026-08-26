@@ -54,6 +54,8 @@ article:
   platform_tag: "Plataforma · raíz de los deep dives"
   case_study_tag: "Caso de estudio"
   deep_dives: "Deep dives"
+  part_of: "parte de"
+  figure_prefix: "Fig."
 
 about:
   label: "Sobre mí"

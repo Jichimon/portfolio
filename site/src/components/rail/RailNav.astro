@@ -21,16 +21,22 @@ interface Props {
   isIndexPage: boolean;
   currentSlug: string;
   nav: NavLabels;
+  currentSectionKey?: string;
 }
 
-const { lang, isIndexPage, currentSlug, nav } = Astro.props;
+const { lang, isIndexPage, currentSlug, nav, currentSectionKey } = Astro.props;
 ---
 
 <ul class="site-rail__nav" data-spy="site-rail__nav-item--current">
   {
     NAV_ITEMS.map((item) => {
       const href = resolveNavItemHref(item, { lang, isIndexPage });
-      const isCurrent = item.kind === 'route' && item.slug === currentSlug;
+      // Current either because this item IS the page, or because the page sits inside
+      // the section it names — an article is not a nav destination but is read from
+      // inside one, and the rail says so.
+      const isCurrent =
+        (item.kind === 'route' && item.slug === currentSlug) ||
+        (currentSectionKey !== undefined && item.key === currentSectionKey);
       const label = nav[item.key as keyof NavLabels];
       return (
         <li class:list={['site-rail__nav-item', { 'site-rail__nav-item--current': isCurrent }]}>

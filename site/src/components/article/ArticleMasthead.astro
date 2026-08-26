@@ -1,0 +1,71 @@
+---
+// The label/value block under the title. It renders whatever rows it is handed, in
+// the order it is handed them — which row set an entry earns is decided in the core,
+// not here, so a case study showing five and the platform showing four is one code
+// path rather than two.
+interface MastheadRow {
+  key: string;
+  label: string;
+  value: string;
+}
+
+interface Props {
+  rows: MastheadRow[];
+}
+
+const { rows } = Astro.props;
+---
+
+<div class="article-masthead">
+  {
+    rows.map((row) => (
+      <Fragment>
+        <div class="article-masthead__label">{row.label}</div>
+        <div class:list={['article-masthead__value', `article-masthead__value--${row.key}`]}>{row.value}</div>
+      </Fragment>
+    ))
+  }
+</div>
+
+<style>
+  .article-masthead {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    border-top: 1px solid var(--color-ink);
+    border-bottom: 1px solid var(--color-ink);
+    padding: 20px 0;
+    margin: 0 0 56px;
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 8px 24px;
+    max-width: 820px;
+  }
+  .article-masthead__label {
+    color: var(--color-label);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 11px;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .article-masthead__value {
+    color: var(--color-ink);
+  }
+  /* The one row that regularly wraps to several lines, so it gets the looser leading
+     the design gives it rather than the tight single-line rhythm of the others. */
+  .article-masthead__value--outcome {
+    line-height: 1.65;
+  }
+
+  @media (max-width: 820px) {
+    .article-masthead {
+      grid-template-columns: 1fr;
+      gap: 2px 0;
+      padding: 18px 0;
+    }
+    .article-masthead__label {
+      padding-top: 10px;
+    }
+  }
+</style>

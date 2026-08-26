@@ -52,9 +52,16 @@ interface Props {
   socials: SocialLink[];
   alternateHref: string;
   footerText: string;
+  currentSectionKey?: string;
 }
 
-const { lang, title, isIndexPage, currentSlug, nav, rail, socials, alternateHref, footerText } = Astro.props;
+const { lang, title, isIndexPage, currentSlug, nav, rail, socials, alternateHref, footerText, currentSectionKey } = Astro.props;
+
+// Whether the page filled the rail's optional slot is decided HERE, where the answer
+// is unambiguous, and travels on as a prop. Read inside the rail it would be true for
+// every page, because the transfer below hands the slot down whether or not anything
+// was put in it.
+const hasRailExtra = Astro.slots.has('rail-extra');
 ---
 
 <!doctype html>
@@ -92,7 +99,11 @@ const { lang, title, isIndexPage, currentSlug, nav, rail, socials, alternateHref
         rail={rail}
         socials={socials}
         alternateHref={alternateHref}
-      />
+        hasRailExtra={hasRailExtra}
+        currentSectionKey={currentSectionKey}
+      >
+        <slot name="rail-extra" slot="rail-extra" />
+      </Rail>
       <main class="page-shell__main">
         <slot />
         <Footer text={footerText} />

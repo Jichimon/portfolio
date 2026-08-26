@@ -1,5 +1,5 @@
 import type { CollectionEntry } from 'astro:content';
-import { getCollection } from 'astro:content';
+import { getCollection, render } from 'astro:content';
 import {
   findEntryBySlugAndLang,
   findAlternateLocaleEntry,
@@ -16,7 +16,15 @@ import {
   ROUTED_PAGE_SLUGS,
   INDEX_PAGE_SLUG,
 } from '../../lib/content/routes/route-set.mjs';
-import { NAV_ITEMS } from '../../lib/nav/nav-structure.mjs';
+import {
+  collectReferencedDiagramIds,
+  resolveDiagramAssets,
+} from '../../lib/content/diagrams/diagram-assets.mjs';
+import {
+  buildDeepDiveCards,
+  buildParentTitleLookup,
+} from '../../lib/content/entries/deep-dives.mjs';
+import { NAV_ITEMS, resolveNavItemHref } from '../../lib/nav/nav-structure.mjs';
 
 export type Locale = 'en' | 'es';
 
@@ -76,6 +84,13 @@ interface ArticleStrings {
   platform_tag: string;
   case_study_tag: string;
   deep_dives: string;
+  // Optional because they do not exist yet, not because they are decorative. Both are
+  // an author hand-off into the frozen content, and both have a block waiting for them:
+  // `part_of` is the connective that extends a case study's tag with the platform that
+  // names it, and `figure_prefix` is the numbering a figure caption would carry. Until
+  // each lands, the block that wants it ships shorter rather than with an approximation.
+  part_of?: string;
+  figure_prefix?: string;
 }
 
 interface AboutStrings {
@@ -268,4 +283,125 @@ export async function listRoutes() {
   const routes = deriveRouteSetFromEntries(routableEntries, ROUTED_PAGE_SLUGS, INDEX_PAGE_SLUG);
   assertNavRouteItemsAreRouted(routes);
   return routes;
+}
+
+
+// The diagram sources sit outside this package, beside the markdown that names
+// them, and they are read-only input: the build reads them and serves copies, and
+// nothing is ever written back. They are pulled in as build-time text rather than
+// read from disk at request time, which is what makes the paths resolve against
+// THIS file rather than against whatever directory the bundled output ends up in —
+// the first attempt read the directory at runtime and looked for it inside the
+// build output, where it does not exist.
+const DIAGRAM_SOURCES = import.meta.glob('../../../resources/diagrams/*.svg', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+const DIAGRAM_EXTENSION = '.svg';
+
+function diagramIdFromSourcePath(sourcePath: string): string {
+  const fileName = sourcePath.slice(sourcePath.lastIndexOf('/') + 1);
+  return fileName.slice(0, -DIAGRAM_EXTENSION.length);
+}
+
+const DIAGRAM_SOURCE_BY_ID = new Map(
+  Object.entries(DIAGRAM_SOURCES).map(([sourcePath, text]) => [diagramIdFromSourcePath(sourcePath), text]),
+);
+
+// Resolving here rather than in the endpoint keeps "which ids does the content
+// actually reference" in the one layer that can see the content at all.
+export async function listDiagramIds(): Promise<string[]> {
+  const entries = await loadCaseStudyEntries();
+  const referencedIds = collectReferencedDiagramIds(entries.map((entry) => entry.body ?? ''));
+  return resolveDiagramAssets(referencedIds, new Set(DIAGRAM_SOURCE_BY_ID.keys())) as string[];
+}
+
+// An id that never appeared in the listing above is a caller bug rather than a 404,
+// so this throws instead of returning an empty document a browser would render as a
+// blank frame.
+export function readDiagramAsset(id: string): string {
+  const source = DIAGRAM_SOURCE_BY_ID.get(id);
+  if (source === undefined) {
+    throw new Error(`no diagram source is bundled for id "${id}"`);
+  }
+  return source;
+}
+
+
+export async function getCaseStudy(slug: string, lang: Locale) {
+  return findEntryBySlugAndLang(await loadCaseStudyEntries(), slug, lang);
+}
+
+// Every article route, for the two page modules' getStaticPaths. Read off the route
+// set rather than off the collection directly, so a slug that is derived but not yet
+// routed cannot produce a page module for a path nothing else agrees exists.
+export async function listCaseStudyRouteParams(lang: Locale) {
+  const caseStudyEntries = (await listCaseStudies(lang)) as { data: { slug: string } }[];
+  const caseStudySlugs = new Set(caseStudyEntries.map((entry) => entry.data.slug));
+  return (await listRoutes())
+    .filter((route) => route.lang === lang && caseStudySlugs.has(route.slug))
+    .map((route) => ({ slug: route.slug }));
+}
+
+export interface DeepDiveCard {
+  title: string;
+  meta?: string;
+  href: string;
+}
+
+export async function listDeepDiveCards(slugs: string[], lang: Locale): Promise<DeepDiveCard[]> {
+  const entries = (await loadCaseStudyEntries()).filter((entry) => entry.data.lang === lang);
+  const routes = (await listRoutes()).filter((route) => route.lang === lang);
+  return buildDeepDiveCards(slugs, entries, routes) as DeepDiveCard[];
+}
+
+// Which platform, if any, names this case study among its deep dives. The relation
+// exists only as the link list in a platform's own body, so the answer comes from the
+// same extraction that strips that list — the plugin writes the slugs onto the
+// rendered entry's data, and this reads them back rather than parsing a second time.
+async function listPlatformSummaries(lang: Locale) {
+  const platformEntries = (await loadCaseStudyEntries()).filter(
+    (entry) => entry.data.lang === lang && entry.data.type === 'platform',
+  );
+  return Promise.all(
+    platformEntries.map(async (entry) => {
+      const { remarkPluginFrontmatter } = await render(entry);
+      return {
+        slug: entry.data.slug,
+        title: entry.data.title,
+        childSlugs: (remarkPluginFrontmatter.deepDiveSlugs ?? []) as string[],
+      };
+    }),
+  );
+}
+
+export async function getParentPlatformTitle(slug: string, lang: Locale): Promise<string | undefined> {
+  return buildParentTitleLookup(await listPlatformSummaries(lang))(slug) as string | undefined;
+}
+
+// The article's back link. Derived from the same nav data the rail renders, so the
+// destination is declared once and the Spanish page lands on the Spanish home.
+export function getBackToWorkHref(lang: Locale): string {
+  const workItem = NAV_ITEMS.find((item) => item.key === 'work');
+  if (!workItem) {
+    throw new Error('the nav declares no "work" item for an article to link back to');
+  }
+  return resolveNavItemHref(workItem, { lang, isIndexPage: false }) as string;
+}
+
+// The rendered article, and everything the pipeline learned while rendering it. The
+// heading list is the one the body's own anchors were built from, and the deep-dive
+// slugs are the ones the pipeline lifted out of the body — a page reads both back
+// from here rather than parsing the body a second time to rediscover them.
+export async function renderCaseStudy(slug: string, lang: Locale) {
+  const entry = await getCaseStudy(slug, lang);
+  const { Content, headings, remarkPluginFrontmatter } = await render(entry);
+  return {
+    entry,
+    Content,
+    headings: headings as { depth: number; slug: string; text: string }[],
+    deepDiveSlugs: (remarkPluginFrontmatter.deepDiveSlugs ?? []) as string[],
+  };
 }

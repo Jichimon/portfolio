@@ -40,10 +40,13 @@ interface Props {
   rail: RailLabels;
   alternateHref: string;
   socials: SocialLink[];
+  hasRailExtra: boolean;
+  currentSectionKey?: string;
 }
 
-const { lang, isIndexPage, currentSlug, nav, rail, alternateHref, socials } = Astro.props;
+const { lang, isIndexPage, currentSlug, nav, rail, alternateHref, socials, hasRailExtra, currentSectionKey } = Astro.props;
 const homeHref = buildLocalizedRoutePath('/', lang);
+const navProps = { lang, isIndexPage, currentSlug, nav, currentSectionKey };
 ---
 
 <nav class="site-rail">
@@ -56,7 +59,20 @@ const homeHref = buildLocalizedRoutePath('/', lang);
     </div>
   </div>
 
-  <RailNav lang={lang} isIndexPage={isIndexPage} currentSlug={currentSlug} nav={nav} />
+  {
+    // The nav gets a wrapper ONLY on a page that fills the slot beside it. The rail
+    // spaces its children apart, so an always-present wrapper would either regroup a
+    // page that has nothing to group or leave a four-child rail pushing the nav and
+    // the list to opposite ends of the column.
+    hasRailExtra ? (
+      <div class="site-rail__mid">
+        <RailNav {...navProps} />
+        <slot name="rail-extra" />
+      </div>
+    ) : (
+      <RailNav {...navProps} />
+    )
+  }
 
   <div class="site-rail__bottom">
     <LanguageSwitcher lang={lang} alternateHref={alternateHref} groupLabel={rail.language_group} />
@@ -107,6 +123,11 @@ const homeHref = buildLocalizedRoutePath('/', lang);
     display: block;
     margin-top: 5px;
   }
+  .site-rail__mid {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
   .site-rail__bottom {
     display: flex;
     flex-direction: column;
@@ -146,6 +167,11 @@ const homeHref = buildLocalizedRoutePath('/', lang);
     .site-rail__role,
     .site-rail__location {
       display: none;
+    }
+    .site-rail__mid {
+      flex-direction: row;
+      align-items: center;
+      flex: 1 1 auto;
     }
     .site-rail__bottom {
       flex-direction: row;
