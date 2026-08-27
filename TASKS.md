@@ -441,7 +441,9 @@ Slice G was not the sloppiest of the three — it delivered completely and repor
 
 **One thing the specimen adds to the Constraint below.** The obvious fix, demanding a `done:` block in every log, would be wrong: a log written mid-session for work still in flight legitimately has none yet. What makes slice G's log detectable is not its age but its **claim** — it says the work is finished. The applicable set has to be derived from that, which is the same "derive it, do not demand a roster" shape the constraint already names.
 
-**Done:** a red test presents a done block missing an applicable dimension and `check-procedures` fails; the test fails when the new assertion is removed.
+**A second specimen, from `EVAL-001` (2026-08-27), and it is the harder half.** The one above is a log with **no** block; this one has a block that answers three questions and silently drops five. `progress/2026-08-26-02-task26-slice-b-about-article.md:43` declares `tests`, `scope` and `iterations`, and omits `docs`, `content`, `security`, `mutation` and `loose_ends`; slices c, e, f, g and h share the shape. The scorecard's other half of this finding is worth keeping beside it: **0 of 84 done blocks declare `passed` with empty evidence**, across 30 distinct dimension names. The mechanized half holds absolutely, and every miss is on the unmechanized half — which is `P-03`'s point restated as a measurement.
+
+**Done:** a red test presents a done block missing an applicable dimension and `check-procedures` fails; a partially-declared block like slice B's fails the same check; the test fails when the new assertion is removed.
 
 **Constraint:** which dimensions are *applicable* is type-dependent — `ci` is `not_applicable` with no remote, `content` does not apply to a guard fix. Derive the applicable set from the work item's type rather than demanding a fixed roster, or this becomes `INC-07` in a new place.
 
@@ -880,16 +882,17 @@ Nineteen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-08
 | 12 | ~~`TASK 24`~~ — home | `feature` | yes | **DONE 2026-08-26.** Both index routes render from content, 81 e2e across three engines, mutation 75.07. Its lesson is the one the register should carry forward: every automated check was green while five design defects shipped, and five of the fifteen tests this item scheduled had never been written |
 | 13 | ~~`TASK 25`~~ — case study and platform templates | `feature` | yes | **DONE 2026-08-26.** Ten article routes through two type-keyed templates; the table of contents, the masthead rows, the diagram figures and the deep-dive grid are all derived from the entry's own frontmatter and body. Its finding is `TASK 54`: the e2e suite passed with both critical mechanisms deliberately broken, because the build was serving a cached render |
 | 14 | `TASK 26` — About, Experience and 404 | `feature` | yes | |
-| — | **THE LOCALHOST MILESTONE** — the author judges the site; `harness-evaluator` scores the harness | | | |
+| — | `TASK 27`, local + design legs — the fidelity diff the milestone requires | `harness` | no | **Split out 2026-08-27.** `TASKS.md`'s own milestone line requires every `TASK 27` fidelity diff to be green, which is unreachable while the whole item sits behind the milestone. Only the prod leg needs a deploy; local and design do not, so they move here and the prod leg stays behind `TASK 32` |
+| — | **THE LOCALHOST MILESTONE** — the author judges the site; `harness-evaluator` scores the harness (`TASK 60`) | | | |
 | 15 | `TASK 30` — publish the repository to GitHub | `maintenance` | no | Nothing else can be automated until the code has a remote |
 | 16 | `TASK 32` — CI deploy pipeline, GitHub Actions → Cloudflare | `feature` | yes | Proves the whole path — push → build → live — and switches on `TASK 27`'s third comparison |
-| 17 | `TASK 27` — design-fidelity harness, the three-way diff | `harness` | no | **Moved behind the milestone 2026-08-24**, split from `TASK 41`. Its prod comparison needs a deploy to exist, which is the item directly above |
+| 17 | `TASK 27`, prod leg — the third comparison | `harness` | no | **Moved behind the milestone 2026-08-24**, split from `TASK 41`; **narrowed to the prod leg only 2026-08-27**, when the local and design legs moved above the milestone to make it reachable. Needs a deploy to exist, which is the item directly above |
 | 18 | `TASK 28` — custom domain | `feature` | yes | Blocked on the domain existing; deliberately off the critical path |
 | 19 | `TASK 29` — contact form Worker | `feature` | yes | Deferred with a stated trigger |
 
 ## The localhost milestone
 
-The line the whole local sequence runs at. It has no deliverable of its own, so it has no id — but it is the entry condition for `TASK 30`, and a milestone that lives only in a conversation is a milestone nobody can check:
+The line the whole local sequence runs at. It has no deliverable of its own, so it has no id — but it is the entry condition for `TASK 30`, and a milestone that lives only in a conversation is a milestone nobody can check. Its harness-scoring half is delegated work, and delegated work needs an id to be governed by (`H-05`) — that id is `TASK 60`, opened 2026-08-27 for exactly this:
 
 > `npm start` serves `/`, `/es/`, all five `/case-studies/<slug>` in both locales, `/about`, `/experience` and their `/es/` counterparts, plus a real 404 — both themes, all three responsive states — and `npm test` is green, including every `TASK 27` fidelity diff.
 
@@ -1674,9 +1677,11 @@ Two `ui` strings are still owed by the author — `article.part_of` and `article
 
 ---
 
-## TASK 27 — Design-fidelity harness: dev, prod and the design as three things · `harness` · `TODO` · **runs before the page items**
+## TASK 27 — Design-fidelity harness: dev, prod and the design as three things · `harness` · `TODO` · **runs before the milestone**
 
 `INC-03`'s remedy, deferred since `docs/harness/architecture.md` §M *"until the site has screens worth diffing"*. The site is that trigger — and this is the mechanism criterion 3 names, so **it is built before the screens it checks, not after them.** Built afterwards, the first three pages ship unverified and then get retrofitted, which is the more expensive order and the one that quietly never happens.
+
+**Split into two legs 2026-08-27, so the milestone it gates is actually reachable.** The milestone's own text ("`npm test` is green, including every `TASK 27` fidelity diff") required this whole item, but the backlog table put it entirely *behind* the milestone — unreachable by construction. Only the **prod** leg genuinely needs a deploy; **local** (dev build vs. design) does not. The **local + design legs run before the milestone**, in the backlog row directly above it; the **prod leg stays behind `TASK 32`**, reporting a declared `skipped` until a deployed base URL exists, exactly as designed below.
 
 **Deliverable:** a Playwright suite that captures every route at 1440 / 1024 / 390 in both themes and both locales, and diffs **three** things: the local build, the deployed build, and the design intent — the corresponding artboard, rendered from `docs/design/canvas/build/src/`.
 
@@ -1891,6 +1896,117 @@ The asymmetry is the point and it is stated in the code. `check-terms` is a gate
 
 Detail: `progress/2026-08-27-07-task59-write-time-scrubber.md`.
 - `TASK 45` is `DONE` and stays `DONE`. This is not a reopening; it is the part of its blast radius that was not looked at.
+
+---
+
+## TASK 60 — Run EVAL-001, the milestone's harness-scoring half · `harness` · `DONE`
+
+**Opened 2026-08-27, reconciling a gap in the milestone's own text.** "The localhost milestone" names two halves — the author judges the site, `harness-evaluator` scores the harness — but only the first half had anything to check it against; the second named an activity, not a work item. `H-05`'s `delegation-gate` denies any write-capable delegation whose brief names no work item (`extractWorkItems` requires at least one `TASK-N` match), and `harness-evaluator` holds `Write` — so a delegation to it needs an id to cite, and none existed. This item is that id.
+
+**Deliverable:** `progress/evaluation-results/EVAL-001-<slug>.md`, following `EVAL-TEMPLATE.md`'s fixed shape, scored against the first real non-harness work — the six site items (`TASK 22`–`TASK 26`, plus the pulled-in bugfixes they opened) — per `EVAL-000`'s own instruction that this is *"the first evaluation with any external validity"*.
+
+**Done:** the scorecard exists, in the template's shape; every `EC-*` case gets `Caught`/`Partial`/`Gap`, cited to a trace event; every KPI names its substrate (`observable`/`self-reported`/`unmeasurable`) rather than presenting one as the other; every `Gap` becomes its own tracked work item (`P-06`); the run's own `permission_mode` and `enforcement_environment` are recorded, per every excluded run's reason.
+
+**Constraints**
+- **No type-`feature` or type-`migration` id ever appears in the delegation brief**, even to explain context — `extractWorkItems` scans the whole brief text and `specRequiredFor` would then demand an approved spec for it. Name the site items descriptively (*"the content-layer item"*, *"the two page-template items"*) instead; their facts and findings are read from `TASKS.md` and the trace, not carried by citing an id.
+- **This item's own id (`TASK-60`) is the one write-capable delegations to `harness-evaluator` cite** — it is typed `harness`, so `specRequiredFor` does not apply to it and no spec is needed.
+- Reads `progress/2026-08-27-12-eval001-trace-index.md` first — a precomputed, reproducible index of every trace file's header/footer/posture and every `policy.decision` deny, built so the 60-turn budget is not spent re-deriving what a targeted `Grep` can verify (`P-09`).
+- Score the harness, never the model (`A16`): a pass condition is a guard verdict plus a trace shape, not the absence of bad behavior.
+
+**Closed 2026-08-27.** `progress/evaluation-results/EVAL-001-first-non-harness-work.md` · 5 Caught · 5 Partial · 4 Gap across 14 cases. Its bottom line: *the harness is paying for its rung-1 boundaries and is not yet paying for its gate.* The twelve improvement items it filed become `TASK 61`–`TASK 67` below, plus three referenced rather than duplicated.
+
+---
+
+## The seven items `EVAL-001` opened
+
+Filed 2026-08-27 from `progress/evaluation-results/EVAL-001-first-non-harness-work.md`'s "Improvement work items filed" section. The evaluator wrote twelve; it cannot write this register, so the orchestrator files them (`P-06`). **Twelve became seven, and the two compressions are recorded rather than silent:** four trace-writer defects share one surface and became `TASK 64`, on the precedent `TASK 12` set for exactly this; and three of the twelve are already tracked — the omitted-dimension check is `TASK 14`, which gains its live specimen below rather than a duplicate id, and the CI item is `GAP-12`, blocked on `TASK 30` and already carried by it.
+
+## TASK 61 — `path-boundary` denies reads that `H-02` and `H-03` exist to permit · `bugfix` · `TODO`
+
+**Opened 2026-08-27 by `EVAL-001`, which measured it as 44% of the harness's entire denial volume.** `H-02` makes `resources/**` read-only *input*; reading it is the permitted use, and 15 of the 34 post-baseline denials refused a read. Three were read verbatim from the trace and all three are pure reads — `sed -n '1,200p' resources/site/ui.en.md | grep -n "article" -A 40` is the clearest.
+
+**A second instance, on the other boundary, produced while verifying the first:** the orchestrator ran `sed -n '9p' <a trace file>` to check the evaluator's claim against the trace and was denied by `H-03` for *writing* to `evidence/`. A guard that denies the act of auditing it is the same defect on a second boundary, and it was found by the finding.
+
+**Cause, in the guard's own source.** `scripts/guards/lib/path-boundary.mjs:86` puts `sed`, `perl` and `awk` in an `INPLACE` set with the comment *"only dangerous with the relevant flag, but cheap to treat as such"*, and `:113-118` flags **every** non-flag argument of any `MUTATOR` or `INPLACE` head — so `cp <source-in-resources> <dest>` is denied on its source. The denial text records the command name and the target but not the flag, so the trace as written cannot distinguish a prevented write from a refused read.
+
+**Done:** a red battery in `scripts/guards/lib/path-boundary.test.mjs` shows `sed -n '1,200p' resources/site/ui.en.md` **allowed** and `sed -i 's/a/b/' resources/site/ui.en.md` **denied**; write-intent for the `INPLACE` heads is decided by the in-place flag (`-i`, `-i.bak`, `perl -pi`) rather than the executable name; `cp` and `mv` flag only their destination argument; each assertion fails when its clause is removed (`P-14`).
+
+**The trade-off, stated in both directions (`C-11`).** The current rule is deliberately over-broad and says so, and over-denial is the safe direction for a rung-1 boundary. What `EVAL-001` priced is the other side: 15 false denials teach every delegated agent that the boundary is arbitrary, and a boundary agents learn to route around is worth less than one that is occasionally inconvenient. Fix the precision, not the rung.
+
+## TASK 62 — `L` on the delegated path: instrument it, or record that it cannot be · `harness` · `TODO`
+
+**Opened 2026-08-27 by `EVAL-001`. `GAP-03`, now unactioned across three scorecards.** All 332 `instructions.loaded` events sit in `orchestrator.jsonl` files across 34 traces; **zero** appear in any of the 70 delegated trace files. Verified inside a single directory rather than corpus-wide only: `b4add49b-…/orchestrator.jsonl` carries 19, and its five `implementer` files and one `test-engineer` file carry none.
+
+`EVAL-000` said the harness could not tell an instrumentation gap from `INC-04` running live. `EVAL-001` argues that is no longer the honest framing — delegated agents were themselves denied by guards, and their logs use the rule surface fluently — but that evidence is circumstantial, and the measurement still does not exist. The reportable value is therefore **`unmeasurable`, never 0**: a zero implies a measurement was taken and came back empty.
+
+**Done:** either a delegated (non-orchestrator) trace file on disk carries at least one `instructions.loaded` event, **or** `docs/harness/evidence.md` and `docs/harness/contracts.md` §6 both state that `L` is orchestrator-only and why, `EC-003`'s `required_evidence` line stops demanding an artifact the harness does not produce, and no scorecard reports a delegated `L` figure again. `G-11` requires the honest claim including downward.
+
+## TASK 63 — The paired-predicate assertion reaches every gate step · `harness` · `TODO`
+
+**Opened 2026-08-27 by `EVAL-001`, on the strongest outcome signal in the scorecard.** Eight of its fifteen escaped defects are one failure mode — **a check reported PASS while doing nothing** — and the gate caught none of them: `TASK 34`, `TASK 39`, `TASK 42`, `TASK 48`, `TASK 51`, `TASK 54`, `TASK 57`, `TASK 58`.
+
+`T-02`'s mechanization exists in exactly one place, `scripts/guards/lib/sources.test.mjs:57` (*"the check would catch a planted control byte"*), and was never generalized. This is a content failure of the mechanization, not a compliance failure — `T-02` is loaded on every matching path and `EC-002` has a green control.
+
+**Done:** every step in `scripts/gate.mjs` has a test asserting the step **fails** on a planted defect of its own kind; any step producing an artifact — screenshot, build output, type check — fails rather than reporting PASS when the artifact is absent; each assertion fails when its planted defect is removed. **Residual to fold in while here:** `T-03`'s mutation floor sits at 74.5 against a measured 74.74, so the score may fall 0.24 points in silence — a ratchet permitting a silent fall is `EC-002`'s own shape inside the remedy for `EC-002`.
+
+## TASK 64 — Trace fidelity, second pass: the four writer defects `EVAL-001` found · `bugfix` · `TODO`
+
+**Opened 2026-08-27 by `EVAL-001`.** Four separate findings, folded into one item because they share one surface — the hook writers — which is the same reasoning `TASK 12` recorded when it folded six of `EVAL-000`'s gaps. Each clause below is independently checkable, so the fold costs no precision.
+
+1. **Budget exhaustion still leaves no machine-readable mark (`GAP-04`).** No footer in 104 files carries `termination.state: FAILED`; all 106 are `COMPLETE`. Meanwhile **24 delegated trace files carry a header and no footer at all**, every one of them post-baseline — one is the deliberate `budget-probe` red-path run, which is why the scorecard reports 23. `TASK 52` amended `G-06` *upward* to make the footer's absence the signal, at rung 4, checked by nothing. **Done:** either a `run.footer` with `termination.state: FAILED` exists on disk, or `check-trace` reports every delegated trace carrying a header and no footer as a finding and enumerates the current instances.
+2. **`GAP-08` recurred six times.** Footer-only trace files with an empty `agent` field: `17db4bf1-…/-a7752c22c8902b6b7.jsonl`, `2b631645-…/-aaa9d96eb5a76d81b.jsonl`, `5a10d8af-…/-a11c2beeef0e2dc4a.jsonl`, `9d06a627-…/-a31b7b600a2b25900.jsonl`, `ff549b41-…/-a45856924a1e6862a.jsonl`, `ff549b41-…/-a5e02d76a2eb61671.jsonl` — plus the baseline's original, seven on disk in total. **Done:** no file under `evidence/runs/` has a footer as its only event, and no event carries `agent: ""`.
+3. **A distinct variant: a run that started, reported success, and made no tool call.** `evidence/runs/b6218083-…/unknown-role-aeb35e8a584709486.jsonl` — header at `seq:1` (`agent:"unknown-role"`, `permission_mode:"plan"`), footer at `seq:2` (`COMPLETE/objective_reported`), nothing between. It **has** a header, so it is not `GAP-08`: the writer emitted a placeholder role name rather than failing. **Done:** `check-trace` fails any trace whose `agent` is neither a role file present in `.claude/agents/` nor the reserved `orchestrator`, and the writer records why it could not resolve the agent instead of emitting a placeholder.
+4. **`permission_mode` coverage, not mechanism (`GAP-05`, partially closed).** 167 of 176 headers still read `unknown`. The mechanism landed in `TASK 12`'s posture slice and the coverage did not. **Done:** every `run.header` written after this item closes carries a real `permission_mode`, so a scorecard can honour the template's instruction to exclude a `bypassPermissions` run — which today it cannot do for 95% of the corpus.
+
+## TASK 65 — `check-evals` cannot detect a stale `proof: none` · `bugfix` · `TODO`
+
+**Opened 2026-08-27 by `EVAL-001`, which found the live instance.** `EC-014`'s control shipped — `scripts/guards/lib/evidence.mjs:170-183` and `:275-279` thread `opaqueFields` blanked by field name rather than by a "looks opaque" heuristic, with three red tests at `scripts/guards/lib/evidence.test.mjs:182`, `:192`, `:201` — and `TASK 18` is `DONE`. **The case file still reads `proof: none`, `outcome: Gap`, and a `proof_reason` asserting that the fix "is not implemented yet."** `check-evals` passes, because it exempts `proof: none` from every staleness assertion.
+
+This is `INC-07`'s shape — a check that passes forever — inside the checker `contracts.md` §6 built to prevent exactly that. The evaluator scored the case `Caught` from the artifacts and left the file alone, correctly: it never edits what it scores.
+
+**Done:** `check-evals` fails a case carrying `proof: none` whose `proof_reason` names a work item that `TASKS.md` marks `DONE`; the check fails when that assertion is removed; and `EC-014` carries its real `proof` block (`scripts/guards/lib/evidence.test.mjs`, test `RED: a banned term inside an opaque tool_use_id is not a redaction finding`) with `outcome: Caught`.
+
+## TASK 66 — Record work-item status transitions, so `K2` has a substrate · `harness` · `TODO`
+
+**Opened 2026-08-27 by `EVAL-001`, which had to report `K2` as `unmeasurable` where the baseline reported 2.** Nothing in this repository records a status transition: `TASKS.md` carries current status only, and the trace carries tool calls, not register states. The evaluator observed 0 reopens and could not distinguish that from 0 recorded — and **declined to report 2 → 0 as an improvement**, which is the right call and also the reason the metric is now worth less than it was.
+
+**Done:** a status change in `TASKS.md` away from `DONE` leaves a dated, greppable line a scorecard can read without interpretation, and the next evaluation reports `K2` with substrate `observable` rather than `unmeasurable`.
+
+## TASK 67 — `harness-evaluator`'s budget is conditional, and the role file does not say so · `documentation` · `TODO`
+
+**Opened 2026-08-27 by `EVAL-001`, closing `GAP-13` with a measurement.** The run consumed ~37 of 60 turns including two whole-file writes — but **only because both corpora were precomputed**. The role file records the 20 → 60 raise and not the condition, so the next brief that hands it raw corpora will read 60 as sufficient when the measurement says nothing of the kind.
+
+**Done:** `.claude/agents/harness-evaluator.md` states the observed cost (~37 turns, with both corpora precomputed) and that a brief handing over raw corpora is a different budget, citing `TASK 55`'s measurement — 0 of 3 slices cut when briefed with an extract, 1 of 1 cut at ~100k tokens when told to go read the sources.
+
+**Referenced, not duplicated (`P-06`).** Three of the evaluator's twelve are already tracked: the omitted-dimension check is `TASK 14`; the CI result is `GAP-12`, blocked on `TASK 30`; and `EC-013`'s case-folding residual is `TASK 11`.
+
+## TASK 68 — `check-procedures` cannot tell a work log from generated tool output · `bugfix` · `TODO`
+
+**Opened 2026-08-27 by `TASK 60`, which produced the instance while running.** `check-procedures` requires a `done:` block in every `progress/*.md` written after 2026-08-18, and it now fails on `progress/2026-08-27-13-eval001-workitem-extract.md` — a **generated** artifact, reproducible byte-for-byte from a read-only script, which records no work and finishes nothing. A done block on it would be a machine-written claim that a work item completed, which is ceremony in the one register that must not contain any.
+
+**Why the obvious fixes are all wrong**, so the next session does not re-derive them:
+
+- **An exclusion roster is refused by the guard's own rationale**, in writing, as `INC-07`'s shape. That refusal is correct and should not be reversed.
+- **Moving the file out of `progress/` trades one red step for another.** Both the scorecard and this item's log cite its path; `progress/evaluation-results/` is a `docs` root, so the citation must resolve, and moving the file breaks `check-docs` instead.
+- **Emitting a `done:` block from the generator** makes the guard green by making the artifact lie.
+
+**The shape of the real fix, per `P-13`: derive the property, do not list the files.** A generated artifact can declare itself — the two extracts already carry a reproduce command and a "this is tool output (`D2`), not a scorecard" header — so the marker exists in substance and needs only to become machine-readable, and the guard needs to require a `done:` block of everything that does **not** carry it.
+
+**Done:** `check-procedures` passes on a `progress/` file that declares itself generated and carries a reproduce command, fails on one that does neither, and still fails a real session log that omits its `done:` block; each assertion fails when its clause is removed (`P-14`); and the marker is a declared property of the file rather than a list of filenames in a config.
+
+**Until it ships, the `procedures` step is red for this one file** and every item closing in the meantime should declare that in its `done:` block rather than let a red step become background noise — which is `TASK 34`'s lesson.
+
+## TASK 69 — An `/about` assertion passes alone and times out under load, on Firefox · `bugfix` · `TODO`
+
+**Opened 2026-08-27 by `TASK 60`'s gate run. This is `TASK 57`'s failure mode recurring after that item closed it**, which makes it an escaped defect against a closed work item rather than a new flake.
+
+**Measured, not inferred.** Under the full suite — 513 tests, three engines — `tests/e2e/about-experience-404.smoke.spec.ts:122` (*"the byline prints its three pairs and reuses the rail location verbatim"*) failed with `page.goto: Test timeout of 30000ms exceeded` navigating to `http://localhost:4321/about`; 308 passed, 204 skipped. Re-run alone on Firefox, the same file's **25 tests all pass in 59.4s**, the byline test among them. It passes in isolation and fails under load: the definition of the class.
+
+**It is not this item's doing.** `TASK 60` changed no file under `site/` — the working tree at the time held only `TASKS.md` and additions under `progress/`.
+
+`T-06` is explicit that a flake is a finding and that intermittent means a real race, a real timing assumption or a real ordering bug. The timeout is on navigation rather than on an assertion, which points at contention for the single preview server the suite manages in `globalSetup`, not at the byline markup.
+
+**Done:** the mechanism is named — server contention, a fixed 30s navigation budget under parallel load, or an ordering dependency — with the evidence that distinguishes them; the fix addresses that mechanism rather than raising the timeout; and the full three-engine suite passes twice consecutively from a cold build. **Raising the timeout closes the symptom and is not this item's done**, because `TASK 57` already established that this class survives that treatment.
 
 ---
 
