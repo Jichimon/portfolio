@@ -72,6 +72,33 @@ const STEPS = [
     skipNote: 'no .component.test.ts exists yet — the behaviour modules arrive with the layout shell',
   },
   {
+    name: 'type check',
+    protects: 'a type error cannot reach a closed work item because nobody remembered a command (T-09, G-11)',
+    // Astro's own bin through node, for the reason the steps around this one already carry:
+    // spawnSync has no shell and npx is a .cmd shim on Windows.
+    //
+    // NOT redundant with the build, checked rather than assumed: with a planted type error
+    // `astro build` exited 0 and built all 17 pages, while `astro check` exited 1 naming it.
+    // The build does not type-check, so this step doubles nothing.
+    cmd: [process.execPath, join(ROOT, 'site/node_modules/astro/bin/astro.mjs'), 'check'],
+    cwd: join(ROOT, 'site'),
+    // Runs BEFORE the e2e tier deliberately: a type error should not cost three browser
+    // engines. No dependsOn, though — a type error does not break the build, so marking
+    // e2e BLOCKED on it would assert a causality that does not exist.
+    //
+    // Hints do not fail it, and that is the tool's own default rather than a setting here:
+    // the tree reports 20 hints and 0 errors at exit 0. A step that fires on advisory
+    // output is a step people learn to ignore.
+    //
+    // Both halves of the toolchain, not just the binary: `astro check` is a thin front end
+    // over @astrojs/check, and without it the command prompts to install rather than
+    // checking. A step that can prompt is a step that can hang (P-03).
+    skipIf: () =>
+      !existsSync(join(ROOT, 'site/node_modules/astro/bin/astro.mjs')) ||
+      !existsSync(join(ROOT, 'site/node_modules/@astrojs/check')),
+    skipNote: 'astro or @astrojs/check is not installed — run npm install in site/',
+  },
+  {
     name: 'e2e smoke',
     protects: 'every route the collection derives is actually served, and a route that is not yet built says so out loud instead of 404ing in production (T-02, INC-03)',
     // Playwright's own bin through node, for the reason the two steps around this one

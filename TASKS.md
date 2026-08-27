@@ -736,7 +736,19 @@ This is `INC-08`'s shape — *a check that exists and does not check* — arrivi
 - **It recurs on every install.** This is not a one-off to wait out; the next dependency with a short colliding name reproduces it.
 
 ---
-## TASK 43 — Concurrent writes happened, and the deferred remedies name a different actor · `harness` · `TODO`
+## TASK 43 — Concurrent writes happened, and the deferred remedies name a different actor · `harness` · `DONE`
+
+**Closed 2026-08-27, in the negative on both mechanisms.** Neither is built. `roleWriteScopes` for `implementer`/`test-engineer` **would not have caught this** — it is a per-role allowlist and the colliding writer was the orchestrator, which has no role file by design (`G-09`). Worktree isolation would have separated the writers, at a merge step per delegation, on one incident, with its other three triggers unfired (`P-17`).
+
+**What moved instead.** The incident is transcribed as **`INC-16`** in `architecture.md` §C. Both deferred rows now name the real actor: the `[A21]` trigger reads **two write-capable roles** and says out loud that it would not have covered `INC-16`; the `[A9]` row records that its first trigger fired and isolation was priced and declined. Corrected in `architecture.md` §M **and** the mirror table in `40-agent-policy.md`, in the same change — two tables saying one thing cannot be allowed to drift.
+
+**The cause was reading, not concurrency, and it becomes `P-18` at rung 3:** *a `completed` notification is not a report, and a fragment is resumed rather than taken over.* It points at machinery that did not exist when this item was opened — `TASK 52` proved that a run terminating normally writes its `run.footer` and a cut run writes none (`G-06`), so *did this run finish* is now readable from the trace instead of inferred. The rule names the artifact; `work-item` §4→§5 carries the step that forces it.
+
+**`INC-16` gets an `evals.excluded` entry rather than a case**, with its reason: there is no guard to neuter, so nothing can be demonstrated failing, and a case passing because the orchestrator behaved well measures the model (`A16`). It returns the moment footer-absence has a reader — the gap `G-06` already carries at rung 4.
+
+Detail: `progress/2026-08-27-08-task43-concurrent-writes-decision.md`.
+
+**Superseded opening note follows, kept for the trail.**
 
 Opened 2026-08-24 by `TASK 22`. `40-agent-policy.md` defers two mechanisms — **enforced write scope for `implementer`/`test-engineer`**, and **worktree isolation as a default** — and both name the same trigger: *concurrent writes*. The trigger fired.
 
@@ -1204,7 +1216,19 @@ Everything every page shares: the `oklch` token set and its `data-theme` swap, t
 
 ---
 
-## TASK 47 — `site/` is at the file cap, and the next config file forces a split · `maintenance` · `TODO`
+## TASK 47 — `site/` is at the file cap, and the next config file forces a split · `maintenance` · `DONE`
+
+**Closed 2026-08-27. `S-03` gains a second calibration rather than a bigger number.** Ordinary directories keep **6**. A **package root** — derived from disk as a directory holding `package.json`, never a named path — gets **10**. Both live in `guards.config.json` with their reasons, and `check-site` now reports both.
+
+**The scope was the defect, not the number.** `S-03` governs how somebody organises code and its remedy is a split by context; a package root is not a directory anyone organises, so that remedy is unavailable to it. Checked against each tool rather than assumed: npm fixes `package.json` and the lockfile, `astro`/`astro check`/the editor read `astro.config.mjs` and `tsconfig.json` from the project root, and `vitest`/`playwright` accept `--config` but Playwright resolves `testDir` relative to its config file — so a `site/testing/` split buys a flag on every invocation and displaces paths for no structural gain. **At eleven the answer is still not a higher number**, and that is written at the number.
+
+**Test-first, and proven in red against the real tree as well as in the battery.** 7 new cases, 5 failing before the implementation, 98 pass after. Against the tree: a seventh file at `site/` root passes, a seventh in `site/src/behaviour` fails naming the directory, and the leak is closed in both directions.
+
+**Two loose ends found while validating, both closed here.** `site/test-results` was excluded from the term scanner and **not** from `check-site`'s walk — an asymmetry that would first have fired on a **red** test run, a gate failure landing on top of a real one. Proven by planting eight files and removing the exclusion, then restoring it. And two residue directories under site/ were removed — an empty locale folder and a doubled site/site/ holding one throwaway Playwright measuring script: both were **a write with a relative path resolved from the wrong working directory**, and **`git status` showed neither** — one an empty directory git does not version, the other under `.gitignore`'s `node_modules/`. `H-01` exists so the human sees every agent write in one diff; these two were in no diff. Recorded as a note, not a rule — nothing can mechanize it against git's index (`G-10`).
+
+Detail: `progress/2026-08-27-09-task47-package-root-file-cap.md`.
+
+**Superseded opening note follows, kept for the trail.**
 
 Opened 2026-08-25 by the smoke-tier item. `site/` holds **six** files at its root — `astro.config.mjs`, `package.json`, `package-lock.json`, `tsconfig.json`, `vitest.config.ts`, `playwright.config.ts` — and `maxFilesPerDir` is **6**. It passes today with zero headroom, so the next root-level config file fails `check-site` (`S-03`).
 
@@ -1221,7 +1245,23 @@ That is the rule working, not a defect. It is tracked because the failure will a
 
 ---
 
-## TASK 48 — A delegated slice closes without `astro check` having run · `bugfix` · `TODO`
+## TASK 48 — A delegated slice closes without `astro check` having run · `bugfix` · `DONE`
+
+**Closed 2026-08-27. `astro check` is the gate's `type check` step**, placed before the e2e tier. The gate now runs **20 steps**.
+
+**The bug was reproduced before it was fixed, and the reproduction is the finding.** A full gate run with a type error sitting on disk reported **GATE PASSED, 19 of 19** — not a red step somebody ignored, a gate with no opinion at all. That is how two consecutive items closed carrying 19 and 5 type errors.
+
+**The step does not double the build, and that was the item's first constraint.** Checked rather than assumed: with the same planted error `astro build` **exited 0** and built all 17 pages, while `astro check` **exited 1** naming `ts(2322)`.
+
+**Proven in red and in skip** (`P-14`, `T-04`): with the error planted, **GATE FAILED — 1 of 20**, `type check` the only failure. With `@astrojs/check` removed, **GATE INCOMPLETE**, exit 2, the step declaring its gap out loud rather than passing on nothing. Clean: **GATE PASSED, 20 of 20**.
+
+**Hints do not fail it and needed no setting** — the tree reports **20 hints, 0 errors, exit 0**, which is the tool's own default severity. The entry above said 19; a count in prose expires, in the same session that closed `TASK 47` for saying so. **No `dependsOn`**, deliberately: a type error does not break the build, so marking the e2e tier BLOCKED on it would assert a causality that does not exist.
+
+**Measured in passing:** mutation **77.10%** over **5,710** mutants against a floor of 74.5, up from the last recorded 74.74% over 4,773. Turning the ratchet belongs to `TASK 38`, not here.
+
+Detail: `progress/2026-08-27-11-task48-astro-check-gate-step.md`.
+
+**Superseded opening note follows, kept for the trail.**
 
 Opened 2026-08-25 by the smoke-tier item, on its **second consecutive** occurrence. The layout-shell item closed its behaviour modules on Vitest and mutants without running `astro check`, which had accumulated **19** type errors. The smoke-tier slice landed three files and was cut off immediately before running it; it carried **five**.
 
@@ -1375,7 +1415,25 @@ Detail: `progress/2026-08-27-01-trace-fidelity-y-presupuestos.md`.
 
 ---
 
-## TASK 54 — A green gate can be measuring HTML the current code did not produce · `harness` · `TODO`
+## TASK 54 — A green gate can be measuring HTML the current code did not produce · `harness` · `DONE`
+
+**Closed 2026-08-27. The caches are keyed on the pipeline's own inputs, not cleared.** `astro.config.mjs` fingerprints the core, itself and the lockfile — a plugin's version is a pipeline input too — and derives `cacheDir` and `vite.cacheDir` from that fingerprint. A pipeline change lands on a fresh directory by construction, and an unchanged pipeline still builds warm.
+
+**The defect was reproduced before it was fixed, and the reproduction is the sharpest artifact.** Diagram-caption plugin neutered so it stops dropping the private `Spec:` half: **warm cache, 0 files carried the leak; cold cache, same code, 10.** Same command, opposite answers, no warning in either.
+
+**The red path passes with a WARM cache**, which is what the item asked for. Same neutering, cache present and populated for the previous key: the build produced the defect in 10 files and the e2e suite failed **12**, every failure on `no drawing-spec text reaches the page`, across chromium, firefox and webkit. Restored: **309 passed, 0 failed**.
+
+**Measured, not impressions** (`C-01`). On 17 pages: cold **15.01s**, warm **2.91s** — a far worse ratio than the ~2.5s/~1.3s on 12 pages this entry was opened with, and the reason clearing on every gate run was rejected: it charges every run for a defect that occurs only when the pipeline changes. After the change, an unchanged pipeline builds in **2.56s**. The cost is paid on the build that follows a pipeline change, which is the build that must not be cheap.
+
+**Pruning superseded cache directories is garbage collection, never invalidation.** Correctness does not depend on the deletion succeeding — a build whose keyed directory is missing is slow once, never wrong — so it is best-effort and scoped by the prefixes the module itself mints, leaving Astro's unsuffixed defaults and Vitest's own cache untouched.
+
+**`INC-03` gains no rule, and that is the decision.** The mechanism is structural: the key is a function of the code, so the build cannot silently reuse stale HTML. A rule saying *the build must reflect the code* would be prose nothing can check, and `architecture.md` §M already records the deliberate absence here.
+
+**One limit, stated rather than left to be discovered.** The fingerprint covers the core, the config and the lockfile. A pipeline input placed elsewhere would not move the key on later edits — though adding it moves the key once, since the config is itself an input. The core is where the pipeline lives by rule, so the limit is bounded by that rule.
+
+Detail: `progress/2026-08-27-10-task54-pipeline-keyed-cache.md`.
+
+**Superseded opening note follows, kept for the trail.**
 
 Opened 2026-08-26 by `TASK 25`, from a red path that refused to go red.
 

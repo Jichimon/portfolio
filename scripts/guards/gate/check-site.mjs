@@ -87,7 +87,7 @@ const r = checkSite(walk(siteRoot), {
 });
 
 console.log(
-  `      ${r.scanned} file(s) across ${r.dirs} director(ies) · cap ${cfg.maxFilesPerDir} · gateway ${cfg.gateway} · core ${cfg.core}`,
+  `      ${r.scanned} file(s) across ${r.dirs} director(ies) · cap ${cfg.maxFilesPerDir} (package root ${cfg.maxFilesPerPackageRoot}) · gateway ${cfg.gateway} · core ${cfg.core}`,
 );
 
 if (r.findings.length === 0) {

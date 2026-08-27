@@ -50,6 +50,16 @@ The site's build never runs Mermaid. A one-time content-preparation step renders
 
 **`otp-breakeven` (`block-beta`)** is not special-cased going forward either. Its pre-rendered placeholder ships like the other 10; if it ever needs replacing, that happens through TASK 6 same as any other `id` — the fragility that motivated checking it first no longer blocks the pipeline design, since generation now happens once, offline, not on every build.
 
+## ↪️ Extended 2026-08-27 — the pipeline's output cache is keyed on the pipeline
+
+Neither sub-decision above said anything about caching, and the omission had a consequence nobody could see. Astro caches the markdown pipeline's output in `node_modules/.astro` and `node_modules/.vite`, **keyed on the markdown**. A plugin under the core changes what the pipeline does and invalidates nothing, so the build reuses HTML produced by the *previous* version of the code — through a full green gate, silently.
+
+**Measured on 17 pages, 2026-08-27, rather than argued.** With the diagram-caption plugin deliberately neutered so that the private `Spec:` half stops being dropped, a **warm** build emitted the leak in **0** files and a **cold** build emitted it in **10**. Same code, same command, opposite answers. Cold build 15.01s against warm 2.91s — a ratio that grows with the page count, and the reason clearing the cache on every gate run was rejected: it would charge every run for a defect that occurs only when the pipeline changes.
+
+**The decision: key the cache, do not clear it.** The config fingerprints its own inputs — the core, the config file itself, and the lockfile, because a plugin's version is a pipeline input too — and derives `cacheDir` and `vite.cacheDir` from that fingerprint. A pipeline change lands on a fresh directory by construction; an unchanged pipeline still builds warm, measured at **2.56s**. Directories keyed to a superseded fingerprint are pruned best-effort, which is garbage collection rather than invalidation: **correctness never depends on the deletion succeeding.** A build whose directory was removed is slow once, never wrong — and that is the whole difference from clearing.
+
+**The known limit, stated rather than left to be discovered.** The fingerprint covers the core, this config and the lockfile. A pipeline input placed somewhere else — a plugin imported from the Astro side rather than the core — would not move the key on later edits, though adding the import moves it once, since the config file is itself an input. The core is where the pipeline lives by rule, so the limit is bounded by that rule rather than by luck.
+
 ## Consequences
 
 - **We gain:** frontmatter safety on the fields that matter for routing without duplicating volatile, type-conditional rules; a diagram pipeline with **zero runtime Mermaid/Puppeteer dependency** — the build's diagram step is a plain file copy, permanently, not just after TASK 6 finishes; a hand-authored and a pre-rendered-placeholder SVG are indistinguishable to the pipeline, so TASK 6 can replace assets one at a time with zero markdown or build changes, exactly as it promises; a loud, named failure instead of a silently missing diagram.

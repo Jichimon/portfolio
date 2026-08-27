@@ -98,6 +98,16 @@ The researcher's recommendation was CUBE CSS over BEM, on the grounds that Astro
 
 **The file cap.** No folder under `site/**` holds seven or more files; at seven it is split into context-named subfolders. **No published style guide was found supporting a numeric cap**, and the search was not exhaustive — Astro's own project-structure page declines to prescribe one at all. This is therefore the author's convention, recorded as such. Its known failure mode is a split that invents categories purely to absorb overflow, so the rule carries its own guard rail: a subdivision names a context, and a folder that exists only to hold the excess is a finding rather than compliance.
 
+### ✏️ Amended 2026-08-27 — the root of a package is calibrated separately
+
+The cap above says *no folder under `site/**`*, one number for every directory. `site/` reached exactly six on 2026-08-25 and stayed there with zero headroom, which meant the seventh config file would fail the gate attached to whatever unrelated item happened to add it — and that author would then be choosing a directory layout under time pressure, which is the failure mode this sub-decision already names.
+
+**The number was not the problem; the scope was.** This cap is a convention about how somebody organises code, and its remedy is a split by context. **A package root is not a directory anyone organises.** Its members are there because a tool requires them to be, so they share an external requirement rather than a context, and the remedy is unavailable to them. Checked against each tool rather than assumed (`P-04`, `S-07`): npm fixes `package.json` and `package-lock.json` at the package root; `astro`, `astro check` and the editor read `astro.config.mjs` and `tsconfig.json` from the project root; `vitest` and `playwright` do accept `--config`, but Playwright resolves `testDir` relative to its config file, so relocating them displaces paths and buys a flag on every invocation for no structural gain.
+
+**What the rule becomes:** two calibrations, both in `guards.config.json` with their reasons. Ordinary directories keep **6**. A package root — **derived from disk, as a directory holding `package.json`**, never a named path — gets **10**: the six there today plus the arrivals that can actually be named (`wrangler.jsonc` for the deploy item, `.npmrc`, `README.md`, `.gitignore`). Derived rather than listed, so the repository root and a package nobody has created yet are covered by the same property (`P-13`).
+
+**And at eleven the answer is not a higher number.** A threshold that moves whenever it binds is not a threshold; the review trigger below already says so for the ordinary cap, and it applies here unchanged. What eleven means is a file that did not have to sit at a package root.
+
 ## Sub-decision 6 — The Astro major
 
 `^7`, latest stable at install time, with the lockfile committed because CI deploy will run `npm ci`. **No version number was asserted in this document until one was installed and read** — the researcher's `7.2.1 / 2026-08-11` came from a search-result summary and was flagged approximate, and `C-01` does not allow an unmeasured figure to be published as measured.

@@ -48,6 +48,11 @@ Ownership is disjoint across files, behaviors, contracts, schemas and resources 
 
 Where TDD applies, the implementer reports the **failing test message before the implementation that satisfies it**. That is the deliverable, not a formality.
 
+**A `completed` notification is not a report** (`P-18`). Read the run's `run.footer` in `evidence/runs/` before treating it as
+finished: a run that terminates normally writes one, a run that was cut writes none (`G-06`). When what came back is a fragment
+rather than an account, the run is **resumed** — never taken over. Taking over a run that is still alive puts the orchestrator and
+the agent in the same file in the same minute (`INC-16`), and the orchestrator is the one actor no write-scope allowlist can reach.
+
 ## 5 · Verify
 
 **An agent's report is a claim; the artifact is the evidence** (`P-11`). Verify what the agent says it verified. "I ran the gate and it passed" and "the gate passes" are different propositions, and only the second is a fact about the repository.

@@ -67,8 +67,8 @@ Decided designs, held back because they cannot yet name a failure that has happe
 | Network-egress guard for shell commands | A deploy credential or a remote exists |
 | Live enforcement of `maxToolCalls` / `maxRuntime` | A delegated run overruns with `maxTurns` already set |
 | Trace hash chaining (`prev_hash`) | An untrusted party gains write access to the workspace |
-| Enforced write scope for `implementer` / `test-engineer` | Two roles write concurrently |
-| Worktree isolation as a default | Concurrent writes · a `migration` or `experiment` item · a brief with bulk deletion or relocation · a run the human marks high-risk |
+| Enforced write scope for `implementer` / `test-engineer` | Two **write-capable roles** write concurrently. `INC-16` fired the old wording and this mechanism would not have caught it: the collision was the orchestrator and one agent, and the orchestrator has no role file to scope (`G-09`). That half is `P-18`, not this |
+| Worktree isolation as a default | Concurrent writes · a `migration` or `experiment` item · a brief with bulk deletion or relocation · a run the human marks high-risk. The first fired on 2026-08-24 (`INC-16`) and isolation was **priced and declined** on one incident (`P-17`); the other three have not fired |
 | Named security profiles | More than ~8 roles, or two roles needing identical non-trivial postures |
 
 **Deferred is not rejected.** The decision and its trigger are recorded so nobody re-derives them, and so "we should also have…" has somewhere to land other than scope.
