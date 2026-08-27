@@ -243,7 +243,7 @@ Two defects in the rung-1 guards, both found while building steps 7 and 8, neith
 - The same incident has a sibling worth transcribing with it: a guard whose regex arrived on disk with literal control bytes, so it read correctly in four inspections and could never match. Both are the family *the guard exists and does not protect*.
 - The false positive has now fired **five times in one day**, once aborting a patch mid-run without an obvious signal. That frequency is itself the argument: a guard people route around protects nothing.
 
-## TASK 12 — Trace fidelity · `bugfix` · `TODO`
+## TASK 12 — Trace fidelity · `bugfix` · `DONE`
 
 From `EVAL-000` (`GAP-03`, `GAP-04`, `GAP-05`, `GAP-07`, `GAP-08`, `GAP-09`, `GAP-13`). The trace is the substrate every KPI and every eval verdict is read from, and six separate things it records are wrong or missing. They share one surface — the hook writers — so they are one work item rather than six.
 
@@ -362,6 +362,50 @@ So the technique's rule is: **extract the element-level CSS per component, and e
 Both `TASK 15` audits on 2026-08-24 stopped without reporting and had to be resumed by message — the first at 28 `tool.requested`, the second at 29. **The second one is the informative one:** it was deliberately cut to a single question about a single object, precisely because the first had been given six attack categories, and it blew the budget anyway. So this is not only the brief-slicing problem the `work-item` procedure now records; 20 turns does not fit an audit that runs anything.
 
 The precedent for the fix is in this repository already: `harness-evaluator` went 20 → 60 after being cut off mid-analysis, which is the same failure in a different role. Raising this one is deliberately **not** done as a side edit here — a budget is agent policy, it is what `G-06` promises to enforce, and changing it in the same breath as measuring it would leave nobody able to say which number was ever tested.
+
+---
+
+**Scoped 2026-08-27, and the substrate was read again before anything was planned (`P-04`). Three of this entry's premises moved, and one defect nobody had named turned out to be the largest.**
+
+**The defect nobody had named: every `tool.result` in the corpus records `bytes: 15`. All 3,754 of them.** `15` is the length of `"[object Object]"` — the runtime sends `tool_response` as an object and `bytes()` in `scripts/guards/lib/evidence.mjs` passes it through `String()`. This is `INC-08` repeating **inside the subsystem built to prevent it**: a number that looks healthy and is a constant artifact of stringifying an object. Worse, the test that congratulates itself for catching `tool_result` against `tool_response` hands the function a **string**, so it asserts against a shape the runtime does not send — the passing test that tests its own mock, which `implementer`'s own role file names as its second failure mode.
+
+**The orphan `tool.result` events are real losses, not an ordering artifact.** Both hypotheses were separated rather than assumed: of the 63 results with no matching request, **zero** have their request later in the same file. So `validateTrace`'s order-sensitive correlation is not the cause. All 63 are `Bash`, all `ok: true`, all in orchestrator files, across 6 run directories. The `PreToolUse` write never happened, and `INC-12`'s route is already closed by `G-13`, so there is a second cause still unnamed.
+
+**`run.header` multiplicity is decidable, but only downward.** 118 headers across 101 files; every one reports `startup` or `delegated`, so the payload still cannot tell a resume from a cold start. What the corpus does support is that **no `run.header` is ever adjacent to another** — the 28 non-first headers are preceded by `tool.result` (21), `instructions.loaded` (4) or `run.footer` (3). So **once-per-resume is assertable and once-per-run is not**, and that is the decision this entry said had to be taken rather than discovered. Checked before proposing it, because this entry documents the trap: **11 files do not begin with a header**, so *"the first event is a `run.header`"* would turn the gate red on evidence no agent may clean (`H-03`). It is not being added.
+
+**`permission_mode` is reachable and the route is confirmed live.** `SessionStart` and `SubagentStart` omit it — a fresh header written this session reads `permission_mode: "unknown", model: null` — but `PostToolUse` carries it, captured from real payloads in `evidence.test.mjs`'s coupling test. The mechanism chosen is a `run.header` with `reason: "observed"`, emitted the first time the writer sees a real mode and again if it changes. One extra event per run, no new vocabulary, and it never lands adjacent to another header, so it does not disturb the rule above. It makes `G-04`'s compensating record true for the first time.
+
+**Two done clauses are superseded rather than met, and both by `TASK 52` rather than by this entry:**
+
+- *"a delegated run stopped by its budget writes `run.footer` with `termination.state: FAILED`"* — **unwritable**, confirmed twice. `SubagentStop` carries no stop reason. What replaced it is better: the footer's **absence** is the signal, proven in red on 2026-08-27 and now carried by `G-06`.
+- *"no trace file exists whose only event is a footer"* — **not adopted.** A footer-only file records a subagent that stopped without its start ever being seen, and refusing to write it would delete a signal to make a criterion true. What is fixed is the **name**: those files are called `-<id>.jsonl` because `runIdFor` lets an empty `agent_type` through `??`, and that is a local bug with a local fix.
+
+**The remaining work is code, and it is being taken with `TASK 18` as one `bugfix` item in three sequential slices** — the writer's honesty (`runIdFor`, `bytes`), the validator (redaction projection, `tool_use_id` reuse, orphan classification), and the posture header plus a measured floor for the hook-delivery loss rate. Sequential because all three touch `scripts/guards/lib/evidence.mjs` and `G-12` forbids two roles owning one object. The measurements above are handed to each brief as numbers; **no brief is pointed at `evidence/` to go and find them** (`P-09`, as amended by `TASK 55` the same day).
+
+---
+
+**Closed 2026-08-27. Five slices, not three — re-cut twice under `P-09` rather than hoped through.** Four of the five were cut at their 30-turn cap, every one of them *after* its code had landed and on the account of it, which is the shape `TASK 55` closed the same day. All five kept their logs, because all five wrote the skeleton first.
+
+| slice | behaviors | outcome |
+|---|---|---|
+| 1 · writer honesty | `runIdFor` on a blank `agent_type`; `bytes` on a non-string | completed, 18 turns |
+| 2 · redaction and correlation | `TASK 18`'s field-name exclusion; `tool_use_id` reuse | cut at 30; one defect found in verification |
+| 3 · delivery loss | orphan classification; measured floor | cut at 30; work complete |
+| 4 · header multiplicity | adjacency; `reason` vocabulary | completed, 23 turns |
+| 5 · posture header | `posturePatch`; the writer uses it | cut at 30; work complete |
+
+**Verified in this session's own live trace rather than in a fixture** (`P-11` — the report is a claim, the artifact is the evidence): a `run.header` at seq 267 reading `reason: observed, permission_mode: auto`, which is the **first real `permission_mode` in 118 headers** and the first time `G-04`'s compensating record has ever worked; 25 distinct `tool.result` byte counts where all 3,754 previously read 15; and no file named `-<id>.jsonl`.
+
+**One defect slipped in, and verification caught it rather than the report.** Slice 2's reuse finding **quoted the offending `tool_use_id`** — inside the function whose own doc says findings never quote the value, for the exact field `INC-15` exists because banned terms land in. It now names the earlier event's `seq`, with a test asserting the id is absent from the message. That test was itself broken on first write: a `\b` mangled into byte `0x08` left a regex that read correctly and could never match, so the assertion was vacuously true. The **control-byte guard caught it** — that guard doing precisely the job its message describes.
+
+**`check-trace` is green, and nothing was deleted to make it so.** The delivery-loss rate reads **1.49% against a 2.00% floor**. The two directories the human cleared were a synthetic fixture that never recorded a run and the file behind `TASK 59`; the 59 remaining orphans are measured and floored, not hidden. That distinction is the whole point of the floor.
+
+**Two done clauses were superseded rather than met**, both by `TASK 52` and both recorded above: `termination.state: FAILED` is unwritable, replaced by the footer's absence; and *"no trace file exists whose only event is a footer"* was not adopted, because refusing to write an orphan footer would delete a signal in order to make a criterion true.
+
+**Reconciled, and then checked** (`P-07`, whose characteristic failure is doing the obvious half): `docs/harness/evidence.md` gained the three things its event table cannot hold in a cell — why a `run.header` is written more than once, why the **missing** footer is the signal and the `termination` block is not, and what the delivery-loss rate does and does not cover, including that a denied call whose request was lost stays invisible either way. `docs/harness/contracts.md` §2 stopped promising a termination vocabulary nothing writes, and its duplicated copy of `P-09`'s deleted clause moved with the rule rather than being left to drift.
+
+Detail: `progress/2026-08-27-01`, plus `-02` through `-06`, one log per slice.
+
 
 ---
 
@@ -1277,7 +1321,7 @@ The Playwright item's Done named four things. Three were delivered and reported.
 
 ---
 
-## TASK 52 — A missing `run.footer` may be the cut-off signal `G-06` says does not exist · `harness` · `TODO`
+## TASK 52 — A missing `run.footer` may be the cut-off signal `G-06` says does not exist · `harness` · `DONE`
 
 Opened 2026-08-26 at wrap-up, from the trace rather than from memory (`P-12`).
 
@@ -1304,6 +1348,31 @@ Every delegated run that finished has a footer. Every delegated run known to hav
 - A footer can plausibly go missing for reasons other than a cut — a crash, a killed process, a hook that did not fire. Those alternatives are the item's real work, not the happy path.
 - `evidence/**` is read here and never written (`H-03`).
 
+**Closed 2026-08-27. The correlation is a mechanism, and it was produced on purpose rather than found.** This entry's six files were suggestive and this entry said so; two dispatches settled it. Same role (`researcher`, `maxTurns: 25`), same session, same day, same read-only tool set, one variable — whether the brief fit the budget.
+
+| | green half | red half |
+|---|---|---|
+| trace file | `researcher-a3c611a937e8d1a35.jsonl` | `researcher-ad61d65a67c3ce435.jsonl` |
+| brief | 12 files, strictly one read per turn | 32 files, strictly one read per turn |
+| turns | 12 of 25 | **25 of 25** |
+| outcome | completed and reported | **cut at the limit, at item 24 of 32** |
+| last event | `run.footer` | `tool.result` |
+| `run.footer` | `COMPLETE / objective_reported` | **none** |
+
+`G-06` amended **upward** accordingly, per `G-11`, having been amended downward on 2026-08-25 by `TASK 12`'s triage — the same row moving in both directions as the evidence moved is the rule working, not the rule wobbling.
+
+**Three things this deliberately does NOT claim**, because the constraints above asked for exactly that discipline:
+
+- **A missing footer means the run did not terminate normally, not that its budget was the cause.** A crash, a kill or a hook that never fired look identical. The standing counterexample is named in `G-06` itself: `harness-evaluator`, two footerless segments at ~32 turns against a cap of 60.
+- **The `termination` block is still a literal.** `SubagentStop` carries no stop reason, so `FAILED` and `budget_exhausted` remain unwritable. The signal is the footer's **absence**, read from outside the file — never a field inside it.
+- **Nothing checks this yet.** `G-06` carries rung 4 for the inference. Mechanizing it in `check-trace` is not done here, because a check that flags every footerless orchestrator file as a finding would be red on the running session forever.
+
+**The alternative explanation this entry could not rule out, ruled out.** `TASK 12` conjectured that a cut run's footer lands in the `-<id>.jsonl` file written by a stop with no `agent_type`, so the footer would be misfiled rather than missing. It does not: the 7 dash-named files carry `agent_id`s matching no sibling run, and three of them sit in sessions containing no cut-off run at all. They are a separate phenomenon and they do not confound this.
+
+**The reusable red path is `.claude/agents/budget-probe.md`** — `tools: Read`, `maxTurns: 2`, kept rather than deleted so the claim can be re-run (`P-14`). One caveat found while building it: **a role file is not picked up the moment it is written.** The probe was dispatched immediately after `check-agents` passed on it and came back *"Agent type not found"*; a `maxTurns` edited on an existing role did not take effect either, so the red path was run by temporarily lowering `researcher` (restored). **Later in the same session the registry rescanned**, `budget-probe` became available, and a third dispatch stopped at **exactly its 2-turn limit with no footer** — a third specimen for `G-06` at a different cap. So the reload is delayed, not absent, and the first statement of this caveat said "cannot" where the evidence only supported "not yet". Corrected here rather than left standing.
+
+Detail: `progress/2026-08-27-01-trace-fidelity-y-presupuestos.md`.
+
 ---
 
 ## TASK 54 — A green gate can be measuring HTML the current code did not produce · `harness` · `TODO`
@@ -1324,7 +1393,7 @@ Both of that item's critical mechanisms were deliberately neutered — the diagr
 
 ---
 
-## TASK 55 — Five delegated runs, five turn budgets exhausted · `harness` · `TODO`
+## TASK 55 — Five delegated runs, five turn budgets exhausted · `harness` · `DONE`
 
 Opened 2026-08-26 by `TASK 25`, which delegated five `implementer` slices and had all five cut off.
 
@@ -1358,6 +1427,41 @@ So the distinction `P-09` needs is not only *objects owned plus documents that m
 - **Do not simply raise the number.** A budget raised without a measured reason is a budget that gets raised again next time. `TASK 12` holds seven specimens and this item adds five; that is a sample worth reading before changing anything.
 - **The report is part of the deliverable, not a courtesy.** An agent that writes the code and never reports what it drifted on has delivered an artifact and lost the reasoning behind it, and `P-11` means the orchestrator then has to verify from scratch what the agent already checked.
 - The correlation `TASK 52` is chasing — a cut run leaves no `run.footer` — now has five more specimens. Whoever takes either item should read the other's evidence first.
+
+**Closed 2026-08-27, taking both branches, because the measurement this entry demanded turned out to exist after all.**
+
+**The measurement.** `TASK 12`'s triage concluded that turns are not recoverable from the trace, and it was reading for a turn *count*, which no event carries. A turn is nonetheless **observable as a transition from `tool.result` to `tool.requested`**, and a dispatch — the unit `maxTurns` applies to — is a **segment between `run.header` events**, since a resume gets a fresh header and a fresh budget. Over the whole corpus (34 run directories, 101 files, 12,885 events, read never written):
+
+| role | `maxTurns` | segments WITH footer | segments WITHOUT footer |
+|---|---|---|---|
+| `implementer` | 30 | 22 · turns 4–32 | **23 · turns 28–41, mode 30–33** |
+| `test-engineer` | 30 | 1 · 2 turns | 6 · 1, 29, 34, 34, 37, 41 |
+| `adversarial-auditor` | 20 | 3 · 0, 0, 3 | 2 · 25, 26 |
+| `researcher` | 25 | 7 · 0–22 | 1 · 30 |
+| `harness-evaluator` | 60 | 3 · 5, 5, 30 | 2 · **32, 32** |
+| `Explore` | none declared | 8 · 12–32 | 0 |
+
+The proxy is **exact** when calls are sequential and overcounts by roughly a third when they are batched — established, not assumed: `TASK 52`'s two probe runs forbade parallel reads and the proxy read exactly 12 and exactly 25 against a known cap of 25. The overcount is a property of parallelism, not an error in the method.
+
+**Half of all `implementer` dispatches hit the cap: 23 of 45.** The completed ones run 4–32. A cap that half the dispatches reach is not a safety net, it is a scheduler, and it is biting inside the working distribution rather than at its edge. That is the measured reason this entry's first constraint asked for.
+
+**Branch one — the budgets, each with its number's reason:**
+
+| role | from | to | why |
+|---|---|---|---|
+| `implementer` | 30 | **45** | 23 of 45 segments at the cap; completed work reaches 32 |
+| `test-engineer` | 30 | **45** | 6 of 7 segments footerless, the worst ratio on the roster |
+| `adversarial-auditor` | 20 | **40** | 2 of 2 segments with real work were cut; its three footers were runs of 0, 0 and 3 turns. It has never once produced a footer having worked. It is also the only role whose job is running red paths, and a red path is five calls per finding |
+| `researcher` | 25 | **25** | one cut in eight. No change, said out loud rather than by omission (`P-03`) |
+| `harness-evaluator` | 60 | **60** | its two cuts happened at ~32 turns against a cap of 60, so the budget is not what stopped them. This is `G-06`'s counterexample, not a budget problem |
+
+**Branch two — `P-09` gains the reading axis**, in the sharper form this entry found: *a brief that names a document for the agent to find something inside has handed over an unbounded read; a brief that hands over the extract has not.* The origin recorded on the row is this item's own controlled comparison — nine slices of equal size, all owning two files, cut 2 of 4 · **0 of 3** · 1 of 1 by what each was told to read.
+
+**One clause was removed from `P-09` rather than kept, and it is worth naming.** The row promised *"an agent cut off mid-run delivers zero, not half — the cost is total, not proportional."* This repository's own register falsifies it: across thirteen specimens the artifacts mostly landed and the **report** was the casualty. `INC-06`'s original observation stands for the slice that is too big; it is wrong as a general claim, and a rule contradicted by the evidence beside it is a rule that gets disbelieved. What replaced it is the finding that survives — the cut lands on whatever is last, and log-first is the one mitigation measured to work, eight for eight.
+
+**What is and is not verified.** A role file is not picked up the instant it is written, but the registry **does** rescan during a session: `budget-probe`, created here, was unavailable at first and later enforced its 2-turn cap exactly. **`implementer`'s new cap was then observed directly** — `TASK 59`'s slice ran to **45 turns** before stopping, against the 30 that cut four slices earlier the same day. So the raised numbers are live, and this is an observation rather than the inference it was first written as. **What remains unmeasured is whether they help.** Whether 45 turns lowers `implementer`'s cut rate below the 23-of-45 measured here is a re-measurement, and the segment method above is now cheap enough to repeat — which is the honest answer to this entry's own warning that *a budget raised without a measured reason is a budget that gets raised again next time.*
+
+Detail: `progress/2026-08-27-01-trace-fidelity-y-presupuestos.md`.
 
 ---
 
@@ -1673,7 +1777,7 @@ Raised by the author while reviewing `ADR-002` (content pipeline, TASK 7 decisio
 
 ---
 
-## TASK 18 — Trace redaction false-positives on opaque IDs · `bugfix` · `TODO`
+## TASK 18 — Trace redaction false-positives on opaque IDs · `bugfix` · `DONE` — closed inside `TASK 12`
 
 `INC-15` (`docs/harness/architecture.md` §C). `check-trace`'s whole-file redaction scan (`validateTrace` in `scripts/guards/lib/evidence.mjs`) substring-matches every `private/banned-terms.txt` entry against the **entire serialized trace line**, including fields that are never authored content — `tool_use_id`, `run_id`, `parent_run_id` are opaque, API-generated random tokens. A 4-character banned term coincidentally appeared inside a `tool_use_id` during a `researcher` run this session, failing the gate on a true string match that carries zero actual confidentiality risk.
 
@@ -1685,6 +1789,50 @@ Raised by the author while reviewing `ADR-002` (content pipeline, TASK 7 decisio
 
 - Do not touch `redactToolInput`'s own scrubbing (`scripts/guards/lib/evidence.mjs`) — that's a separate, working mechanism for a different purpose (masking known-sensitive input fields at write time), not the one that flagged this.
 - This incident's affected trace file (`evidence/runs/9a066423-fbac-4ece-8677-6d0ac7fce237/researcher-a0400b23ffcda81af.jsonl`) was hand-edited by the human to remove the leaked lines, which broke `seq` continuity — a second, expected finding from the same guard, working correctly. That file should be deleted outright (evidence is gitignored, uncommitted, disposable) rather than hand-patched to restore density; not this task's job to fix, since evidence/ is `H-03`-protected from every agent, including this one.
+- **Merged 2026-08-27 into `TASK 12`'s closing item**, as slice two of three. Same file, same function neighbourhood (`validateTrace`), and the fix is unchanged from what this entry specifies: exclude `tool_use_id`, `run_id` and `parent_run_id` **by field name**, scan a projection of each parsed event, and scan any line that fails to parse **whole and raw**, so a malformed line cannot become a redaction blind spot. `redactToolInput` is not touched, exactly as the constraint above requires. The affected trace file named above has since been pruned by retention, so the corpus currently reports **no** redaction findings — which means the red test must be a fixture, not that file.
+
+---
+
+## TASK 59 — A malformed term list silently disabled write-time scrubbing, and the trace kept the result · `bugfix` · `DONE`
+
+Opened 2026-08-27 by `TASK 12`'s slice 3, from the gate rather than from memory. `check-trace` reports a **real redaction failure** in `evidence/runs/e2b37e26-b3b5-4c21-af9e-9f0fbd45234f/orchestrator.jsonl`: a banned term sits in the `target.command` of a `tool.requested` event, in a 233-character shell command, written at `2026-08-25T15:40:31Z`.
+
+**It is `TASK 45`'s defect with a second victim nobody named.** That item found that a `\b <term> \b` line in the term list was being read as one literal term, escaped, and matched against nothing — while `check-terms` still reported PASS. The half that got recorded was the **check** protecting nothing. The half that did not is that `redactToolInput` scrubs through the same `mask()`, so for the whole window that the list was malformed **the trace writer was also protecting nothing**, silently, for that term.
+
+The fix landed in `a45bbec` the same day, and `mask()` blanks the term correctly today — verified, not assumed. So the writer is sound and this is a historical artifact. What is not resolved is the shape.
+
+**Why this is an item and not a note.** A check that fails is loud. A **redactor** that silently stops redacting writes the leak to disk, where `H-03` means no agent can ever remove it, and the only signal is a validator noticing months later. `G-13` already says a guard that cannot evaluate must deny; the write-time scrubber has no equivalent, because a hook that refuses to write is a lost measurement rather than a blocked action. That tension is the item's actual question, and it should be answered rather than assumed away.
+
+**Done:** either the write-time scrubber fails loudly when its own term list is malformed — with a red path proving a malformed list cannot result in an unscrubbed write — or the reason it deliberately does not is recorded where the next person will find it, with the residual risk named. Plus a note in `docs/harness/evidence.md` that redaction is only as good as the term list parsed at write time, which is currently implied and nowhere stated.
+
+**Constraints**
+
+- **The affected file has been deleted** (2026-08-27, by the human — `H-03`), so `check-trace` is green and the artifact is gone. **The item is not thereby closed:** the artifact was the symptom, and the question — whether a scrubber that cannot parse its own term list should fail loudly or stay quiet — is untouched by removing the file it produced.
+- **Do not quote the term** in any finding, test fixture or log, including this entry. The probe that located it printed the field path and the string length and nothing else.
+
+---
+
+**Closed 2026-08-27, the same day it was opened, because the answer was already written in this repository.** `check-terms.mjs` guards its own term list twice and says why in the message text: a missing file means *"a confidentiality check that cannot read its own term list must never report clean"*, and zero terms means *"an empty list makes every scan pass, which is worse than no scan at all."*
+
+**The reading side had both guards. The writing side had neither, and no tests at all.** `loadTerms` returned `[]` for a missing list, never checked for an empty parse, and cached globally on a key of nothing. A checkout where the list went missing would have scrubbed nothing, silently, forever.
+
+**The decision, and it deliberately differs from `check-terms`: discriminate on whether `private/` exists.** Absent means there is nothing in this checkout to protect, so `[]` is correct — which keeps the harness usable on a fresh clone and on `TASK 9`'s export, since `private/` is gitignored and never committed. Present, with its term list missing, empty or unparseable, means the thing being protected exists and the protection does not: **throw, naming which of the three it was.**
+
+The asymmetry is the point and it is stated in the code. `check-terms` is a gate step a human runs, so refusing unconditionally costs one red step. `pretooluse.mjs` is a hook on **every tool call**, so refusing unconditionally would deny every call on a checkout without `private/` and brick the harness. Same principle, different blast radius.
+
+**Both hooks were proven rather than assumed** (`P-14` — a guard seen only to pass has not been tested):
+
+- `pretooluse.mjs` already turned any throw into a `G-13` denial through `main().catch`. It had never been exercised for this cause. It now is, by **spawning the real hook** against a temp root — the harness `INC-12`'s own regression test already built — with two red paths: `private/` present and its list empty denies with exit **2 and specifically not 1**, and a checkout with no `private/` still allows an innocuous call.
+- `record-event.mjs` is a recorder and cannot deny; it exits 0 unconditionally because a measurement must never stop the thing it measures. It now catches the throw explicitly, writes **nothing**, and still exits 0 — proven by a test asserting no file appears. Previously a throw killed it with an uncaught stack trace, which wrote nothing either, but by accident rather than by design.
+
+**A latent bug found on the way and fixed with it:** `cachedTerms` was module-level and keyed on nothing, so a second call with a different root returned the first root's terms. One hook is one process with one root, so it had never bitten in production — but it made the four cases untestable in one file, which is its own kind of evidence.
+
+**The second half of this item's done was already discharged** by `TASK 12`'s reconcile pass: `docs/harness/evidence.md` states that redaction is only ever as good as the term list parsed at write time, and names this item.
+
+**What is not claimed.** The original incident's artifact is gone and the specific malformation `parseTerms` throws on is covered — but this closes the *silent* failure modes, not every possible one. A term list that parses cleanly and is simply **wrong** — a term nobody added — is not detectable by any mechanism here, and never was. That is the residual risk, and it belongs to whoever maintains the list rather than to the code.
+
+Detail: `progress/2026-08-27-07-task59-write-time-scrubber.md`.
+- `TASK 45` is `DONE` and stays `DONE`. This is not a reopening; it is the part of its blast radius that was not looked at.
 
 ---
 

@@ -18,11 +18,32 @@
 //              repository exists to prevent (C-05, H-04).
 
 import { createHash } from 'node:crypto';
-import { mask } from './terms.mjs';
+import { mask, scanText } from './terms.mjs';
 
 /** Short content hash: enough to tell two versions apart, useless for recovering content. */
 const hash = (s) => createHash('sha256').update(String(s)).digest('hex').slice(0, 16);
-const bytes = (s) => Buffer.byteLength(String(s ?? ''), 'utf8');
+/**
+ * A byte length that measures the value, not `String()`'s idea of it. A string is measured
+ * directly, as before; null/undefined are 0, as before. Anything else — the shape the runtime
+ * actually sends for `tool_response` — is serialized first, because `String(obj)` collapses
+ * every object to the constant `"[object Object]"` (15 bytes, always), which is INC-08's shape:
+ * a number that looks like a measurement and measures nothing.
+ *
+ * This runs inside a hook, so it must never throw. `JSON.stringify` returns `undefined` for a
+ * function or a symbol, and it throws outright on a circular structure — both are caught and
+ * fall back to `String(s)`, which is exactly today's (honest, if blunt) behavior.
+ */
+const bytes = (s) => {
+  if (s === null || s === undefined) return 0;
+  if (typeof s === 'string') return Buffer.byteLength(s, 'utf8');
+  try {
+    const serialized = JSON.stringify(s);
+    if (serialized === undefined) return Buffer.byteLength(String(s), 'utf8');
+    return Buffer.byteLength(serialized, 'utf8');
+  } catch {
+    return Buffer.byteLength(String(s), 'utf8');
+  }
+};
 
 /**
  * Who is running. The orchestrator run IS the session; a delegated run hangs off it, so a
@@ -32,7 +53,9 @@ const bytes = (s) => Buffer.byteLength(String(s ?? ''), 'utf8');
 export function runIdFor(input) {
   const session = input.session_id ?? 'unknown-session';
   if (!input.agent_id) return { run_id: session, parent_run_id: null, agent: 'orchestrator' };
-  return { run_id: `${session}:${input.agent_id}`, parent_run_id: session, agent: input.agent_type ?? 'unknown-role' };
+  const agentType = input.agent_type;
+  const agent = agentType && String(agentType).trim() ? agentType : 'unknown-role';
+  return { run_id: `${session}:${input.agent_id}`, parent_run_id: session, agent };
 }
 
 const scrub = (s, terms) => mask(String(s ?? ''), terms);
@@ -143,8 +166,21 @@ export function rejectReason(event) {
  *
  * Findings never quote the offending value. A validator that printed the banned term it
  * found would be the leak it is checking for.
+ *
+ * `opts.opaqueFields` names fields whose VALUES are opaque, API-generated tokens
+ * (`tool_use_id`, `run_id`, `parent_run_id`) and are blanked before the redaction match, by
+ * field name only — never by a "looks like an id" heuristic that would widen itself over
+ * time (TASK 18, INC-15's family). Every other field, including one nobody has thought of
+ * yet, and a line that fails to parse, is still scanned exactly as before.
+ *
+ * `opts.traceHeaderReasons` (TASK 12 slice 4) is the declared vocabulary a `run.header`'s
+ * `reason` must come from. Threaded the same way as `opaqueFields` — same options argument,
+ * no reordering. An absent or empty list fails CLOSED: every present `reason` is then
+ * unverifiable and reported, rather than the check quietly validating against nothing
+ * forever (G-13's reasoning applied here).
  */
-export function validateTrace(text, terms = [], label = '') {
+export function validateTrace(text, terms = [], label = '', opts = {}) {
+  const { opaqueFields = [], traceHeaderReasons = [] } = opts;
   const findings = [];
   const at = label ? `${label} ` : '';
   const raw = String(text).split('\n').filter((l) => l.trim());
@@ -161,19 +197,38 @@ export function validateTrace(text, terms = [], label = '') {
   });
 
   let expected = null;
-  const requests = new Set();
+  const requests = new Map();
+  let prevEv = null;
 
   for (const e of events) {
     const where = `${at}seq ${e.seq}`;
 
     if (!(e.ev in SCHEMA)) {
       findings.push({ message: `${where}: unknown event type "${e.ev}" — the schema is the contract, so an event outside it is either a bug or an undocumented change` });
+      prevEv = e.ev;
       continue;
     }
     for (const field of SCHEMA[e.ev]) {
       if (e[field] === undefined) findings.push({ message: `${where}: ${e.ev} is missing required field "${field}"` });
     }
     if (!e.ts) findings.push({ message: `${where}: no timestamp` });
+
+    // A run.header immediately following another run.header describes one start recorded
+    // twice, never a resume — a real resume has real events (at minimum a run.footer, or
+    // any tool activity) between the two headers (TASK 12 slice 4, decided from the corpus
+    // evidence in the brief: no header is ever legitimately adjacent to another).
+    if (e.ev === 'run.header' && prevEv === 'run.header') {
+      findings.push({ message: `${where}: run.header immediately follows another run.header — one start recorded twice, not a resume` });
+    }
+
+    // A header's reason must come from the declared vocabulary. Fail closed: an empty or
+    // missing traceHeaderReasons means nothing is declared, so every present reason is
+    // unverifiable and reported — never silently accepted as if anything were valid.
+    if (e.ev === 'run.header' && e.reason !== undefined && !traceHeaderReasons.includes(e.reason)) {
+      findings.push({ message: `${where}: run.header reason "${e.reason}" is outside the declared vocabulary — either an undeclared value, or guards.config.json's traceHeaderReasons is missing or empty` });
+    }
+
+    prevEv = e.ev;
 
     // seq must be dense and strictly increasing. A gap means truncation or a crashed hook;
     // a duplicate means two writers raced. Both are visible, which is the claim.
@@ -182,9 +237,30 @@ export function validateTrace(text, terms = [], label = '') {
     }
     expected = e.seq + 1;
 
-    if (e.ev === 'tool.requested') requests.add(e.tool_use_id);
+    if (e.ev === 'tool.requested') {
+      // Correlation is the trace's whole claim: a request, its decision, its result. A
+      // reused id would silently join the wrong events, and nothing else would say so.
+      // Scoped to tool.requested — a policy.decision and a tool.result legitimately repeat
+      // the id of the request they belong to, and flagging those fires on every well-formed file.
+      // The id itself is NEVER quoted. INC-15 exists because a banned term turned up inside
+      // one by chance, so printing it here would be the leak this function checks for — the
+      // earlier event's seq locates it just as well and carries nothing.
+      if (requests.has(e.tool_use_id)) {
+        findings.push({ message: `${where}: this tool_use_id was already used by the tool.requested at seq ${requests.get(e.tool_use_id)} — correlation would silently join the wrong events` });
+      }
+      requests.set(e.tool_use_id, e.seq);
+    }
     if ((e.ev === 'policy.decision' || e.ev === 'tool.result') && !requests.has(e.tool_use_id)) {
-      findings.push({ message: `${where}: ${e.ev} has no matching tool.requested — correlation is broken, so the phase cannot be derived` });
+      // An orphan tool.result is a DELIVERY LOSS, not a writer defect (TASK 12 slice 3): the
+      // runtime never delivered the PreToolUse write, an environment property check-trace
+      // measures and floors rather than a schema violation this validator could ever call
+      // fixed. H-03 means no agent may ever clear it by editing the trace, so it must be
+      // distinguishable from every other finding here, which fails unconditionally. Scoped to
+      // tool.result only — that is the shape every orphan on disk actually took; an orphan
+      // policy.decision stays an ordinary, unconditional finding.
+      const finding = { message: `${where}: ${e.ev} has no matching tool.requested — correlation is broken, so the phase cannot be derived` };
+      if (e.ev === 'tool.result') finding.kind = 'delivery_loss';
+      findings.push(finding);
     }
     if (e.ev === 'policy.decision' && e.decision === 'deny') {
       for (const f of ['rule', 'guard']) {
@@ -194,11 +270,14 @@ export function validateTrace(text, terms = [], label = '') {
   }
 
   // Redaction is asserted over the WHOLE file, not per field: the point is that no banned
-  // term reaches the trace by any route, including one nobody wrote a redactor for.
+  // term reaches the trace by any route, including one nobody wrote a redactor for. Reused
+  // from terms.mjs rather than hand-rolled, so this honours each term's own `\b` word-boundary
+  // flag (TASK 45) instead of always matching as a bare substring, and so opaque, generated
+  // ids (tool_use_id, run_id, parent_run_id) are blanked before matching by field name only —
+  // never by shape, and never for a field outside that closed list (TASK 18).
   const serialized = raw.join('\n');
-  const leaked = terms.filter(({ term }) => new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(serialized));
-  for (const t of leaked) {
-    findings.push({ message: `${at}redaction failed: banned-terms.txt:${t.line} appears in the trace. The trace is written by hooks and kept on disk, so this is a leak, not a warning` });
+  for (const hit of scanText(serialized, terms, { opaqueFields })) {
+    findings.push({ message: `${at}redaction failed: banned-terms.txt:${hit.term.line} appears in the trace at line ${hit.line}. The trace is written by hooks and kept on disk, so this is a leak, not a warning` });
   }
 
   return findings;
@@ -241,6 +320,53 @@ export function validateVocabulary(declared) {
     findings.push({ message: `guards.config.json declares "${e}" but no schema defines it, so nothing validates it` });
   }
   return findings;
+}
+
+/**
+ * TASK 12 slice 5 — the fix for `G-04`'s unkept promise. Every `run.header` written from
+ * `SessionStart`/`SubagentStart` records `permission_mode: 'unknown'`, because those two hook
+ * payloads genuinely omit the field. `PostToolUse` and `PostToolUseFailure` DO carry the real
+ * value (captured from the running tool, not documentation — see `POST_TOOL_USE_KEYS` in
+ * evidence.test.mjs). This is the bridge: given the text of a run's trace file already on
+ * disk and a candidate mode from whichever hook just fired, decide whether a fresh
+ * `run.header` should be recorded so the real posture becomes visible — including a
+ * mid-session switch to `bypassPermissions`, which `G-04` exists to catch.
+ *
+ * Pure and read-only: never touches the filesystem itself, so `record` can hand it the text
+ * it already read for `nextSeq` instead of reading the file twice.
+ *
+ * Returns a `run.header` event (missing only the fields the writer stamps — `seq`, `ts`,
+ * `run_id`, `agent`) when, and only when, ALL of:
+ *   - `permissionMode` is a real, non-empty string and not the literal `'unknown'` —
+ *     recording `unknown` twice is not an improvement.
+ *   - it differs from the most recent `permission_mode` already recorded by a `run.header`
+ *     in `existingText`. No prior header at all (including an empty/new file) counts as a
+ *     difference: the real mode is new information worth capturing immediately, and there is
+ *     no prior header for it to be adjacent to.
+ *   - the LAST event currently in `existingText` is not itself a `run.header`. Load-bearing:
+ *     `record` is called by `pretooluse.mjs` on the very first tool call of a run, which
+ *     lands immediately after the startup header. Without this guard the writer would emit a
+ *     finding against itself — two adjacent headers, which slice 4 made a finding — on every
+ *     future trace.
+ */
+export function posturePatch(existingText, permissionMode) {
+  if (typeof permissionMode !== 'string' || permissionMode === '' || permissionMode === 'unknown') return null;
+
+  const lines = String(existingText ?? '').split('\n').filter((l) => l.trim());
+
+  let last = null;
+  let lastHeaderMode; // undefined when no run.header has been recorded yet in this text
+  for (const line of lines) {
+    let e;
+    try { e = JSON.parse(line); } catch { continue; } // an unparsable line carries no posture
+    last = e;
+    if (e.ev === 'run.header') lastHeaderMode = e.permission_mode;
+  }
+
+  if (last && last.ev === 'run.header') return null; // never follow a header with another
+  if (lastHeaderMode === permissionMode) return null; // no change to report
+
+  return { ev: 'run.header', permission_mode: permissionMode, reason: 'observed' };
 }
 
 /**

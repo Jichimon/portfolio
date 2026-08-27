@@ -3,7 +3,7 @@ name: implementer
 description: Implements an approved spec test-first — red, green, refactor. Use when a spec is active, its approved_version matches its version, and the work is code rather than content.
 model: sonnet
 tools: Read, Grep, Glob, Edit, Write, Bash
-maxTurns: 30
+maxTurns: 45
 filesystem_read: the repository, except private/
 filesystem_write: only the files enumerated in the brief
 network: no

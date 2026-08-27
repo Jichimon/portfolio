@@ -23,5 +23,16 @@ try { input = JSON.parse(readFileSync(0, 'utf8') || '{}'); } catch { /* nothing 
 let cfg = {};
 try { cfg = JSON.parse(readFileSync(join(ROOT, 'scripts/guards/guards.config.json'), 'utf8')).evidence ?? {}; } catch { /* defaults */ }
 
-record(ROOT, input, eventsFor(input, loadTerms(ROOT), cfg), { prune: cfg.retainRuns });
+// TASK 59: this is a recorder, not a guard — it cannot deny anything, and must exit 0
+// whatever happens internally (a measurement must never stop the thing it measures). But it
+// also must never write a target value it could not scrub. loadTerms() now throws rather
+// than silently returning [] when private/ exists but its term list is missing, empty, or
+// unparseable (the exact hole this task closes) — so a throw here means "the terms needed to
+// redact this event are unknown", and the only safe response is to record nothing at all for
+// this invocation, quietly, rather than either crashing loud or writing unmasked.
+try {
+  record(ROOT, input, eventsFor(input, loadTerms(ROOT), cfg), { prune: cfg.retainRuns });
+} catch (err) {
+  console.error(`[record-event] not recorded: term list unavailable (${err?.message ?? err})`);
+}
 process.exit(0);

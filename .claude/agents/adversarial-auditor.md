@@ -3,7 +3,7 @@ name: adversarial-auditor
 description: Tries to break what was just built — bypasses, unstated assumptions, claims not backed by an artifact. Use before declaring a work item done, and always on a guard or a boundary.
 model: opus
 tools: Read, Grep, Glob, Bash
-maxTurns: 20
+maxTurns: 40
 filesystem_read: the repository, except private/
 filesystem_write: no file tools; Bash is held for running bypasses and is itself a write vector — procedural, per A21
 network: no

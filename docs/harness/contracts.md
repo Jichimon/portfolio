@@ -108,19 +108,26 @@ isolation: none       # none | worktree, per the triggers in architecture.md §M
 acceptance:
   required_evidence:  # what must exist for this run to count as done
 
-termination:          # written to the trace footer (A13)
+termination:          # the brief's DECLARED vocabulary, not what the trace records
   state:              # COMPLETE | FAILED | ESCALATED | BLOCKED | CANCELLED
   reason:             # policy_violation | budget_exhausted | objective_unmet |
                       # dependency_missing | human_decision_required | withdrawn
   rule:               # required when reason == policy_violation
   guard:              # required when reason == policy_violation
+
+# WHAT THE TRACE ACTUALLY WRITES IS NARROWER, and the gap is stated rather than implied.
+# `SubagentStop` and `SessionEnd` carry no stop reason, so the footer only ever reads
+# COMPLETE with `objective_reported` or `other`. Nothing has ever written FAILED, and
+# `budget_exhausted` appears nowhere in the codebase. A run stopped by its budget writes
+# NO FOOTER AT ALL — which is the signal, proven in red 2026-08-27 and now carried by
+# `G-06`. Read the absence from outside the file; never expect a field inside it.
 ```
 
 ### The two rules that make a brief work
 
 **A brief carries the task, never the rules** (`P-08`). Rules load themselves; what the orchestrator pastes it can also forget, and what it forgets the agent never knows.
 
-**A slice is sized by finishability, not topic** (`P-09`). Enumerate the objects. An agent cut off mid-run delivers zero, not half — the cost is total, not proportional.
+**A slice is sized by the objects it owns AND the documents it must read** (`P-09`). Enumerate the objects — and hand over the extract rather than naming a document to go find something inside, which is an unbounded read wearing a bounded brief's clothes. Order it so nothing that must not be interrupted comes last: the cut lands on whatever is, and across thirteen specimens here the artifacts landed and the **report** was the casualty.
 
 ### Enforced by
 
@@ -217,7 +224,7 @@ Correlated by `tool_use_id`. `executed` is **derived**, not stored: a request ca
   "ok":false, "duration_ms":12, "error_class":"..." }
 ```
 
-Plus a **run header** — `run_id`, `agent`, `model`, `permission_mode`, `enforcement_environment`, `isolation`, budgets — and a **run footer** carrying the `termination` block from the Run Contract.
+Plus a **run header** — `run_id`, `agent`, `model`, `permission_mode`, `enforcement_environment`, `isolation`, budgets — written at every start **and again whenever the observed `permission_mode` changes**, since the start events omit it and only a later payload reveals the posture the run actually had. And a **run footer** carrying a `termination` block narrower than the Run Contract declares, per the note there.
 
 **Why the phases matter:** they are the only thing that separates *the agent tried something dangerous and was stopped* from *something dangerous happened*. Those are opposite outcomes — one of them is the harness working — and a flat log of tool calls cannot tell them apart.
 

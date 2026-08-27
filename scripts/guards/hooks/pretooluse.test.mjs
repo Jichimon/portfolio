@@ -16,7 +16,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, writeFileSync, rmSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -26,14 +26,24 @@ const REPO = join(import.meta.dirname, '..', '..', '..');
  * A throwaway root holding a copy of scripts/guards, so ROOT — which the hook derives from
  * its own location — points at the copy. The real config is never touched: a test that
  * corrupts the repository to prove a point has traded one hazard for another.
+ *
+ * `opts.bannedTerms`, when given, plants `private/banned-terms.txt` with that text at the
+ * temp root (sibling of scripts/, matching ROOT's real layout three levels up from the hook).
+ * Omitted entirely by default — no private/ directory at all — which is the normal state on
+ * a fresh checkout (H-04's file is gitignored) and must not be confused with "private/
+ * exists but is empty".
  */
-function withRoot(configText, fn) {
+function withRoot(configText, fn, opts = {}) {
   const root = mkdtempSync(join(tmpdir(), 'g13-'));
   try {
     cpSync(join(REPO, 'scripts/guards'), join(root, 'scripts/guards'), { recursive: true });
     const cfg = join(root, 'scripts/guards/guards.config.json');
     if (configText === null) rmSync(cfg);
     else writeFileSync(cfg, configText);
+    if (opts.bannedTerms !== undefined) {
+      mkdirSync(join(root, 'private'), { recursive: true });
+      writeFileSync(join(root, 'private/banned-terms.txt'), opts.bannedTerms);
+    }
     return fn(root);
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -42,6 +52,20 @@ function withRoot(configText, fn) {
 
 function runHook(root, payload) {
   const r = spawnSync(process.execPath, [join(root, 'scripts/guards/hooks/pretooluse.mjs')], {
+    input: JSON.stringify(payload),
+    encoding: 'utf8',
+  });
+  return { code: r.status, stderr: r.stderr ?? '' };
+}
+
+/**
+ * record-event.mjs is a recorder, not a guard: it must exit 0 unconditionally regardless of
+ * what happens internally. Spawned as a real process for the same reason runHook is — the
+ * property under test (exit code, and whether a file landed on disk) lives at the process
+ * boundary, not inside a function.
+ */
+function runRecordEvent(root, payload) {
+  const r = spawnSync(process.execPath, [join(root, 'scripts/guards/hooks/record-event.mjs')], {
     input: JSON.stringify(payload),
     encoding: 'utf8',
   });
@@ -105,6 +129,64 @@ test('RED: a missing config file denies', () => {
     const r = runHook(root, READ_CALL);
     assert.equal(r.code, 2);
     assert.match(r.stderr, /G-13/);
+  });
+});
+
+// --- TASK 59: a malformed term list must not silently disable write-time scrubbing -----
+//
+// loadTerms() throwing on a broken private/ is only a control if the hook that calls it
+// (via record() -> redactToolInput) actually turns that throw into a denial rather than an
+// uncaught crash with some other exit code. main().catch() already does this for every
+// throw; these tests prove it for THIS one specifically, by spawning the real hook.
+
+test('RED (TASK 59): private/ present but its term list parses to zero terms denies with exit 2, not 1', () => {
+  // Comment-only content: parseTerms itself does not throw on this (it only throws on a
+  // malformed \b flag), so this exercises loadTerms's OWN new fail-closed check, not
+  // parseTerms's pre-existing one — the actual hole this task closes.
+  withRoot(HEALTHY(), (root) => {
+    const r = runHook(root, READ_CALL);
+    assert.equal(r.code, 2, `a guard that cannot load its term list must DENY. Exit ${r.code} with stderr: ${r.stderr}`);
+    assert.notEqual(r.code, 1, 'exit 1 is non-blocking — the tool call would have proceeded');
+    assert.match(r.stderr, /G-13/);
+  }, { bannedTerms: '# just a comment, no real terms\n' });
+});
+
+test('RED (TASK 59): a checkout with no private/ at all still allows an innocuous call', () => {
+  // No `bannedTerms` option at all, so withRoot creates no private/ directory — the normal
+  // state on a fresh clone. loadTerms must return [] without complaint, not deny.
+  withRoot(HEALTHY(), (root) => {
+    const r = runHook(root, READ_CALL);
+    assert.equal(r.code, 0, `stderr: ${r.stderr}`);
+  });
+});
+
+// --- TASK 59: record-event.mjs cannot deny, so it must fail quiet, not fail loud ---------
+//
+// It calls loadTerms(ROOT) at top level with no try/catch. Today a broken term list kills it
+// with an uncaught exception and an exit code the runtime treats as non-blocking (the mirror
+// image of INC-12, on the recorder rather than the guard). The property that matters is
+// narrower than "denies": a recorder cannot deny anything, so what must hold is that nothing
+// unscrubbed reaches evidence/, and the process still exits 0 either way.
+
+test('RED (TASK 59): record-event.mjs writes nothing and still exits 0 when the term list cannot be loaded', () => {
+  withRoot(HEALTHY(), (root) => {
+    const input = { session_id: 'sess-record-event-broken', hook_event_name: 'SessionStart', permission_mode: 'default' };
+    const r = runRecordEvent(root, input);
+    assert.equal(r.code, 0, `record-event.mjs must never be blocking, whatever went wrong internally. stderr: ${r.stderr}`);
+    const evFile = join(root, 'evidence/runs', 'sess-record-event-broken', 'orchestrator.jsonl');
+    assert.equal(existsSync(evFile), false, 'nothing should be written for an invocation whose term list could not be loaded');
+  }, { bannedTerms: '# just a comment, no real terms\n' }); // private/ present, parses to zero terms
+});
+
+test('record-event.mjs still writes normally when the term list is fine (or private/ is absent)', () => {
+  // The control: without this, the RED test above could pass for the wrong reason (e.g. the
+  // script never writes anything at all) and prove nothing about the broken-list case.
+  withRoot(HEALTHY(), (root) => {
+    const input = { session_id: 'sess-record-event-healthy', hook_event_name: 'SessionStart', permission_mode: 'default' };
+    const r = runRecordEvent(root, input);
+    assert.equal(r.code, 0, `stderr: ${r.stderr}`);
+    const evFile = join(root, 'evidence/runs', 'sess-record-event-healthy', 'orchestrator.jsonl');
+    assert.equal(existsSync(evFile), true, 'a healthy run should still write its header');
   });
 });
 

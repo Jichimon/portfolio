@@ -3,7 +3,7 @@ name: test-engineer
 description: Builds end-to-end tests and runs the mutation gate. Use when a surface needs proof its tests actually test something, or when a work item's e2e coverage is the deliverable rather than a side effect.
 model: sonnet
 tools: Read, Grep, Glob, Edit, Write, Bash
-maxTurns: 30
+maxTurns: 45
 filesystem_read: the repository, except private/
 filesystem_write: test files and test configuration only, enumerated in the brief
 network: no

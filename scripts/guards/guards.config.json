@@ -28,6 +28,14 @@
       "trace.rejected"
     ],
     "_traceEventsRationale": "The event vocabulary, as data. check-trace derives what it accepts from this list rather than carrying its own copy, so adding an event to the writer without declaring it here fails loudly instead of validating as 'unknown' forever.",
+    "traceHeaderReasons": [
+      "startup",
+      "delegated",
+      "observed"
+    ],
+    "_traceHeaderReasonsRationale": "Same shape as traceEvents directly above it: the vocabulary lives in config so a writer emitting an undeclared run.header reason fails loudly instead of validating as unknown forever. 'startup' and 'delegated' are the two values the real corpus emits today (TASK 12 slice 4's decision record: 118 headers across 101 files, every one reporting one or the other). 'observed' is declared now but not yet emitted — it is reserved for TASK 12 slice 5, which will make the writer record the real permission_mode once the runtime exposes it, distinguishing an actually-observed posture from an assumed one. Declaring it here means slice 5 does not have to touch this list, and the two slices stay independent.",
+    "maxRequestLossRate": 0.02,
+    "_maxRequestLossRateRationale": "Measured, not chosen: the repository's own trace carried 63 orphan tool.result events — a tool.requested the runtime never delivered, not a writer defect — over 3,754 tool.result events recorded across the corpus, 1.68%. 0.02 leaves headroom without hand-picking a number to make today's corpus pass. This is a RATCHET, the same shape as T-03's mutation floor: the rate may not rise, and the only correct response to a rise is finding the lost writes, never a bigger number. retainRuns above prunes old run directories, so the denominator drifts with the corpus exactly as the mutation score's denominator drifts with the surface it measures.",
     "recordedHookEvents": [
       "PostToolUse",
       "PostToolUseFailure",
@@ -38,7 +46,13 @@
       "SubagentStop",
       "InstructionsLoaded"
     ],
-    "_recordedHookEventsRationale": "Which runtime events must be wired to record-event.mjs. check-trace asserts settings.json carries every one — a hook nobody registered fires zero times and reports nothing, which is INC-08 exactly."
+    "_recordedHookEventsRationale": "Which runtime events must be wired to record-event.mjs. check-trace asserts settings.json carries every one — a hook nobody registered fires zero times and reports nothing, which is INC-08 exactly.",
+    "opaqueFields": [
+      "tool_use_id",
+      "run_id",
+      "parent_run_id"
+    ],
+    "_opaqueFieldsRationale": "These three, and only these three, are opaque API-generated random tokens, never authored text — a 4-character banned term appeared inside a tool_use_id during a researcher run and failed the gate on a true string match carrying zero confidentiality risk (INC-15's family; TASK 18). Excluded BY FIELD NAME, read from this list, never by a \"looks like an id\" heuristic, which would widen itself silently over time and could come to exclude a field that actually carries publishable content. Every other field on an event — including target.file_path, and including one nobody has invented yet — is still scanned exactly as before, and a line that fails to parse is still scanned too: the exclusion never grows itself. Same family as check-terms.mjs's own terms.opaqueFields (integrity, for lockfile hashes) but a separate list, because the two guards blank different fields for different reasons."
   },
   "exclusions": {
     "_purpose": "Paths excluded from repo-wide scans. This list is the ONLY roster in the guard suite, and it is an exclusion list rather than an inclusion list on purpose (INC-07): forgetting to add a path here makes a scan noisier, never blinder.",

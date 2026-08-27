@@ -11,7 +11,7 @@
 
 import { readFileSync, appendFileSync, mkdirSync, rmdirSync, existsSync, readdirSync, statSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { runIdFor, nextSeq, rejectReason } from '../lib/evidence.mjs';
+import { runIdFor, nextSeq, rejectReason, posturePatch } from '../lib/evidence.mjs';
 import { parseTerms } from '../lib/terms.mjs';
 
 const slug = (s) => String(s ?? 'unknown').replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80);
@@ -42,12 +42,57 @@ function withLock(dir, fn) {
   return fn(); // Contended past the budget: write anyway. A duplicate seq is visible; silence is not.
 }
 
-let cachedTerms = null;
+// Keyed by root, not a single module-level value. Each hook invocation is a fresh process
+// with exactly one root, so this has never bitten in production — but a single unkeyed
+// cache made every case below untestable in one file: a second call with a DIFFERENT root
+// would silently return the first root's terms (allow or throw) instead of its own.
+const cachedTermsByRoot = new Map();
+
+/**
+ * The write-time half of C-05/H-04's scrubbing. Unlike check-terms.mjs — a gate step a
+ * human runs, so refusing costs one red step — this runs on every tool call, so refusing
+ * unconditionally would deny every call on a checkout without private/ (which is normal:
+ * private/ is gitignored and never committed) and brick the harness entirely.
+ *
+ * So the discriminator is whether private/ itself exists, not whether the term list does:
+ *
+ *   private/ absent               -> nothing here to protect. [] is correct, no complaint.
+ *   private/ present, list missing,
+ *   empty, or unparseable          -> the thing being protected exists and the protection
+ *                                     does not. FAIL CLOSED (G-13): throw, naming which case,
+ *                                     so a caller (pretooluse.mjs) can turn it into a denial
+ *                                     instead of silently redacting nothing.
+ */
 export function loadTerms(root) {
-  if (cachedTerms) return cachedTerms;
-  const p = join(root, 'private/banned-terms.txt');
-  cachedTerms = existsSync(p) ? parseTerms(readFileSync(p, 'utf8')) : [];
-  return cachedTerms;
+  if (cachedTermsByRoot.has(root)) return cachedTermsByRoot.get(root);
+
+  const privateDir = join(root, 'private');
+  if (!existsSync(privateDir)) {
+    const terms = [];
+    cachedTermsByRoot.set(root, terms);
+    return terms;
+  }
+
+  const p = join(privateDir, 'banned-terms.txt');
+  if (!existsSync(p)) {
+    throw new Error(
+      'private/banned-terms.txt is missing, but private/ exists — refusing to protect ' +
+      'nothing. A confidentiality check that cannot read its own term list must never scrub silently.',
+    );
+  }
+
+  // parseTerms itself throws on a malformed \b-flagged line (TASK 45); that propagates here
+  // unchanged, which is the point — this call must not swallow it into a silent [].
+  const terms = parseTerms(readFileSync(p, 'utf8'));
+  if (terms.length === 0) {
+    throw new Error(
+      'private/banned-terms.txt defines no terms, but private/ exists — an empty list makes ' +
+      'every scrub a no-op, which is worse than no list at all.',
+    );
+  }
+
+  cachedTermsByRoot.set(root, terms);
+  return terms;
 }
 
 /** Keep the newest N run directories. Operational output, not knowledge — see guards.config. */
@@ -85,9 +130,21 @@ export function record(root, input, events, opts = {}) {
     });
 
     withLock(dir, () => {
-      let seq = nextSeq(existsSync(file) ? readFileSync(file, 'utf8') : '');
+      const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
+      let seq = nextSeq(text);
       const ts = new Date().toISOString();
-      const lines = checked.map((e) => JSON.stringify({
+
+      // TASK 12 slice 5: G-04's compensation for a residual risk only works if permission_mode
+      // is ever actually recorded. SessionStart/SubagentStart genuinely omit it; PostToolUse
+      // and PostToolUseFailure carry the real value. When it is real, new, and not immediately
+      // after another header, stamp a fresh run.header so the true posture becomes visible
+      // instead of staying "unknown" forever. Skipped outright when the caller's own events
+      // already begin with a run.header — belt and braces on top of posturePatch's own
+      // adjacency check, using the SAME text already read above rather than a second read.
+      const observed = events[0]?.ev === 'run.header' ? null : posturePatch(text, input.permission_mode);
+      const toWrite = observed ? [observed, ...checked] : checked;
+
+      const lines = toWrite.map((e) => JSON.stringify({
         ev: e.ev, ts, seq: seq++, run_id, ...(parent_run_id ? { parent_run_id } : {}), agent,
         ...Object.fromEntries(Object.entries(e).filter(([k]) => k !== 'ev')),
       }));
