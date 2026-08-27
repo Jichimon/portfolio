@@ -62,9 +62,28 @@ about:
   based_in: "Radicado en"
   since: "Desde"
   reads_as: "Se lee como"
+  next_up:
+    - key: experience
+      label: "Dónde trabajé, y qué pasó ahí"
+    - key: work
+      label: "El trabajo en detalle"
+    - key: contact
+      label: "Hablemos"
 
 experience:
   label: "Experiencia"
+  most_recent: "más reciente"
+  cv_note: "Cochabamba, Bolivia · GMT-4 · abierto a remoto, o híbrido/relocation según el rol"
+  full_history:
+    label: "Historial completo en LinkedIn →"
+    social: "LinkedIn"
+  next_up:
+    - key: work
+      label: "El trabajo en detalle"
+    - key: about
+      label: "Cómo fue en realidad"
+    - key: contact
+      label: "Hablemos"
 
 contact_form:
   email_label: "Tu email"

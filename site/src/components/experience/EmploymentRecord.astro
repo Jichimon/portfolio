@@ -1,0 +1,88 @@
+---
+import EmploymentEntry from './EmploymentEntry.astro';
+
+interface CaseStudyRow {
+  title: string;
+  href: string;
+}
+
+interface EmploymentEntryContent {
+  company: string;
+  period: string;
+  title: string;
+  paragraphs: string[];
+  isMostRecent: boolean;
+  stack?: string[];
+  logo?: string;
+  caseStudyRows?: CaseStudyRow[];
+}
+
+interface Props {
+  entries: EmploymentEntryContent[];
+  lang: 'en' | 'es';
+  labels: {
+    most_recent: string;
+    cv_note: string;
+    full_history: { label: string; social: string };
+  };
+  fullHistoryHref: string;
+}
+
+const { entries, labels, fullHistoryHref } = Astro.props;
+const { label: fullHistoryLabel } = labels.full_history;
+---
+
+{entries.length > 0 && (
+  <Fragment>
+    <div class="employment-record">
+      <div class="employment-record__rule" aria-hidden="true" />
+      {entries.map((entry) => (
+        <EmploymentEntry {...entry} mostRecentLabel={labels.most_recent} />
+      ))}
+    </div>
+    <div class="employment-record__cv-note">
+      <span>{labels.cv_note}</span>
+      <a href={fullHistoryHref}>{fullHistoryLabel}</a>
+    </div>
+  </Fragment>
+)}
+
+<style>
+  .employment-record {
+    margin-top: 56px;
+    max-width: 980px;
+  }
+
+  .employment-record__rule {
+    border-top: 1px solid var(--color-ink);
+  }
+
+  .employment-record__cv-note {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    max-width: 980px;
+    margin-top: 28px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-ink-faint);
+  }
+
+  .employment-record__cv-note a {
+    color: var(--color-ink-muted);
+  }
+
+  .employment-record__cv-note a:hover {
+    color: var(--color-accent);
+  }
+
+  @media (max-width: 820px) {
+    .employment-record__cv-note {
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+</style>
+</content>

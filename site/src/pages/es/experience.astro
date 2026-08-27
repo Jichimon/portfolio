@@ -1,0 +1,53 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DocumentHead from '../../components/page/DocumentHead.astro';
+import EmploymentRecord from '../../components/experience/EmploymentRecord.astro';
+import NextUp from '../../components/page/NextUp.astro';
+import {
+  getPage,
+  getUiStrings,
+  getAlternateHref,
+  getExperienceRecord,
+} from '../../gateway/content-queries.ts';
+
+const lang = 'es';
+const slug = 'experience';
+
+const [page, ui, alternateHref, entries] = await Promise.all([
+  getPage(slug, lang),
+  getUiStrings(lang),
+  getAlternateHref(slug, lang),
+  getExperienceRecord(lang),
+]);
+
+// The availability line links to one of the site's own social entries, named by the
+// content rather than spelled out here, so the address stays declared once.
+const { social: fullHistorySocial } = ui.data.experience.full_history;
+const fullHistoryLink = ui.data.socials.find((entry) => entry.name === fullHistorySocial);
+if (!fullHistoryLink) {
+  throw new Error(`the experience strings name social "${fullHistorySocial}", which is not a declared social link`);
+}
+---
+
+<BaseLayout
+  lang={lang}
+  title={page.data.title}
+  isIndexPage={false}
+  currentSlug={slug}
+  nav={ui.data.nav}
+  rail={ui.data.rail}
+  socials={ui.data.socials}
+  localeSwitch={{ kind: 'alternate', lang, href: alternateHref }}
+  footerText={ui.data.footer.metrics_slot}
+>
+  <section class="document-page">
+    <DocumentHead label={ui.data.experience.label} h1={page.data.h1} intro={page.data.intro} />
+    <EmploymentRecord
+      entries={entries}
+      lang={lang}
+      labels={ui.data.experience}
+      fullHistoryHref={fullHistoryLink.url}
+    />
+    <NextUp items={ui.data.experience.next_up} lang={lang} variant="record" />
+  </section>
+</BaseLayout>

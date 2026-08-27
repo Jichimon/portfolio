@@ -36,7 +36,7 @@ const { title, subtitle, skills = [] } = entry.data;
   nav={nav}
   rail={rail}
   socials={socials}
-  alternateHref={alternateHref}
+  localeSwitch={{ kind: 'alternate', lang, href: alternateHref }}
   footerText={footerText}
   currentSectionKey={SECTION_NAV_KEY_FOR_ARTICLES}
 >

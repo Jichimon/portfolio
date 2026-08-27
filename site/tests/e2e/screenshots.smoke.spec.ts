@@ -108,6 +108,28 @@ test('the derived route set has at least one live route to screenshot', () => {
   expect(liveRoutes.length).toBeGreaterThan(0);
 });
 
+// The not-found page is served by every unmatched address and belongs to no locale, so
+// the collection derives no route for it and the loop below would never reach it. It is
+// appended deliberately, with its reason: the page a visitor sees when something has
+// gone wrong is the last one that should go unlooked-at, and it went unlooked-at long
+// enough to ship a defect that a single glance caught.
+//
+// The path is deliberately one nothing will ever route. A real slug here would be a path
+// literal duplicating something the collection already owns.
+//
+// It is also the one captured page whose correct response is NOT 200, so the expected
+// status travels with the route rather than being assumed by the loop. Asserting the
+// status at all is what stops this suite quietly photographing an error page in place of
+// a real one.
+interface CapturedRoute extends DerivedRoute {
+  expectedStatus: number;
+}
+
+const capturedRoutes: CapturedRoute[] = [
+  ...liveRoutes.map((route) => ({ ...route, expectedStatus: 200 })),
+  { slug: 'not-found', lang: 'en', path: '/an-address-that-matches-no-route', expectedStatus: 404 },
+];
+
 // The three sanctioned widths this suite captures, and the two themes BaseLayout resolves.
 const WIDTHS = [1440, 1024, 390] as const;
 const VIEWPORT_HEIGHT = 900;
@@ -121,7 +143,7 @@ test.beforeAll(() => {
   console.log(`screenshots.smoke: images will be written to ${SCREENSHOTS_DIR}`);
 });
 
-for (const route of liveRoutes) {
+for (const route of capturedRoutes) {
   for (const width of WIDTHS) {
     for (const theme of THEMES) {
       test(`captures ${route.path} (slug "${route.slug}", lang "${route.lang}") at ${width}px in ${theme}`, async ({
@@ -144,7 +166,10 @@ for (const route of liveRoutes) {
 
         const response = await page.goto(route.path, { waitUntil: 'networkidle' });
         expect(response, `no response returned for ${route.path}`).not.toBeNull();
-        expect(response!.status(), `expected 200 for ${route.path}`).toBe(200);
+        expect(
+          response!.status(),
+          `expected ${route.expectedStatus} for ${route.path}`,
+        ).toBe(route.expectedStatus);
 
         // Confirms the forced theme actually resolved, rather than trusting the seed to
         // have taken — the same distinction the file's own header comment draws between

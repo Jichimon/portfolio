@@ -370,16 +370,7 @@
 
   "routeDeclarationSites": [],
     "_routeDeclarationSitesRationale": "Where a path-shaped literal naming a REAL content slug is allowed to appear. Empty, and that is the healthy state: the route set is derived from the collection, so no source file should need to spell one out. Declared as a SET rather than left implicit for the same reason `gateway` is - the day one legitimately needs an exception, it is written here with a reason instead of the guard being edited. The slug side is NOT here: check-site derives it from the filenames under the content roots, so a sixth case study is covered with no edit (P-13). What this catches is a page hardcoding `/case-studies/<a real slug>` instead of asking the collection.",
-    "pendingRoutes": [
-      {
-        "slug": "about",
-        "reason": "TASK 26's Deliverable. The route is derived from the collection today and has no page module until that item builds it."
-      },
-      {
-        "slug": "experience",
-        "reason": "TASK 26's Deliverable, same item and same shape as its sibling above."
-      }
-    ],
+    "pendingRoutes": [],
     "_pendingRoutesRationale": "TASK 41. A slug whose route the collection already derives but which no page module serves yet. The smoke tier asserts 200 over (derived routes MINUS these) and asserts that every slug named here still 404s — so the list is SELF-STALING: the day a page item routes one, the second assertion fails and the entry has to be removed. That second half is the whole reason this is not a skip list. Written as SLUGS rather than routes because a slug covers both locales by construction, so a locale added later needs no edit here (P-13). Every entry carries a reason naming the item that will route it, and a reasonless entry fails the check — the same convention docs.ignore follows, and for the same reason: an exclusion that cannot explain itself becomes permanent. This list is expected to reach EMPTY, which is the healthy end state, not a defect.",
     "maxFilesPerDir": 6,
     "_threshold_rationale": "The author's convention, stated 2026-08-24 and recorded as theirs: at seven files a directory is split into context-named subfolders. No published style guide was found supporting a numeric cap and the search was not exhaustive (ADR-008, sub-decision 5) - so this is calibrated by judgment, not by a citation. Its known failure mode is a split that invents categories to absorb overflow, which is why S-03 also requires the subdivision to name a context.",

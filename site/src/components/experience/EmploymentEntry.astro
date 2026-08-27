@@ -1,0 +1,217 @@
+---
+interface CaseStudyRow {
+  title: string;
+  href: string;
+}
+
+interface Props {
+  company: string;
+  period: string;
+  title: string;
+  paragraphs: string[];
+  isMostRecent: boolean;
+  stack?: string[];
+  logo?: string;
+  caseStudyRows?: CaseStudyRow[];
+  mostRecentLabel: string;
+}
+
+const { company, period, title, paragraphs, isMostRecent, mostRecentLabel } = Astro.props;
+
+// A key the caller omitted must render nothing, so presence is read off the
+// props object itself rather than off the value — an empty string or an
+// empty array is a real value and must not be treated as absence.
+const hasLogo = Object.hasOwn(Astro.props, 'logo');
+const hasStack = Object.hasOwn(Astro.props, 'stack');
+const hasCaseStudyRows = Object.hasOwn(Astro.props, 'caseStudyRows');
+
+const logo = hasLogo ? (Astro.props.logo as string) : undefined;
+const stack = hasStack ? (Astro.props.stack as string[]) : undefined;
+const caseStudyRows = hasCaseStudyRows ? (Astro.props.caseStudyRows as CaseStudyRow[]) : undefined;
+---
+
+<div class="employment-entry">
+  <div class="employment-entry__meta">
+    {hasLogo && (
+      <span class="employment-entry__logo">
+        <img src={logo} alt="" />
+      </span>
+    )}
+    <span class="employment-entry__company">{company}</span>
+    <span class="employment-entry__period">{period}</span>
+    {isMostRecent && <span class="employment-entry__badge">{mostRecentLabel}</span>}
+  </div>
+  <div class="employment-entry__detail">
+    <h2 class="employment-entry__title">{title}</h2>
+    {paragraphs.map((paragraph) => (
+      <p>{paragraph}</p>
+    ))}
+    {hasCaseStudyRows && caseStudyRows && (
+      <ul class="employment-entry__case-studies">
+        {caseStudyRows.map((row) => (
+          <li>
+            <a href={row.href}>
+              <span class="employment-entry__case-study-arrow">→</span>
+              {row.title}
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+    {hasStack && stack && <div class="employment-entry__stack">{stack.join(' · ')}</div>}
+  </div>
+</div>
+
+<style>
+  .employment-entry {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 40px;
+    padding: 34px 0 36px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .employment-entry:last-child {
+    border-bottom: 1px solid var(--color-ink);
+  }
+
+  .employment-entry__logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 12px;
+  }
+
+  .employment-entry__logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* Not --type-mono: the artboard sets this column at 13px against that
+     step's 12.5px, and overriding two thirds of a shorthand token is a
+     worse lie than naming the family and stating the value the design gives. */
+  .employment-entry__meta {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .employment-entry__company {
+    display: block;
+    color: var(--color-ink);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  .employment-entry__period {
+    display: block;
+    color: var(--color-label);
+    margin-top: 4px;
+  }
+
+  .employment-entry__badge {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 9.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    border: 1px solid var(--color-accent-line);
+    border-radius: 2px;
+    padding: 3px 7px;
+  }
+
+  .employment-entry__detail {
+    max-width: 660px;
+  }
+
+  .employment-entry__title {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 19px;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    margin: 0 0 12px;
+  }
+
+  .employment-entry__detail p {
+    font-size: 15.5px;
+    line-height: 1.75;
+    color: var(--color-ink-muted);
+    margin: 0 0 16px;
+  }
+
+  .employment-entry__detail p:last-of-type {
+    margin-bottom: 0;
+  }
+
+  .employment-entry__case-studies {
+    list-style: none;
+    margin: 22px 0 0;
+    padding: 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .employment-entry__case-studies li {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .employment-entry__case-studies a {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 11px 2px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--color-ink-muted);
+    transition: color 0.14s ease, padding-left 0.14s ease;
+  }
+
+  .employment-entry__case-studies a:hover {
+    color: var(--color-ink);
+    padding-left: 8px;
+  }
+
+  .employment-entry__case-study-arrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-accent);
+    flex: 0 0 auto;
+  }
+
+  .employment-entry__stack {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-ink-faint);
+    margin-top: 20px;
+  }
+
+  @media (max-width: 820px) {
+    .employment-entry {
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 26px 0 28px;
+    }
+
+    .employment-entry__badge {
+      margin-top: 8px;
+    }
+
+    .employment-entry__detail {
+      max-width: none;
+    }
+
+    .employment-entry__title {
+      font-size: 17px;
+    }
+
+    .employment-entry__detail p {
+      font-size: 15px;
+    }
+  }
+</style>
+</content>

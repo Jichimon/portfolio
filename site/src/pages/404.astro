@@ -1,0 +1,76 @@
+---
+// One file answers every unmatched route in both locales, which is why it carries both
+// languages rather than guessing from the URL that just failed to match. It is also the
+// only page that belongs to no locale: it marks neither as current, and offers both.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import NotFoundPanels from '../components/not-found/NotFoundPanels.astro';
+import { getUiStringsForEveryLocale, getLocaleHomeHrefs } from '../gateway/content-queries.ts';
+import { NAV_ITEMS, resolveNavItemHref } from '../../lib/nav/nav-structure.mjs';
+
+const [ui, localeHomeHrefs] = await Promise.all([getUiStringsForEveryLocale(), getLocaleHomeHrefs()]);
+
+const ORDERED_LOCALES = ['en', 'es'] as const;
+
+// The destinations are the nav's own reachable items, in the nav's own order — the site
+// does not have a different structure per language, so neither does its recovery page.
+// The content supplies a name and a description per row and nothing about where a row
+// points; pairing them positionally is what keeps a path out of the content entirely.
+const reachableNavItems = NAV_ITEMS.filter((item) => item.kind !== 'reserved');
+
+const panels = ORDERED_LOCALES.map((lang) => {
+  const strings = ui[lang].data.not_found;
+  if (strings.destinations.length !== reachableNavItems.length) {
+    throw new Error(
+      `the "${lang}" not-found strings declare ${strings.destinations.length} destinations, ` +
+        `but the nav has ${reachableNavItems.length} reachable items — the two are paired by position`,
+    );
+  }
+  return {
+    lang,
+    heading: strings.heading,
+    body: strings.body,
+    destinations: strings.destinations.map((destination, index) => ({
+      name: destination.name,
+      what: destination.what,
+      href: resolveNavItemHref(reachableNavItems[index], { lang, isIndexPage: false }) as string,
+    })),
+  };
+});
+
+// Split across both locales on purpose: the artboard prints one line carrying the code
+// once and the wording twice, and holding the whole line in each locale's file would be
+// one datum declared twice.
+const statusLine = [
+  ui.en.data.not_found.status_code,
+  ui.en.data.not_found.status_word,
+  ui.es.data.not_found.status_word,
+].join(' · ');
+
+// Nothing here is a locale's own page, so the rail marks nothing current and the switcher
+// offers each locale its own home rather than an alternate of a page that does not exist.
+const chrome = ui.en;
+---
+
+<BaseLayout
+  lang="en"
+  title={statusLine}
+  isIndexPage={false}
+  currentSlug=""
+  nav={chrome.data.nav}
+  rail={chrome.data.rail}
+  socials={chrome.data.socials}
+  localeSwitch={{ kind: 'neutral', hrefs: localeHomeHrefs }}
+  footerText={chrome.data.footer.metrics_slot}
+>
+  <section class="document-page not-found">
+    <NotFoundPanels panels={panels} statusLine={statusLine} />
+  </section>
+</BaseLayout>
+
+<style>
+  /* The one page that opens slightly lower than the other two, which is the only thing
+     separating it from them and the reason the shell exposes this as a property. */
+  .not-found {
+    --document-page-start: 72px;
+  }
+</style>

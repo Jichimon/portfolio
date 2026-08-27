@@ -62,9 +62,28 @@ about:
   based_in: "Based in"
   since: "Since"
   reads_as: "Reads as"
+  next_up:
+    - key: experience
+      label: "Where I've worked, and what happened there"
+    - key: work
+      label: "The work in depth"
+    - key: contact
+      label: "Get in touch"
 
 experience:
   label: "Experience"
+  most_recent: "most recent"
+  cv_note: "Cochabamba, Bolivia · GMT-4 · open to remote, or hybrid/relocation depending on the role"
+  full_history:
+    label: "Full history on LinkedIn →"
+    social: "LinkedIn"
+  next_up:
+    - key: work
+      label: "The work in depth"
+    - key: about
+      label: "How it actually went"
+    - key: contact
+      label: "Get in touch"
 
 contact_form:
   email_label: "Your email"
@@ -109,8 +128,8 @@ Every value above is lifted from an artboard in `docs/design/canvas/src/`. Nothi
 | `socials` | `Main.dc.html` 448 · the same two links the footer carries (`CaseStudiesIndex.dc.html` 343). Values are identical in both locales — a name and a URL, nothing to translate |
 | `home` | `Main.dc.html` 531, 542, 655, 667, 668, 687 · `MobileSeam.dc.html` 142 for the two seam labels |
 | `article` | `CaseStudyDetail.dc.html` 288 · `PlatformPage.dc.html` 286 · `CaseStudiesIndex.dc.html` 334 |
-| `about` | `About.dc.html` 266, 270–272 |
-| `experience` | `Experience.dc.html` 242 |
+| `about` | `About.dc.html` 266, 270–272, 329–336 |
+| `experience` | `Experience.dc.html` 242, 254, 312–324 |
 | `contact_form` | `Main.dc.html` 672–683 |
 | `footer` | `Main.dc.html` 716 |
 | `not_found` | `NotFound.dc.html` 228, 264–286 |

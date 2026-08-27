@@ -13,6 +13,7 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import '../styles/tokens.css';
 import Rail from '../components/rail/Rail.astro';
+import type { LocaleSwitch } from '../components/rail/LanguageSwitcher.astro';
 import Footer from '../components/Footer.astro';
 
 interface NavLabels {
@@ -50,12 +51,12 @@ interface Props {
   nav: NavLabels;
   rail: RailLabels;
   socials: SocialLink[];
-  alternateHref: string;
+  localeSwitch: LocaleSwitch;
   footerText: string;
   currentSectionKey?: string;
 }
 
-const { lang, title, isIndexPage, currentSlug, nav, rail, socials, alternateHref, footerText, currentSectionKey } = Astro.props;
+const { lang, title, isIndexPage, currentSlug, nav, rail, socials, localeSwitch, footerText, currentSectionKey } = Astro.props;
 
 // Whether the page filled the rail's optional slot is decided HERE, where the answer
 // is unambiguous, and travels on as a prop. Read inside the rail it would be true for
@@ -98,7 +99,7 @@ const hasRailExtra = Astro.slots.has('rail-extra');
         nav={nav}
         rail={rail}
         socials={socials}
-        alternateHref={alternateHref}
+        localeSwitch={localeSwitch}
         hasRailExtra={hasRailExtra}
         currentSectionKey={currentSectionKey}
       >

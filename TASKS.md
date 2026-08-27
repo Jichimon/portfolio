@@ -383,6 +383,20 @@ This is what makes TASK 7 a measurement instead of an anecdote, so it lands **be
 
 From `EVAL-000` (`GAP-01`), which downgraded `EC-001` to `Partial` on exactly this. `validateDone` catches a dimension marked `passed` with empty evidence, but a block that simply **does not mention** a dimension passes clean — and omission is `INC-01`'s actual mechanism. The incident was not four dimensions with weak evidence; it was four different meanings of done, each silently missing what the others covered. `P-03` says silence reads as coverage, and the check cannot yet detect silence.
 
+**A live specimen, 2026-08-26, and it is the cleanest possible demonstration.** `TASK 26` ran nine delegated slices, each writing its own progress log. Three of those logs reached the gate in an unfinished state:
+
+| log | what it carried | caught? |
+|---|---|---|
+| slice D | `tests: { status: in_progress }` | **yes** — named within seconds, status outside the vocabulary |
+| slice H | `tests: { status: in_progress }` | **yes** — same rule |
+| slice G | **no `done:` block at all** | **no.** Passed clean |
+
+Slice G was not the sloppiest of the three — it delivered completely and reported well. It simply never wrote the block, and `check-procedures` validated 71 done blocks without noticing that a seventy-second was missing.
+
+**That is this item's exact mechanism, observed rather than argued.** Two siblings were caught for saying something wrong; the third said nothing and passed. `P-03` calls it out in one line — silence reads as coverage — and the gap is that the check can hear a wrong answer and cannot hear no answer.
+
+**One thing the specimen adds to the Constraint below.** The obvious fix, demanding a `done:` block in every log, would be wrong: a log written mid-session for work still in flight legitimately has none yet. What makes slice G's log detectable is not its age but its **claim** — it says the work is finished. The applicable set has to be derived from that, which is the same "derive it, do not demand a roster" shape the constraint already names.
+
 **Done:** a red test presents a done block missing an applicable dimension and `check-procedures` fails; the test fails when the new assertion is removed.
 
 **Constraint:** which dimensions are *applicable* is type-dependent — `ci` is `not_applicable` with no remote, `content` does not apply to a guard fix. Derive the applicable set from the work item's type rather than demanding a fixed roster, or this becomes `INC-07` in a new place.
@@ -1211,7 +1225,19 @@ Opened 2026-08-25 by the home page item, which needs exactly one line out of thi
 
 ---
 
-## TASK 50 — `contact.{en,es}.md` is superseded and routes nowhere · `content` · `TODO`
+## TASK 50 — `contact.{en,es}.md` is superseded and routes nowhere · `content` · `DONE`
+
+**Closed 2026-08-26, decided: retire.** The author's call, taken with the alternatives on the table rather than by default. Contact is a **section of the home page, not a page**: it carries no route, and every string it rendered already comes from `ui.home.contact_*`, `ui.contact_form` and `ui.socials`. A file loaded by the collection, validated by the schema, counted by the parity guard and rendered by nothing is worse than an absent one — it looks published, it is not, and it drifts against the thing that really renders.
+
+The pair was already deleted from the working tree; what was missing was the decision, and this is it. `check-content`, `check-docs` and `check-terms` pass with the pair gone, `ROUTED_PAGE_SLUGS` names `home`, `about` and `experience`, and nothing outside the historical `progress/` trail references either file.
+
+**Two alternatives were offered and declined**, recorded so nobody re-derives them:
+
+- **A routed `/contact` page.** Legitimate — a portfolio normally has one — but it is a design decision needing an artboard, and none exists. Building one from nothing would have been inventing design.
+- **A `/contact` route redirecting to the home page's contact anchor**, so a guessed or previously shared URL lands somewhere sensible. Declined as scope: the URL was never published, so there is nothing to preserve, and a redirect for a path nobody has is a mechanism with no user.
+
+**Superseded opening note follows, kept for the trail.**
+
 
 Opened 2026-08-25 alongside its sibling above, and separated from it because it is a different deliverable with a different done (`P-01`).
 
@@ -1306,6 +1332,25 @@ Every slice owned exactly two files — the size `TASK 12`'s specimen set says c
 
 **What is different from `TASK 12`'s specimens.** Not the writing — the reading. Each brief required the content entries, two or three artboards, and a markdown-pipeline API nobody in this repository had used before. `maxTurns: 30` in `.claude/agents/implementer.md` was calibrated against slices whose context was already familiar.
 
+**Nine more slices, 2026-08-26 (`TASK 26`), and this set finally separates the two causes.** Six completed, three were cut. What differs between them is not size — every slice owned exactly two files, as `TASK 25`'s did — but what each was told to **read**.
+
+| round | slices | briefed to read | cut off |
+|---|---|---|---|
+| one · core modules | 4 | one or two sibling modules for house style | **2 of 4** |
+| two · components | 3 | **one pre-written extract**, forbidden from opening any artboard | **0 of 3** |
+| three · end-to-end | 1 | **three existing spec files, plus "derive from the content"** | **1 of 1** |
+
+**Round two is the result that matters: three for three, on component work of comparable size to the round that lost half its runs.** The only variable changed was that the orchestrator did the expensive artboard read once, up front, and handed each agent a bounded extract with an explicit instruction not to open the source. That is the second axis this item was opened to find, now with a controlled comparison rather than a hypothesis.
+
+**And the failure that proves it from the other side was the orchestrator's own.** The end-to-end slice was the single brief in the item that named files to go and read instead of handing over an extract. It spent **50 tool calls and roughly 100k tokens and produced no test file at all** — only its log skeleton — with its final message saying it was about to start looking at the page sources. It never reached its output because the input was unbounded, which is this register's eighth specimen repeating exactly, in a brief written by someone who had already applied the fix three times that hour.
+
+So the distinction `P-09` needs is not only *objects owned plus documents that must be read*. It is sharper and more actionable: **a brief that names a document to find something in has handed over an unbounded read; a brief that hands over the extract has not.** The two look identical when you write them and cost differently by an order of magnitude.
+
+**Two further observations from the same nine runs:**
+
+- **Log-first held again, three for three.** Every cut-off slice kept its progress log. Two of them, though, left a `done:` block mid-state — one with a status outside the vocabulary, which `check-procedures` caught within seconds, and one with no block at all, which nothing caught. See `TASK 14`.
+- **Resuming by message stayed cheap.** The one core slice cut with real work outstanding was finished in a single round trip, because the orchestrator could name exactly which three tests were missing.
+
 **Done:** either the budget is raised with the new number justified by measurement rather than by feel, or `P-09` gains the distinction this item found — that a slice is sized by *objects owned plus documents that must be read*, not by objects alone — or both, with the rejected option recorded.
 
 **Constraints**
@@ -1313,6 +1358,50 @@ Every slice owned exactly two files — the size `TASK 12`'s specimen set says c
 - **Do not simply raise the number.** A budget raised without a measured reason is a budget that gets raised again next time. `TASK 12` holds seven specimens and this item adds five; that is a sample worth reading before changing anything.
 - **The report is part of the deliverable, not a courtesy.** An agent that writes the code and never reports what it drifted on has delivered an artifact and lost the reasoning behind it, and `P-11` means the orchestrator then has to verify from scratch what the agent already checked.
 - The correlation `TASK 52` is chasing — a cut run leaves no `run.footer` — now has five more specimens. Whoever takes either item should read the other's evidence first.
+
+---
+
+## TASK 56 — A self-staling list whose test forbade it from ever reaching empty · `bugfix` · `DONE`
+
+Opened and closed 2026-08-26 by `TASK 26`, recorded because the shape generalizes.
+
+`guards.config.json`'s `pendingRoutes` is a self-staling list: a slug whose route the collection derives but which no page module serves yet. Its own rationale ends *"This list is expected to reach EMPTY, which is the healthy end state, not a defect."*
+
+**The smoke tier asserted the opposite.** `routes.smoke.spec.ts` carried `expect(pendingRoutes.length).toBeGreaterThan(0)`, so the day the last pending route was served — which is what this backlog has been working toward for six items — the suite would have gone red for succeeding.
+
+Both halves were written in good faith and each is right on its own. The assertion exists for a real reason: a route set with nothing in it lets every loop below iterate zero times and report green, which is `TASK 39`'s failure shape. What it got wrong is *which* emptiness is suspicious. An empty **live** set means the derivation broke. An empty **pending** set means the work finished.
+
+**Done:** the liveness assertion covers the live set only, and the pending half asserts **coherence** instead — every slug still listed must be one the route set actually derives, so a stale entry naming a page that no longer exists is reported. Nothing else would have caught that.
+
+**Constraint honoured:** the fix does not weaken `TASK 39`'s protection. It narrows it to the set where emptiness is genuinely a defect.
+
+---
+
+## TASK 57 — Two end-to-end assertions passed alone and failed under load · `bugfix` · `DONE`
+
+Opened and closed 2026-08-26 by `TASK 26`.
+
+Two assertions in the new page suite failed on Firefox under the full 495-test run and passed 25 of 25 when that same spec ran alone on the same engine. `T-06` says a flake is a finding, so the cause was found rather than the run repeated.
+
+**Both depended on rendered layout where the question was structural.** One read `innerText`, which forces a layout pass; the other resolved a child-combinator locator. Under contention with the screenshot tier hammering the same preview server, both timed out. Neither was asserting anything about layout: one compares a byline's text against the rail's, the other asks which class the first child carries.
+
+**Done:** both read the DOM directly — `textContent` via `evaluate`, and `firstElementChild.className` — and four consecutive full-suite runs are clean. The timing assumption is removed rather than tolerated.
+
+**Worth carrying forward.** The first full run of the session reported one failure that vanished on re-run and left no artifact, and it was almost certainly one of these two. That one was nearly written off as noise. The rule that saved it is the plain one: **run the failing spec in isolation before believing a flake is environmental** — if it passes alone and fails in company, the test is making a timing assumption and the assumption is the bug.
+
+---
+
+## TASK 58 — A screenshot step reported PASS while writing no image · `bugfix` · `DONE`
+
+Opened and closed 2026-08-26 by `TASK 26`, and it is `TASK 39`'s exact shape in a new place.
+
+The screenshot tier was extended to capture the not-found page, which had never been captured because it is served by every unmatched address and the collection therefore derives no route for it. **The page a visitor sees when something has gone wrong was the one page nobody was looking at** — and a real fidelity defect had already shipped behind that gap, found only because the orchestrator captured it by hand.
+
+The extension appeared to work: the run reported `97 passed` and named the new tests. **It had written no image.** The capture body asserts `status === 200`, which the not-found page correctly is not, so all six of its tests were failing — and the failure sat far enough up a 100-line reporter stream to be missed on first read.
+
+**Done:** the expected status travels with the route rather than being assumed by the loop, the not-found page is captured at all three widths in both themes, and the run reports 103 passed with 102 images on disk — counted, not inferred.
+
+**The reusable half is the reading, not the fix.** A step that names the right work and reports a green summary is not evidence the work happened; `P-11` says the artifact is the evidence, and here the artifact was a file count that took one command to check and would have gone unchecked.
 
 ---
 
@@ -1396,7 +1485,20 @@ Two `ui` strings are still owed by the author — `article.part_of` and `article
 
 ---
 
-## TASK 26 — About, Experience and 404 · `feature` · `TODO`
+## TASK 26 — About, Experience and 404 · `feature` · `DONE` · **ran fourteenth**
+
+**Closed 2026-08-26.** `/about`, `/experience`, the bilingual 404 and their `/es/` counterparts. **17 pages build**, the gate runs 19 steps and passes 18 — the one red is `evidence trace`, which `H-03` puts outside every agent's reach and which every item since the content layer has closed the same way. **303 end-to-end tests across three engines**, 212 core unit tests (156 before), 15 component tests, `astro check` clean, and **mutation 76.72 against a floor of 74.5 — the highest this repository has measured**, up from 75.90.
+
+**Its most important result has nothing to do with the pages.** Spiked before the spec was written: **the build publishes every file its asset glob matches, referenced or not**, under both an eager and a lazy glob. A photograph the author had deliberately withheld — six or more identifiable people, `C-06` consent — was in that directory. Nothing rendered it, no test looked for it, every check was green, and it would have shipped at a guessable URL. `resources/photos/` is now a **declared** publication boundary, and `ABOUT-009` fails the build naming any asset no locale references, derived from the directory listing rather than a roster. `INC-03`'s lesson has now arrived through a fourth door: not *dev ≠ prod*, not *nobody looked*, not *the build did not rebuild*, but **what nobody rendered was published anyway.**
+
+**Three design defects were found by looking, none by a check.** About shipped with its page inset applied twice, because its component rendered a `<section>` inside the page's own — the exact failure the not-found brief carried an explicit warning about, and it landed in the one slice that was not warned. An explanatory HTML comment shipped to production. And the not-found page printed `HTTP 404` in the display slot where the artboard has the numeral alone, duplicating the status line directly above it. All three fixed.
+
+**Absence over approximation held against real unwritten content.** The About lead and one photo caption are still empty, and the page renders no empty paragraph and no reserved gap — asserted end to end, and proven in red by neutering the rule and watching the suite fail.
+
+**Delegation: nine slices, six clean, three cut off, and the pattern is now legible.** Round one lost two of four; round two, handed pre-written extracts and forbidden from opening any artboard, lost none of three. The one that produced **nothing at all** was the end-to-end slice — the only brief that was handed a reading list instead of an extract, which makes its failure the orchestrator's rather than the agent's. Detail: `progress/2026-08-26-02-task26-about-experience-404.md`.
+
+**Superseded opening note follows, kept for the trail.**
+
 
 **Deliverable:** `/about`, `/experience`, the bilingual 404, and their `/es/` counterparts.
 
@@ -1457,7 +1559,28 @@ Replaces `mailto:` with a real submission, which is what makes the form's four d
 
 ---
 
-## TASK 20 — Split About and Experience, and source three photographs · `content` · `TODO`
+## TASK 20 — Split About and Experience, and source three photographs · `content` · `TODO` · **most of it closed 2026-08-26**
+
+**Reconciled 2026-08-26 by `TASK 26`, which needed a subset of this item to render its two pages and could not proceed without it.** What that item drafted, and the author applied to frozen `resources/` themselves:
+
+| row | state |
+|---|---|
+| Per-role narrative moved out of About | **done** — About's four employer paragraphs are gone; Experience owns the chronology outright |
+| The four employers as structured entries | **done** — `roles[]` in `experience.{en,es}.md` frontmatter with `company`, `period`, `title`, `body`, `stack`, optional `logo`, and `case_studies` as bare slugs |
+| An `h1` and an intro line for Experience, plus a per-role `stack` field | **done**, both locales |
+| An `h1` for About | **done**, both locales. The Spanish was derived from the author's own Spanish prose and signed off rather than invented |
+| **Three photographs** | **done** — a 3:2 Huayna Potosí panorama, a 4:5 portrait and a 4:5 Bolivia landscape, all the author's own, all EXIF-free, all rendering |
+| A lead paragraph opening About as a person | **still open.** `lead` is present and empty; the block is absent rather than approximated, and appears with no code change the day it is written |
+| Two or three sentences on working from Cochabamba for teams abroad | **still open**, same shape |
+
+**Two things this reconciliation adds that the original entry did not know.**
+
+**`resources/photos/` is a publication boundary, not a drop box.** Every file in it is published by the build whether anything references it or not. Two candidate photographs were removed for that reason, one of them because it shows identifiable third parties whose consent `C-06` requires. The build now fails naming any unreferenced asset, so this cannot recur silently — but the rule is worth stating here too, because this is the item that adds photographs.
+
+**The portrait is shippable and it is the weakest image on the site.** It reads as a phone selfie against an indoor wall, and it is the one photograph whose only job is to be him. Recorded as a real, small, non-blocking improvement rather than left as an impression.
+
+**Superseded opening note follows, kept for the trail.**
+
 
 `about.{en,es}.md` and `experience.{en,es}.md` tell the same chronology twice. About walks the four employers in prose; Experience lists the same four employers with the same facts in a different register. The design work in `TASK 8` surfaced it — the author's words: *"ahorita las 2 páginas se ven muy parecidas"* — but no design can fix it, because the duplication is in the content.
 

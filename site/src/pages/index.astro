@@ -21,7 +21,7 @@ const [page, ui, alternateHref] = await Promise.all([
   nav={ui.data.nav}
   rail={ui.data.rail}
   socials={ui.data.socials}
-  alternateHref={alternateHref}
+  localeSwitch={{ kind: 'alternate', lang, href: alternateHref }}
   footerText={ui.data.footer.metrics_slot}
 >
   <HomeSections lang={lang} />

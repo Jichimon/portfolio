@@ -85,12 +85,23 @@ const pendingSlugs = readPendingRouteSlugs();
 const liveRoutes = derivedRoutes.filter((route) => !pendingSlugs.has(route.slug));
 const pendingRoutes = derivedRoutes.filter((route) => pendingSlugs.has(route.slug));
 
-// A route set with nothing live, or nothing pending, would let every test below
-// pass by iterating zero times — this is what stops the suite from silently
-// proving nothing the day the derivation breaks.
-test('the derived route set has both a live route and a pending route to check', () => {
+// A route set with nothing live would let every test below pass by iterating zero
+// times — this is what stops the suite from silently proving nothing the day the
+// derivation breaks.
+//
+// The pending half is deliberately NOT asserted to be non-empty. An empty pending list
+// is the healthy end state: it means every designed page is routed, and demanding at
+// least one would turn arriving there into a failure. What is worth asserting instead
+// is coherence — a slug still listed as pending that the derivation no longer produces
+// is a stale entry, and nothing else would report it.
+test('the derived route set has a live route to check, and every pending slug is real', () => {
   expect(liveRoutes.length).toBeGreaterThan(0);
-  expect(pendingRoutes.length).toBeGreaterThan(0);
+  for (const slug of pendingSlugs) {
+    expect(
+      derivedRoutes.some((route) => route.slug === slug),
+      `pendingRoutes names "${slug}", which the route set no longer derives`,
+    ).toBe(true);
+  }
 });
 
 for (const route of liveRoutes) {

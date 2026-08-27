@@ -179,3 +179,23 @@ a:hover {
     padding-inline: 18px;
   }
 }
+
+/* The vertical rhythm of a document page — one that IS a single section rather than a
+   composition of many. The home page paces itself, because each of its sections carries
+   its own spacing against its neighbours; About, Experience and the not-found page are
+   each one section with nothing to pace against, so their top and bottom come from here.
+
+   It lives beside the horizontal measure above for the same reason that one does: it is
+   composition, and three pages declaring it separately is how three pages end up
+   disagreeing about where a page starts. The start is a custom property because one of
+   the three opens slightly lower than the other two and that is the only difference
+   between them — a whole second class would be a lot of machinery for eight pixels. */
+.page-shell__main section.document-page {
+  padding-block: var(--document-page-start, 64px) 96px;
+}
+
+@media (max-width: 820px) {
+  .page-shell__main section.document-page {
+    padding-block: 36px 64px;
+  }
+}

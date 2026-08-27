@@ -4,6 +4,7 @@ import { satteri } from '@astrojs/markdown-satteri';
 import { createDiagramDirectivePlugin } from './lib/content/diagrams/diagram-directive.mjs';
 import { createHeadingIdsPlugin } from './lib/content/articles/toc.mjs';
 import { createArticleSectionsPlugin } from './lib/content/articles/article-sections.mjs';
+import { createAboutBodyPlugin } from './lib/content/pages/about-body.mjs';
 
 // compat maps React imports onto Preact, so an island is written as plain React.
 export default defineConfig({
@@ -26,6 +27,7 @@ export default defineConfig({
         createDiagramDirectivePlugin(),
         () => createHeadingIdsPlugin(),
         createArticleSectionsPlugin(),
+        createAboutBodyPlugin(),
       ],
     }),
   },

@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AboutArticle from '../components/about/AboutArticle.astro';
+import {
+  getPage,
+  getUiStrings,
+  getAlternateHref,
+  getAboutPageContent,
+  renderAboutBody,
+} from '../gateway/content-queries.ts';
+
+const lang = 'en';
+const slug = 'about';
+
+const [page, ui, alternateHref, content, Content] = await Promise.all([
+  getPage(slug, lang),
+  getUiStrings(lang),
+  getAlternateHref(slug, lang),
+  getAboutPageContent(lang),
+  renderAboutBody(lang),
+]);
+---
+
+<BaseLayout
+  lang={lang}
+  title={page.data.title}
+  isIndexPage={false}
+  currentSlug={slug}
+  nav={ui.data.nav}
+  rail={ui.data.rail}
+  socials={ui.data.socials}
+  localeSwitch={{ kind: 'alternate', lang, href: alternateHref }}
+  footerText={ui.data.footer.metrics_slot}
+>
+  <section class="document-page">
+    <AboutArticle
+      masthead={content.masthead}
+      breakFigure={content.breakFigure}
+      pairFigures={content.pairFigures}
+      labels={ui.data.about}
+      location={ui.data.rail.location}
+      lang={lang}
+    >
+      <Content />
+    </AboutArticle>
+  </section>
+</BaseLayout>

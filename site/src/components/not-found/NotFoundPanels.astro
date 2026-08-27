@@ -1,0 +1,205 @@
+---
+// Two complete monolingual panels, never interleaved: a visitor reads one half and
+// ignores the other. Each panel is an <article>, not a <section> — the shell already
+// gives every <section> inside the page a horizontal inset, and the artboard's two
+// halves sit side by side inside ONE such section, so a second layer of <section>
+// here would apply that inset twice and indent both panels. <article> carries none of
+// that styling and is also the more accurate element: each half is a self-contained
+// composition in its own language, which is what <article> means.
+//
+// SeveredLink is rendered here rather than by the page module: the artboard treats
+// the status line, the break and the two halves as one contiguous unit inside a
+// single section, and the status-code phrase SeveredLink needs is already present,
+// pre-composed, inside statusLine — there is nothing left for the page module to add.
+import SeveredLink from './SeveredLink.astro';
+
+export interface NotFoundPanel {
+  lang: 'en' | 'es';
+  heading: string;
+  body: string;
+  destinations: { name: string; what: string; href: string }[];
+}
+
+interface Props {
+  panels: NotFoundPanel[];
+  statusLine: string;
+}
+
+const { panels, statusLine } = Astro.props;
+
+// statusLine composes "<status code phrase> · <status word en> · <status word es>",
+// e.g. "HTTP 404 · not found · no encontrado". The status-code phrase is the first
+// segment, already whole — SeveredLink prints it verbatim, so no digit is ever
+// hardcoded here or in SeveredLink itself.
+const statusCodePhrase = statusLine.split(' · ')[0] ?? statusLine;
+
+// The geometry carries the NUMERAL, not the whole phrase. The phrase is already printed
+// in the status line directly above, and repeating it here both duplicates the reading
+// and squeezes the severed connectors either side of it. Sliced from the content rather
+// than written down: the digits come from the same string, so nothing is declared here
+// that the content does not already say. A phrase with no digits in it falls back to
+// printing whole rather than to an empty gap.
+const severedLinkCode = statusCodePhrase.match(/\d+/)?.[0] ?? statusCodePhrase;
+---
+
+<div class="not-found-panels">
+  <p class="not-found-panels__status">{statusLine}</p>
+
+  <SeveredLink code={severedLinkCode} />
+
+  <div class="not-found-panels__grid">
+    {
+      panels.map((panel) => (
+        <article class="not-found-panel" lang={panel.lang}>
+          <h1 class="not-found-panel__heading">{panel.heading}</h1>
+          <p class="not-found-panel__body">{panel.body}</p>
+          <ul class="not-found-panel__destinations">
+            {panel.destinations.map((destination) => (
+              <li class="not-found-panel__destination">
+                <a class="not-found-panel__destination-link" href={destination.href}>
+                  <span class="not-found-panel__destination-name">{destination.name}</span>
+                  <span class="not-found-panel__destination-what">{destination.what}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </article>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  .not-found-panels__status {
+    font: var(--type-label);
+    letter-spacing: var(--type-label-tracking);
+    text-transform: uppercase;
+    color: var(--color-label);
+    margin: 0 0 34px;
+  }
+
+  .not-found-panels__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  .not-found-panel {
+    padding-right: 56px;
+  }
+
+  .not-found-panel + .not-found-panel {
+    padding-right: 0;
+    padding-left: 56px;
+    border-left: 1px solid var(--color-border);
+  }
+
+  .not-found-panel__heading {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 33px;
+    line-height: 1.18;
+    letter-spacing: -0.016em;
+    margin: 0 0 18px;
+    max-width: 15ch;
+  }
+
+  .not-found-panel__body {
+    font-family: var(--font-body);
+    font-size: 15.5px;
+    line-height: 1.72;
+    color: var(--color-ink-muted);
+    margin: 0 0 30px;
+  }
+
+  .not-found-panel__destinations {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--color-ink);
+  }
+
+  .not-found-panel__destination {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .not-found-panel__destination-link {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 15px 0;
+    transition: padding-left 0.16s ease, color 0.16s ease;
+  }
+
+  .not-found-panel__destination-link:hover {
+    padding-left: 8px;
+    color: var(--color-ink);
+  }
+
+  .not-found-panel__destination-name {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 15px;
+    flex: 0 0 auto;
+  }
+
+  .not-found-panel__destination-link:hover .not-found-panel__destination-name {
+    color: var(--color-accent);
+  }
+
+  .not-found-panel__destination-what {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--color-ink-faint);
+    margin-left: auto;
+    text-align: right;
+  }
+
+  @media (max-width: 1180px) {
+    .not-found-panel {
+      padding-right: 36px;
+    }
+    .not-found-panel + .not-found-panel {
+      padding-left: 36px;
+    }
+    .not-found-panel__heading {
+      font-size: 28px;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .not-found-panels__grid {
+      grid-template-columns: 1fr;
+    }
+    .not-found-panel {
+      padding-right: 0;
+      padding-bottom: 40px;
+    }
+    .not-found-panel + .not-found-panel {
+      padding-left: 0;
+      padding-top: 40px;
+      border-left: none;
+      border-top: 1px solid var(--color-border);
+    }
+    .not-found-panel__heading {
+      font-size: 27px;
+      max-width: none;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .not-found-panel__heading {
+      font-size: 24px;
+    }
+    .not-found-panel__destination-link {
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .not-found-panel__destination-what {
+      margin-left: 0;
+      text-align: left;
+      flex: 1 1 100%;
+    }
+  }
+</style>

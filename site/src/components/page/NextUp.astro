@@ -1,0 +1,89 @@
+---
+// The row of onward links that closes a document page. About and Experience draw it
+// identically apart from how far it sits below what precedes it, so it is one component
+// with a variant rather than two files that will drift — which is the same duplication,
+// at a smaller scale, that made those two pages read as each other in the first place.
+//
+// The content names nav item KEYS, never paths. Resolving them here means the
+// destination is declared once, in the nav structure, and the Spanish page gets Spanish
+// paths without anything in the content knowing that locales exist.
+import { NAV_ITEMS, resolveNavItemHref } from '../../../lib/nav/nav-structure.mjs';
+
+interface NextUpItem {
+  key: string;
+  label: string;
+}
+
+interface Props {
+  items: NextUpItem[];
+  lang: 'en' | 'es';
+  variant: 'article' | 'record';
+}
+
+const { items, lang, variant } = Astro.props;
+
+const links = items.map((item) => {
+  const navItem = NAV_ITEMS.find((candidate) => candidate.key === item.key);
+  if (!navItem) {
+    throw new Error(`a next-up entry names "${item.key}", which is not a nav item`);
+  }
+  const href = resolveNavItemHref(navItem, { lang, isIndexPage: false });
+  if (href === null) {
+    throw new Error(`a next-up entry names "${item.key}", which is a reserved nav item with no destination`);
+  }
+  return { href, label: item.label };
+});
+---
+
+<div class:list={['next-up', `next-up--${variant}`]}>
+  <div class="next-up__rule"></div>
+  <div class="next-up__links">
+    {
+      links.map((link) => (
+        <a class="next-up__link" href={link.href}>
+          <span class="next-up__arrow" aria-hidden="true">&rarr;</span>
+          {link.label}
+        </a>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  .next-up--article {
+    margin-top: 80px;
+  }
+  .next-up--record {
+    margin-top: 64px;
+    max-width: 980px;
+  }
+  .next-up__rule {
+    height: 1px;
+    background: var(--color-border);
+    margin-bottom: 28px;
+  }
+  .next-up__links {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+  .next-up__link {
+    color: var(--color-ink-muted);
+  }
+  .next-up__link:hover {
+    color: var(--color-accent);
+  }
+  .next-up__arrow {
+    color: var(--color-accent);
+    margin-right: 7px;
+  }
+
+  @media (max-width: 820px) {
+    .next-up__links {
+      flex-direction: column;
+      gap: 12px;
+    }
+  }
+</style>

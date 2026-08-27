@@ -1,0 +1,47 @@
+---
+// The masthead's one line of metadata: where the author is based, since when the
+// thesis has held, and how the reader should take the page. The three values sit on
+// one row so the reader gets them in a single glance rather than three separate facts.
+interface Props {
+  location: string;
+  since: string;
+  readsAs: string;
+  labels: {
+    based_in: string;
+    since: string;
+    reads_as: string;
+  };
+}
+
+const { location, since, readsAs, labels } = Astro.props;
+---
+
+<div class="about-byline">
+  <span class="about-byline__item">
+    <span class="about-byline__key">{labels.based_in}</span> {location}
+  </span>
+  <span class="about-byline__item">
+    <span class="about-byline__key">{labels.since}</span> {since}
+  </span>
+  <span class="about-byline__item">
+    <span class="about-byline__key">{labels.reads_as}</span> {readsAs}
+  </span>
+</div>
+
+<style>
+  .about-byline {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--color-ink-faint);
+    margin-top: 30px;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .about-byline__key {
+    color: var(--color-label);
+  }
+</style>

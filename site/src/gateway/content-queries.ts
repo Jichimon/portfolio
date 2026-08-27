@@ -25,6 +25,9 @@ import {
   buildParentTitleLookup,
 } from '../../lib/content/entries/deep-dives.mjs';
 import { NAV_ITEMS, resolveNavItemHref } from '../../lib/nav/nav-structure.mjs';
+import { readAboutMasthead, readPhotoFigures } from '../../lib/content/pages/about-article.mjs';
+import { buildEmploymentRecord } from '../../lib/content/pages/employment-record.mjs';
+import { assertEveryAssetIsReferenced } from '../../lib/content/assets/published-photos.mjs';
 
 export type Locale = 'en' | 'es';
 
@@ -93,15 +96,25 @@ interface ArticleStrings {
   figure_prefix?: string;
 }
 
+interface NextUpEntry {
+  key: string;
+  label: string;
+}
+
 interface AboutStrings {
   label: string;
   based_in: string;
   since: string;
   reads_as: string;
+  next_up: NextUpEntry[];
 }
 
 interface ExperienceStrings {
   label: string;
+  most_recent: string;
+  cv_note: string;
+  full_history: { label: string; social: string };
+  next_up: NextUpEntry[];
 }
 
 interface ContactFormStrings {
@@ -404,4 +417,139 @@ export async function renderCaseStudy(slug: string, lang: Locale) {
     headings: headings as { depth: number; slug: string; text: string }[],
     deepDiveSlugs: (remarkPluginFrontmatter.deepDiveSlugs ?? []) as string[],
   };
+}
+
+
+// The photographs sit beside the markdown that names them, outside this package, and are
+// read-only input — exactly like the diagram sources above, and pulled in the same way so
+// the paths resolve against THIS file rather than against the build output.
+//
+// The glob is a PUBLICATION BOUNDARY, and that is not a figure of speech: measured against
+// a real build, every file it matches is emitted into the output whether or not anything
+// references it, under both an eager and a lazy glob. A photograph withheld for any reason
+// would therefore ship at a guessable URL with nothing rendering it and every check green.
+// assertPhotoAssetsAreAllReferenced turns that into a named build failure.
+const PHOTO_SOURCES = import.meta.glob('../../../resources/photos/*.{jpg,jpeg,png}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, ImageMetadata>;
+
+function fileNameFromSourcePath(sourcePath: string): string {
+  return sourcePath.slice(sourcePath.lastIndexOf('/') + 1);
+}
+
+const PHOTO_SOURCE_BY_FILE_NAME = new Map(
+  Object.entries(PHOTO_SOURCES).map(([sourcePath, metadata]) => [fileNameFromSourcePath(sourcePath), metadata]),
+);
+
+interface PhotoFrontmatterEntry {
+  file: string;
+  slot: string;
+  alt: string;
+  caption?: string;
+}
+
+export interface PhotoFigure {
+  alt: string;
+  image: ImageMetadata;
+  caption?: string;
+}
+
+export interface AboutPageContent {
+  masthead: { h1: string; since: string; readsAs: string; lead?: string };
+  breakFigure?: PhotoFigure;
+  pairFigures: PhotoFigure[];
+}
+
+async function assertPhotoAssetsAreAllReferenced() {
+  const aboutEntries = (await loadPageEntries()).filter((entry) => entry.data.slug === ABOUT_PAGE_SLUG);
+  const photoEntriesByLocale = aboutEntries.map(
+    (entry) => (entry.data.photos ?? []) as PhotoFrontmatterEntry[],
+  );
+  assertEveryAssetIsReferenced([...PHOTO_SOURCE_BY_FILE_NAME.keys()], photoEntriesByLocale);
+}
+
+// The core decides which figure belongs in which slot and whether a caption exists at all;
+// only the join from a filename to the built image lands here, because an ImageMetadata is
+// a build artifact and site/lib cannot see one.
+function withImage(figure: { file: string; alt: string; caption?: string }): PhotoFigure {
+  const image = PHOTO_SOURCE_BY_FILE_NAME.get(figure.file);
+  if (!image) {
+    throw new Error(`photo "${figure.file}" has no bundled asset`);
+  }
+  const withMetadata: PhotoFigure = { alt: figure.alt, image };
+  if (figure.caption !== undefined) {
+    withMetadata.caption = figure.caption;
+  }
+  return withMetadata;
+}
+
+const ABOUT_PAGE_SLUG = 'about';
+const EXPERIENCE_PAGE_SLUG = 'experience';
+
+export async function getAboutPageContent(lang: Locale): Promise<AboutPageContent> {
+  await assertPhotoAssetsAreAllReferenced();
+  const entry = await getPage(ABOUT_PAGE_SLUG, lang);
+  const sourceName = `${ABOUT_PAGE_SLUG}.${lang}.md`;
+  const masthead = readAboutMasthead(entry.data, sourceName) as AboutPageContent['masthead'];
+  const figures = readPhotoFigures(entry.data, new Set(PHOTO_SOURCE_BY_FILE_NAME.keys()), sourceName) as {
+    break?: { file: string; alt: string; caption?: string };
+    pair: { file: string; alt: string; caption?: string }[];
+  };
+
+  const content: AboutPageContent = { masthead, pairFigures: figures.pair.map(withImage) };
+  if (figures.break) {
+    content.breakFigure = withImage(figures.break);
+  }
+  return content;
+}
+
+export interface EmploymentEntryContent {
+  company: string;
+  period: string;
+  title: string;
+  paragraphs: string[];
+  isMostRecent: boolean;
+  stack?: string[];
+  logo?: string;
+  caseStudyRows?: { title: string; href: string }[];
+}
+
+// The About body is the one page body the site renders as prose. Rendering it here rather
+// than in the page module keeps astro:content behind this boundary, which is the whole
+// point of the boundary — a page receives a component, not a content API.
+export async function renderAboutBody(lang: Locale) {
+  const { Content } = await render(await getPage(ABOUT_PAGE_SLUG, lang));
+  return Content;
+}
+
+export async function getExperienceRecord(lang: Locale): Promise<EmploymentEntryContent[]> {
+  const entry = await getPage(EXPERIENCE_PAGE_SLUG, lang);
+  const roles = (entry.data.roles ?? []) as Record<string, unknown>[];
+  return buildEmploymentRecord(
+    roles,
+    await loadCaseStudyEntries(),
+    await listRoutes(),
+    lang,
+    `${EXPERIENCE_PAGE_SLUG}.${lang}.md`,
+  ) as EmploymentEntryContent[];
+}
+
+// The not-found page is the one page that belongs to no locale, so it reads both halves of
+// the chrome at once and offers both locale homes rather than an alternate of itself.
+export async function getUiStringsForEveryLocale(): Promise<Record<Locale, UiStringsEntry>> {
+  const [en, es] = await Promise.all([getUiStrings('en'), getUiStrings('es')]);
+  return { en, es };
+}
+
+export async function getLocaleHomeHrefs(): Promise<Record<Locale, string>> {
+  const routes = await listRoutes();
+  const hrefFor = (lang: Locale) => {
+    const route = routes.find((candidate) => candidate.slug === INDEX_PAGE_SLUG && candidate.lang === lang);
+    if (!route) {
+      throw new Error(`the index page has no route in locale "${lang}"`);
+    }
+    return route.path;
+  };
+  return { en: hrefFor('en'), es: hrefFor('es') };
 }

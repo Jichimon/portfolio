@@ -1,0 +1,61 @@
+---
+// The opening of a document page: the small mono label naming the section, then the
+// headline and its one-line statement. Both locales of a page render it identically, so
+// it is a component rather than markup repeated in two page modules — where the two
+// copies would be one stylesheet edit away from disagreeing.
+//
+// The intro is optional because the label and headline are what make a page findable and
+// the statement is what makes it good. A page without one opens on its headline rather
+// than on a gap.
+interface Props {
+  label: string;
+  h1: string;
+  intro?: string;
+}
+
+const { label, h1, intro } = Astro.props;
+---
+
+<header class="document-head">
+  <p class="document-head__label">{label}</p>
+  <h1 class="document-head__title">{h1}</h1>
+  {intro && <p class="document-head__intro">{intro}</p>}
+</header>
+
+<style>
+  .document-head {
+    max-width: 720px;
+  }
+  .document-head__label {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-label);
+    margin: 0 0 28px;
+  }
+  .document-head__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1.18;
+    letter-spacing: -0.012em;
+    margin: 0 0 14px;
+  }
+  .document-head__intro {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+    margin: 0;
+  }
+
+  @media (max-width: 820px) {
+    .document-head__title {
+      font-size: 26px;
+    }
+    .document-head__intro {
+      font-size: 15px;
+    }
+  }
+</style>

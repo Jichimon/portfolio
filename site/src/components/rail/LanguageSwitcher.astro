@@ -1,30 +1,64 @@
 ---
-// Two locales, so this is a two-state switch and not a menu. The current locale is
-// marked and never a link; the other is always a link, and its target is handed in
-// already resolved to THIS page's counterpart — never derived here and never a
-// constant, so this file cannot reintroduce the "thrown back to home" defect even
-// by accident.
+// Two locales, so this is a two-state switch and not a menu.
+//
+// It has two states rather than one, and the second is a real designed state rather than
+// an edge case: almost every page belongs to a locale, marks its own and links to its
+// counterpart; the not-found page belongs to NEITHER, because it answers a request whose
+// language nobody knows, so it marks nothing and offers both as links.
+//
+// The two are one discriminated shape rather than an optional href plus a boolean,
+// because those two props can express a fourth combination that means nothing — current
+// locale AND no current locale — and a shape that can be nonsense eventually is.
+//
+// In the alternate state the target is handed in already resolved to THIS page's
+// counterpart, never derived here and never a constant, so this file cannot reintroduce
+// the "thrown back to home" defect even by accident.
+export type LocaleSwitch =
+  | { kind: 'alternate'; lang: 'en' | 'es'; href: string }
+  | { kind: 'neutral'; hrefs: Record<'en' | 'es', string> };
+
 interface Props {
-  lang: 'en' | 'es';
-  alternateHref: string;
+  localeSwitch: LocaleSwitch;
   groupLabel: string;
 }
 
-const { lang, alternateHref, groupLabel } = Astro.props;
+const { localeSwitch, groupLabel } = Astro.props;
 
-// The two-letter codes are a language tag, not copy: identical in either locale's
-// version of this page, so they are declared here as data rather than sourced from
-// the interface strings collection — the same status as the slash between them.
+// The two-letter codes are a language tag, not copy: identical in either locale's version
+// of this page, so they are declared here as data rather than sourced from the interface
+// strings collection — the same status as the slash between them.
 const LOCALE_CODE: Record<'en' | 'es', string> = { en: 'EN', es: 'ES' };
-const alternateLang: 'en' | 'es' = lang === 'en' ? 'es' : 'en';
+const ORDERED_LOCALES: ('en' | 'es')[] = ['en', 'es'];
+
+// One list either way, so the markup below has a single shape and the difference between
+// the two states is data rather than a second branch of template.
+const entries =
+  localeSwitch.kind === 'neutral'
+    ? ORDERED_LOCALES.map((lang) => ({ lang, href: localeSwitch.hrefs[lang], isCurrent: false }))
+    : ORDERED_LOCALES.map((lang) => ({
+        lang,
+        href: lang === localeSwitch.lang ? null : localeSwitch.href,
+        isCurrent: lang === localeSwitch.lang,
+      }));
 ---
 
 <div class="site-rail__lang" role="group" aria-label={groupLabel}>
-  <span class="site-rail__lang-current" lang={lang} aria-current="true">{LOCALE_CODE[lang]}</span>
-  <span class="site-rail__lang-separator" aria-hidden="true">/</span>
-  <a class="site-rail__lang-link" href={alternateHref} hreflang={alternateLang} lang={alternateLang}>
-    {LOCALE_CODE[alternateLang]}
-  </a>
+  {
+    entries.map((entry, index) => (
+      <>
+        {index > 0 && <span class="site-rail__lang-separator" aria-hidden="true">/</span>}
+        {entry.isCurrent ? (
+          <span class="site-rail__lang-current" lang={entry.lang} aria-current="true">
+            {LOCALE_CODE[entry.lang]}
+          </span>
+        ) : (
+          <a class="site-rail__lang-link" href={entry.href} hreflang={entry.lang} lang={entry.lang}>
+            {LOCALE_CODE[entry.lang]}
+          </a>
+        )}
+      </>
+    ))
+  }
 </div>
 
 <style>
