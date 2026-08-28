@@ -18,6 +18,7 @@
 //              repository exists to prevent (C-05, H-04).
 
 import { createHash } from 'node:crypto';
+import { join } from 'node:path';
 import { mask, scanText } from './terms.mjs';
 
 /** Short content hash: enough to tell two versions apart, useless for recovering content. */
@@ -144,6 +145,7 @@ export const SCHEMA = {
   'tool.result': ['run_id', 'tool_use_id', 'ok'],
   'instructions.loaded': ['run_id', 'file_path', 'load_reason'],
   'trace.rejected': ['run_id', 'rejected_ev', 'reason'],
+  'run.cost': ['run_id', 'wall_ms'],
 };
 
 /**
@@ -370,6 +372,143 @@ export function posturePatch(existingText, permissionMode) {
 }
 
 /**
+ * TASK 77 · `ADR-009` §8 — the trace file a given hook `input` would be written to.
+ *
+ * Pure: string-building only, no I/O. Reuses `runIdFor` and reproduces the same
+ * file-naming `trace-writer.mjs`'s `record()` already computes inline. Duplicated rather
+ * than imported, deliberately: this module is the dependency-free pure layer `trace-writer.mjs`
+ * imports FROM, not the reverse, so the one-line `slug` regex is repeated here on purpose.
+ */
+const slug = (s) => String(s ?? 'unknown').replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80);
+
+export function traceFilePathFor(root, input) {
+  const { agent } = runIdFor(input);
+  const file = input.agent_id ? `${slug(agent)}-${slug(input.agent_id)}.jsonl` : 'orchestrator.jsonl';
+  return join(root, 'evidence/runs', slug(input.session_id), file);
+}
+
+/**
+ * TASK 77 · `ADR-009` §8 — the boundary a cost measurement counts from.
+ *
+ * Pure. Parses `existingTraceText` as JSONL, CRLF-tolerant (matching `parseTrace`'s tolerance
+ * in `cost.mjs`: split on `/\r?\n/`, skip a line that fails to parse rather than aborting).
+ *
+ * Finds the most recent `run.header` whose `reason !== 'observed'`, and the most recent
+ * `run.cost`, if either exists, and returns the `ts` of whichever is later — or `null` when
+ * neither exists.
+ *
+ * `reason: 'observed'` is deliberately excluded. `posturePatch` injects that header
+ * mid-dispatch, the first time the real `permission_mode` becomes known and whenever it
+ * changes — it is not a resume boundary. Counting it as one would silently truncate the
+ * token/wall-clock window to "since the permission mode was last observed," under-counting
+ * everything before it. `startup` and `delegated` headers are real boundaries; `observed`
+ * is not.
+ */
+export function costWindowStart(existingTraceText) {
+  let latest = null;
+  for (const line of String(existingTraceText ?? '').split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let e;
+    try { e = JSON.parse(line); } catch { continue; }
+    if (!e.ts) continue;
+    const isBoundary =
+      (e.ev === 'run.header' && e.reason !== 'observed') ||
+      e.ev === 'run.cost';
+    if (!isBoundary) continue;
+    if (latest === null || String(e.ts) > String(latest)) latest = e.ts;
+  }
+  return latest;
+}
+
+/**
+ * TASK 77 · `ADR-009` §8 — token usage since a boundary, read from the transcript.
+ *
+ * Pure. Parses `transcriptText` as JSONL, CRLF-tolerant. For each line where
+ * `type === 'assistant'`, `message.usage` exists, and (`sinceTs == null` or
+ * `timestamp > sinceTs`), pulls exactly five NAMED fields from `message.usage` — nothing
+ * else on the line — each guarded with `Number.isFinite`, defaulting a missing or
+ * non-numeric value to 0. Grouped into `by_model`, keyed by a VALIDATED `message.model`.
+ *
+ * An empty `{}` is a legitimate, correct answer — no new assistant turns since the boundary —
+ * never an error case.
+ *
+ * `message.model` is TRANSCRIPT TEXT — the substrate `docs/harness/evidence.md` says holds
+ * "everything that was said," never something this trace copies verbatim. It is validated
+ * against a known shape (`claude-opus-5`, `claude-sonnet-5`,
+ * `claude-haiku-4-5-20251001`) before it is trusted as an object key; anything else buckets
+ * under the fixed sentinel `unknown-model`, never under the raw string — a raw copy would be
+ * a second, unaudited path for arbitrary text (including a confidential term) to reach the
+ * trace.
+ *
+ * **Deduplicated by `message.id` before summing.** The transcript writes one JSONL line PER
+ * CONTENT BLOCK, not one per logical assistant message: a single turn's thinking/text/tool_use
+ * blocks share one `message.id`, each carrying its own `usage` snapshot, and `output_tokens`
+ * GROWS across snapshots of the same id (measured on a real transcript: one message went
+ * 4 -> 298 across two lines, 1.5s apart, same id). Summing every qualifying line independently
+ * overcounts almost every field. Only the LAST occurrence per `message.id`, in file order
+ * (chronological, so the last snapshot is the most complete one), is kept — this holds
+ * regardless of `stop_reason`, which is inconsistently populated and is never keyed off. A
+ * line with no `message.id` at all (not an observed real-transcript shape, but not assumed
+ * away either) is never merged with another id-less line, via a unique per-line fallback key.
+ */
+const MODEL_NAME_RE = /^claude-[a-z0-9]+(-[a-z0-9.]+)*$/i;
+
+export function extractTokenUsage(transcriptText, sinceTs) {
+  const num = (v) => (Number.isFinite(v) ? v : 0);
+  const lastById = new Map(); // last-write-wins per message.id, in file (chronological) order
+  let anonymousSeq = 0;
+
+  for (const line of String(transcriptText ?? '').split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let e;
+    try { e = JSON.parse(line); } catch { continue; }
+    if (e.type !== 'assistant') continue;
+    const usage = e.message?.usage;
+    if (!usage) continue;
+    if (sinceTs != null && !(String(e.timestamp) > String(sinceTs))) continue;
+
+    const rawModel = e.message?.model;
+    const key = typeof rawModel === 'string' && MODEL_NAME_RE.test(rawModel) ? rawModel : 'unknown-model';
+    const id = e.message?.id ?? `__no-id-${anonymousSeq++}`;
+
+    lastById.set(id, { key, usage });
+  }
+
+  const by_model = {};
+  for (const { key, usage } of lastById.values()) {
+    if (!by_model[key]) by_model[key] = { in: 0, out: 0, cache_create: 0, cache_read: 0, thinking: 0 };
+    by_model[key].in += num(usage.input_tokens);
+    by_model[key].out += num(usage.output_tokens);
+    by_model[key].cache_create += num(usage.cache_creation_input_tokens);
+    by_model[key].cache_read += num(usage.cache_read_input_tokens);
+    by_model[key].thinking += num(usage.output_tokens_details?.thinking_tokens);
+  }
+  return { by_model };
+}
+
+/**
+ * TASK 77 · `ADR-009` §8 — the `run.cost` event that accompanies a footer.
+ *
+ * `wall_ms` is guarded against `Date.parse` returning `NaN` (a malformed or absent boundary
+ * ts) by treating that as `null` too, same as no boundary at all — never a fabricated number.
+ *
+ * `opts.transcriptError` set means the transcript could not be read: the event carries
+ * `error_class` and **no `by_model` key at all**, not `by_model: {}`. That presence-vs-absence
+ * distinction is the entire difference between a measured zero and an unmeasured run.
+ */
+function runCostEventFor(opts) {
+  const sinceTs = costWindowStart(opts.existingTraceText ?? '');
+  const parsed = sinceTs ? Date.parse(sinceTs) : NaN;
+  const wall_ms = sinceTs && Number.isFinite(parsed) ? Date.now() - parsed : null;
+
+  if (opts.transcriptError) {
+    return { ev: 'run.cost', wall_ms, error_class: opts.transcriptError };
+  }
+  const { by_model } = extractTokenUsage(opts.transcriptText ?? '', sinceTs);
+  return { ev: 'run.cost', wall_ms, by_model };
+}
+
+/**
  * Hook payload → trace events. Pure, and here rather than in the hook script for one reason:
  * the field names below are a COUPLING to the runtime, and a coupling nobody tests drifts.
  *
@@ -396,10 +535,16 @@ export function eventsFor(input, terms = [], opts = {}) {
       return [{ ev: 'run.header', ...posture, reason: 'delegated', isolation: input.isolation ?? 'none' }];
 
     case 'SessionEnd':
-      return [{ ev: 'run.footer', termination: { state: 'COMPLETE', reason: input.session_end_reason ?? 'other' } }];
+      return [
+        { ev: 'run.footer', termination: { state: 'COMPLETE', reason: input.session_end_reason ?? 'other' } },
+        runCostEventFor(opts),
+      ];
 
     case 'SubagentStop':
-      return [{ ev: 'run.footer', termination: { state: 'COMPLETE', reason: 'objective_reported' } }];
+      return [
+        { ev: 'run.footer', termination: { state: 'COMPLETE', reason: 'objective_reported' } },
+        runCostEventFor(opts),
+      ];
 
     case 'PostToolUse':
       return [{

@@ -2126,7 +2126,7 @@ Both files carry a traceability body asserting where each value came from. The r
 | 2 | `TASK 72` — record where the iterations go | measure | — |
 | 3 | `TASK 71` — `ADR-009`, delegation economics and the brief contract | decide · `DONE` | `TASK 70` |
 | 3b | `TASK 79` — the hand-off packet becomes a documented convention | decide · `DONE` | — |
-| 3c | `TASK 77` — the trace records what a run cost, in tokens and wall-clock | **measure — runs before the fix phase** | — |
+| 3c | `TASK 77` — the trace records what a run cost, in tokens and wall-clock | measure · `DONE` | — |
 | 4 | `TASK 65` — two checkers that cannot classify (absorbs `TASK 68`) | fix | — |
 | 5 | `TASK 63` — the paired-predicate assertion reaches every gate step | fix | — |
 | 6 | `TASK 61` — `path-boundary` denies reads the rules exist to permit | fix | — |
@@ -2247,7 +2247,7 @@ Both files carry a traceability body asserting where each value came from. The r
 - Write-capability is read off the role's own `tools` list, never a roster (`H-05`).
 - `G-13`: a guard that cannot evaluate must deny.
 
-## TASK 77 — The trace records what a run cost, in tokens and wall-clock · `harness` · `TODO`
+## TASK 77 — The trace records what a run cost, in tokens and wall-clock · `harness` · `DONE`
 
 **Opened 2026-08-28 by `ADR-009`'s eighth sub-decision, from a claim that turned out to be false.** The harness has been treating token cost as unavailable. `G-06` says `maxCost` *"is not available and is never reported as a number"* — true of the **budget control** — and `ADR-009`'s first draft said `bytes` is *"never tokens billed"*, true of that column. Together they read as *tokens cannot be measured*, and that is wrong. Hook payloads carry no usage field, but **every hook receives `transcript_path`**, and the transcript's `message.usage` carries `input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens` and `thinking_tokens` per assistant message, tagged with its `model`. Measured 2026-08-28: one session totals 1,062,469 output and 168,464,001 cache-read tokens, and an earlier session carries two model tiers in one file, so per-model attribution already works.
 
@@ -2260,6 +2260,13 @@ Both files carry a traceability body asserting where each value came from. The r
 - **Reuse the writer.** `eventsFor` in `scripts/guards/lib/evidence.mjs` is where every event is built. Do not add a second write path, and do not register another hook: the per-call hook cost is already measured and one more registration is one more process spawn per tool call.
 - **`G-06`'s row is amended in the same change (`G-11`).** `maxCost` stays unavailable as a *budget control*; cost as a *measurement* stops being an overclaim. Both halves stated, neither deleted.
 - Per dispatch and per session — **never per turn**. That is the taxonomy `TASK 72` already declined.
+
+**Closed 2026-08-28.** `run.cost` writes at `SubagentStop`/`SessionEnd`, alongside `run.footer`. Two implementation decisions `ADR-009` §8 left open, both filled in and worth recording so nobody re-derives them:
+
+- **The "since the previous such event" boundary** is the most recent `run.header` in the run's own trace file whose `reason` is not `observed` (a mid-dispatch posture-change header, not a resume boundary — counting it would silently truncate the window), or the most recent `run.cost`, whichever is later. `wall_ms` comes from the same boundary.
+- **`message.model` is validated against a known shape** (`/^claude-[a-z0-9]+(-[a-z0-9.]+)*$/i`) before it is trusted as an object key; anything else buckets under the fixed sentinel `unknown-model`. It is transcript text, and copying it verbatim would be a second, unaudited path for arbitrary text to reach the trace.
+
+**A real defect was found and fixed by `P-11`'s "verify two ways" check, not by the test battery.** The transcript writes one JSONL line per content block, not one per logical assistant message — a single turn's `thinking`/`text`/`tool_use` blocks share one `message.id`, each carrying its own `usage` snapshot, and `output_tokens` grows across those snapshots while the cache fields stay constant. The first implementation summed every qualifying line independently, overcounting almost every field (measured on a real dispatch: 2.1 transcript lines per logical message on average). The fix deduplicates by `message.id`, keeping only the last occurrence in file order. Caught by reading a real `run.cost` event this item's own implementer dispatch produced and independently recomputing it by hand from the transcript — the two numbers disagreed, which is what sent the fix back rather than closing on a green test suite. `docs/harness/evidence.md` records the mechanic; `G-06`, `docs/harness/architecture.md` §I and `docs/harness/contracts.md` §2 are amended in the same change (`G-11`) — the same "`maxCost` … never reported as a number" overclaim was live in three documents, not the one this item's hand-off named.
 
 ## TASK 78 — Cost per completed item becomes computable · `harness` · `TODO` (needs `TASK 77` · **runs after the fix phase**)
 
@@ -2299,6 +2306,14 @@ Both files carry a traceability body asserting where each value came from. The r
 **And it does not go in `CLAUDE.md`,** which states of itself that no rule bodies live there because a rule stated twice drifts (`G-10`). `wrap-up` already owns hand-over; a second home for it would be the drift that file exists to prevent.
 
 **Done:** `wrap-up` §5 requires the closing message and names its three parts — the cut stated explicitly, the paste-ready prompt reproduced **in the terminal** rather than only in the packet, and the tier with its one-line reason — plus what is left for the human to decide.
+
+## TASK 81 — `EC-005`'s notes assert `maxCost` is unmeasurable, and that stopped being true · `harness` · `TODO`
+
+**Opened 2026-08-28, a loose end from `TASK 77` (`P-06`).** `EC-005`'s `outcome: Partial` `notes` state *"maxCost is unavailable and never reported as a number"* — true when the case was scored, and no longer true: `TASK 77` shipped `run.cost`, a per-dispatch/session measurement written at `SubagentStop`/`SessionEnd`. The `notes` field is a dated evaluation record, not a live claim, so `TASK 77` deliberately left it unedited rather than rewriting history the case wasn't re-run to produce.
+
+**Done:** `harness-evaluator` re-scores `EC-005` against the current repository — `maxCost` as a *budget control* is still `NOT AVAILABLE` (no knob exists, and this case's `question`/`expected_behavior` are about budget enforcement, not cost measurement, so the verdict itself may not move) — and the `notes` field is updated to state both halves, matching `G-06`'s own amended row rather than repeating the now-superseded claim.
+
+**Not urgent.** No gate step depends on this case's current text; it is a documentation-accuracy gap in a scored record, not a defect in what the harness does.
 
 **Constraints**
 

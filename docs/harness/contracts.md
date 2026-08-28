@@ -101,7 +101,10 @@ budget:               # G-06
   maxToolCalls:       # OBSERVED from the trace at wrap-up
   maxRuntime:         # OBSERVED
   maxRetries:         # OBSERVED
-  # maxCost is NOT AVAILABLE and is never reported as a number
+  # maxCost is NOT AVAILABLE as a budget control — no knob exists.
+  # Cost as a MEASUREMENT is a different claim: run.cost (TASK 77) reports
+  # wall_ms and per-model token counts at SubagentStop/SessionEnd. See
+  # docs/harness/evidence.md and ADR-009 §8.
 
 isolation: none       # none | worktree, per the triggers in architecture.md §M
 

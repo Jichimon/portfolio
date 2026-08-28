@@ -9,10 +9,10 @@
 // It exits 0 unconditionally. Recording is a measurement, and a measurement must never be
 // able to stop the thing it measures.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { eventsFor } from '../lib/evidence.mjs';
+import { eventsFor, traceFilePathFor, classifyError } from '../lib/evidence.mjs';
 import { record, loadTerms } from './trace-writer.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -30,8 +30,24 @@ try { cfg = JSON.parse(readFileSync(join(ROOT, 'scripts/guards/guards.config.jso
 // unparseable (the exact hole this task closes) — so a throw here means "the terms needed to
 // redact this event are unknown", and the only safe response is to record nothing at all for
 // this invocation, quietly, rather than either crashing loud or writing unmasked.
+// TASK 77 · ADR-009 §8: the run.cost boundary and the transcript's token usage, both read
+// here so eventsFor stays pure. Same discipline as the try/catch above this comment — a
+// measurement must never be able to stop the thing it measures, so both reads degrade to an
+// absence rather than throwing.
+let existingTraceText = '';
 try {
-  record(ROOT, input, eventsFor(input, loadTerms(ROOT), cfg), { prune: cfg.retainRuns });
+  const p = traceFilePathFor(ROOT, input);
+  if (existsSync(p)) existingTraceText = readFileSync(p, 'utf8');
+} catch { /* boundary degrades to null inside costWindowStart; never throws */ }
+
+let transcriptText, transcriptError;
+if (input.hook_event_name === 'SubagentStop' || input.hook_event_name === 'SessionEnd') {
+  try { transcriptText = readFileSync(input.transcript_path, 'utf8'); }
+  catch (err) { transcriptError = classifyError(err.message ?? err.code ?? 'unknown'); }
+}
+
+try {
+  record(ROOT, input, eventsFor(input, loadTerms(ROOT), { ...cfg, existingTraceText, transcriptText, transcriptError }), { prune: cfg.retainRuns });
 } catch (err) {
   console.error(`[record-event] not recorded: term list unavailable (${err?.message ?? err})`);
 }

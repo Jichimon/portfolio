@@ -380,9 +380,11 @@ This lets the evaluator filter violating runs out of a scorecard, and lets metri
 | `maxToolCalls` | **OBSERVED** | counted from the trace at wrap-up |
 | `maxRuntime` | **OBSERVED** | derived from trace timestamps at wrap-up |
 | `maxRetries` | **OBSERVED** | counted from `tool.result` failures and repeated requests |
-| `maxCost` | **NOT AVAILABLE** | not exposed to hooks. Never reported as a number |
+| `maxCost` | **NOT AVAILABLE as a budget control** | no knob exists to enforce a ceiling. Cost as a *measurement* is a different claim and is no longer unavailable — see below |
 
 The first draft proposed enforcing `maxToolCalls` and `maxRuntime` live, via a guard on every tool call. The proportionality filter downgraded both to observed: `maxTurns` is native and already bounds the INC-06 failure, and a hot-path hook to enforce ceilings a solo developer would notice anyway is cost without a matching incident. **Promotion trigger:** a delegated run overruns with `maxTurns` already set.
+
+**Amended 2026-08-28 (`TASK 77`, per `G-11`).** The `maxCost` row above was true only of the budget control — no knob is exposed to hooks, and none is promised here — but it read as "tokens cannot be measured," which is a different, false claim. Every hook receives `transcript_path`, and the transcript's `message.usage` carries per-model token counts. `SubagentStop` and `SessionEnd` now write a `run.cost` event summing that usage since the previous such event, as integers only: see `docs/harness/evidence.md` for the event shape and `docs/adr/ADR-009-delegation-economics.md` §8 for the design.
 
 ---
 

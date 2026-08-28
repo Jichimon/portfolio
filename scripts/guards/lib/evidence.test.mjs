@@ -19,6 +19,9 @@ import {
   eventsFor,
   rejectReason,
   posturePatch,
+  costWindowStart,
+  extractTokenUsage,
+  traceFilePathFor,
 } from './evidence.mjs';
 
 const TERMS = [{ term: 'AcmeCore', line: 1 }];
@@ -550,6 +553,358 @@ test('RED: an event outside the schema is rejected', () => {
 
 test('run_id is exempt, because the writer stamps it after this check', () => {
   assert.equal(rejectReason({ ev: 'run.footer', termination: { state: 'COMPLETE' } }), null);
+});
+
+// --- TASK 77: run.cost — SCHEMA row -----------------------------------------
+
+test('RED: SCHEMA declares run.cost, requiring run_id and wall_ms', () => {
+  assert.deepEqual(SCHEMA['run.cost'], ['run_id', 'wall_ms']);
+});
+
+test('RED: a run.cost event with wall_ms is accepted; without it, rejected', () => {
+  assert.equal(rejectReason({ ev: 'run.cost', wall_ms: 1000, by_model: {} }), null);
+  assert.match(rejectReason({ ev: 'run.cost', by_model: {} }), /wall_ms/);
+});
+
+// --- TASK 77: costWindowStart -------------------------------------------------
+// The boundary a cost measurement counts from. Only a REAL resume boundary counts:
+// posturePatch's own `run.header` with `reason: 'observed'` sits mid-dispatch, never at one,
+// so treating it as a boundary would silently truncate the window to "since the permission
+// mode was last observed" and under-count everything before it.
+
+test('RED: no run.header and no run.cost anywhere returns null', () => {
+  const text = lines([
+    { ev: 'tool.requested', seq: 1, ts: '2026-08-28T10:00:00Z', run_id: 's1', tool: 'Bash', tool_use_id: 't1', target: {} },
+  ]);
+  assert.equal(costWindowStart(text), null);
+});
+
+test('RED: a single real run.header returns its own ts', () => {
+  const text = lines([
+    { ev: 'run.header', seq: 1, ts: '2026-08-28T10:00:00Z', run_id: 's1', permission_mode: 'default', reason: 'startup' },
+  ]);
+  assert.equal(costWindowStart(text), '2026-08-28T10:00:00Z');
+});
+
+test('RED: an "observed" run.header planted between a real header and now is NOT the boundary — the real header still is', () => {
+  const text = lines([
+    { ev: 'run.header', seq: 1, ts: '2026-08-28T10:00:00Z', run_id: 's1', permission_mode: 'default', reason: 'startup' },
+    { ev: 'tool.requested', seq: 2, ts: '2026-08-28T10:00:01Z', run_id: 's1', tool: 'Bash', tool_use_id: 't1', target: {} },
+    { ev: 'run.header', seq: 3, ts: '2026-08-28T10:00:02Z', run_id: 's1', permission_mode: 'bypassPermissions', reason: 'observed' },
+    { ev: 'tool.requested', seq: 4, ts: '2026-08-28T10:00:03Z', run_id: 's1', tool: 'Bash', tool_use_id: 't2', target: {} },
+  ]);
+  assert.equal(costWindowStart(text), '2026-08-28T10:00:00Z');
+});
+
+test('a "delegated" run.header counts as a real boundary, same as "startup"', () => {
+  const text = lines([
+    { ev: 'run.header', seq: 1, ts: '2026-08-28T09:00:00Z', run_id: 's1', permission_mode: 'default', reason: 'delegated' },
+  ]);
+  assert.equal(costWindowStart(text), '2026-08-28T09:00:00Z');
+});
+
+test('RED: a prior run.cost event is a candidate boundary too — whichever ts is later wins', () => {
+  const earlierHeader = lines([
+    { ev: 'run.header', seq: 1, ts: '2026-08-28T09:00:00Z', run_id: 's1', permission_mode: 'default', reason: 'startup' },
+    { ev: 'run.cost', seq: 2, ts: '2026-08-28T09:30:00Z', run_id: 's1', wall_ms: 1800000, by_model: {} },
+  ]);
+  assert.equal(costWindowStart(earlierHeader), '2026-08-28T09:30:00Z');
+});
+
+test('RED: a run.header AFTER an earlier run.cost wins, since it is the later ts', () => {
+  const text = lines([
+    { ev: 'run.cost', seq: 1, ts: '2026-08-28T08:00:00Z', run_id: 's1', wall_ms: 1000, by_model: {} },
+    { ev: 'run.header', seq: 2, ts: '2026-08-28T09:00:00Z', run_id: 's1', permission_mode: 'default', reason: 'delegated' },
+  ]);
+  assert.equal(costWindowStart(text), '2026-08-28T09:00:00Z');
+});
+
+test('costWindowStart tolerates CRLF line endings and unparseable lines', () => {
+  const text = `${JSON.stringify({ ev: 'run.header', seq: 1, ts: '2026-08-28T10:00:00Z', run_id: 's1', permission_mode: 'default', reason: 'startup' })}\r\nnot json at all\r\n`;
+  assert.equal(costWindowStart(text), '2026-08-28T10:00:00Z');
+});
+
+test('an empty existingTraceText returns null', () => {
+  assert.equal(costWindowStart(''), null);
+});
+
+// --- TASK 77: extractTokenUsage -----------------------------------------------
+// Pure. Parses a transcript's JSONL, CRLF-tolerant, and pulls exactly five NAMED numeric
+// fields per assistant message, grouped by a VALIDATED model name. The transcript "holds
+// everything that was said" (docs/harness/evidence.md), so nothing but named numbers and a
+// vetted model key may reach the return value.
+
+const transcriptLines = (msgs) => msgs.map((m) => JSON.stringify(m)).join('\n') + '\n';
+
+test('RED: a single assistant message with usage extracts all five fields under its model', () => {
+  const text = transcriptLines([
+    {
+      type: 'assistant', timestamp: '2026-08-28T10:00:00Z',
+      message: {
+        model: 'claude-sonnet-5',
+        usage: {
+          input_tokens: 100, output_tokens: 200,
+          cache_creation_input_tokens: 30, cache_read_input_tokens: 40,
+          output_tokens_details: { thinking_tokens: 10 },
+        },
+      },
+    },
+  ]);
+  const result = extractTokenUsage(text, null);
+  assert.deepEqual(result, {
+    by_model: {
+      'claude-sonnet-5': { in: 100, out: 200, cache_create: 30, cache_read: 40, thinking: 10 },
+    },
+  });
+});
+
+test('RED: two assistant messages under different models sum separately', () => {
+  const text = transcriptLines([
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00Z',
+      message: { model: 'claude-opus-5', usage: { input_tokens: 5, output_tokens: 6, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:01Z',
+      message: { model: 'claude-sonnet-5', usage: { input_tokens: 1, output_tokens: 2, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:02Z',
+      message: { model: 'claude-opus-5', usage: { input_tokens: 3, output_tokens: 4, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } },
+  ]);
+  const result = extractTokenUsage(text, null);
+  assert.equal(result.by_model['claude-opus-5'].in, 8);
+  assert.equal(result.by_model['claude-opus-5'].out, 10);
+  assert.equal(result.by_model['claude-sonnet-5'].in, 1);
+});
+
+test('RED: a missing or non-numeric usage field defaults to 0, never throws', () => {
+  const text = transcriptLines([
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00Z',
+      message: { model: 'claude-sonnet-5', usage: { input_tokens: 'not-a-number', output_tokens: null } } },
+  ]);
+  const result = extractTokenUsage(text, null);
+  assert.deepEqual(result.by_model['claude-sonnet-5'], { in: 0, out: 0, cache_create: 0, cache_read: 0, thinking: 0 });
+});
+
+test('RED: lines that are not type "assistant", or that carry no message.usage, are skipped', () => {
+  const text = transcriptLines([
+    { type: 'user', timestamp: '2026-08-28T10:00:00Z', message: { model: 'claude-sonnet-5', usage: { input_tokens: 999 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:01Z', message: { model: 'claude-sonnet-5' } },
+  ]);
+  assert.deepEqual(extractTokenUsage(text, null), { by_model: {} });
+});
+
+test('RED: sinceTs filters out messages at or before the boundary, keeping only strictly later ones', () => {
+  const text = transcriptLines([
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00Z', message: { model: 'claude-sonnet-5', usage: { input_tokens: 1, output_tokens: 1 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00Z', message: { model: 'claude-sonnet-5', usage: { input_tokens: 2, output_tokens: 2 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:01Z', message: { model: 'claude-sonnet-5', usage: { input_tokens: 4, output_tokens: 4 } } },
+  ]);
+  const result = extractTokenUsage(text, '2026-08-28T10:00:00Z');
+  assert.equal(result.by_model['claude-sonnet-5'].in, 4);
+});
+
+test('a null sinceTs includes every assistant usage line in the transcript', () => {
+  const text = transcriptLines([
+    { type: 'assistant', timestamp: '2026-08-28T09:00:00Z', message: { model: 'claude-sonnet-5', usage: { input_tokens: 1 } } },
+  ]);
+  assert.equal(extractTokenUsage(text, null).by_model['claude-sonnet-5'].in, 1);
+});
+
+test('an empty by_model is a legitimate, correct answer — never treated as an error', () => {
+  assert.deepEqual(extractTokenUsage('', null), { by_model: {} });
+  assert.deepEqual(extractTokenUsage('not json at all\n', null), { by_model: {} });
+});
+
+test('extractTokenUsage tolerates CRLF line endings and an unparseable line', () => {
+  const text = `${JSON.stringify({ type: 'assistant', timestamp: '2026-08-28T10:00:00Z', message: { model: 'claude-sonnet-5', usage: { input_tokens: 7 } } })}\r\nnot json\r\n`;
+  assert.equal(extractTokenUsage(text, null).by_model['claude-sonnet-5'].in, 7);
+});
+
+test('real-shaped model names — including a dated snapshot suffix — validate and key by the raw string', () => {
+  for (const model of ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5-20251001']) {
+    const text = transcriptLines([
+      { type: 'assistant', timestamp: '2026-08-28T10:00:00Z', message: { model, usage: { input_tokens: 1 } } },
+    ]);
+    const result = extractTokenUsage(text, null);
+    assert.ok(model in result.by_model, `${model} did not key its own bucket: ${JSON.stringify(result)}`);
+  }
+});
+
+// --- TASK 77 follow-up: dedup by message.id -----------------------------------
+// Claude Code's transcript writes ONE JSONL LINE PER CONTENT BLOCK, not one per logical
+// assistant message: a single turn's thinking/text/tool_use blocks share one `message.id`,
+// each carrying its own `usage` snapshot, and `output_tokens` GROWS across snapshots of the
+// same id (measured on a real transcript: one message went 4 -> 298 across two lines, 1.5s
+// apart, same id). Summing every qualifying line independently overcounts almost every field.
+// The fix: keep only the LAST occurrence per `message.id` in file order (file order is
+// chronological, so the last snapshot is the most complete one — this holds regardless of
+// `stop_reason`, which is inconsistently populated and must not be keyed off), then sum one
+// `usage` object per unique id.
+
+test('RED: multiple lines sharing one message.id are deduplicated to the LAST snapshot, never summed', () => {
+  const text = transcriptLines([
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00.000Z', message: { id: 'msg_1', model: 'claude-sonnet-5', usage: { input_tokens: 100, output_tokens: 2, cache_creation_input_tokens: 30, cache_read_input_tokens: 40 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00.500Z', message: { id: 'msg_1', model: 'claude-sonnet-5', usage: { input_tokens: 100, output_tokens: 2, cache_creation_input_tokens: 30, cache_read_input_tokens: 40 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:01.500Z', message: { id: 'msg_1', model: 'claude-sonnet-5', usage: { input_tokens: 100, output_tokens: 47, cache_creation_input_tokens: 30, cache_read_input_tokens: 40 } } },
+  ]);
+  const result = extractTokenUsage(text, null);
+  // The LAST snapshot's usage (out: 47) — never the sum of all three (out: 51) and never the
+  // first line's (out: 2).
+  assert.deepEqual(result.by_model['claude-sonnet-5'], { in: 100, out: 47, cache_create: 30, cache_read: 40, thinking: 0 });
+});
+
+test('RED: two distinct message.id values, each spanning multiple snapshot lines, are each counted exactly once — never merged into each other', () => {
+  const text = transcriptLines([
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00.000Z', message: { id: 'msg_a', model: 'claude-sonnet-5', usage: { input_tokens: 10, output_tokens: 1 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00.500Z', message: { id: 'msg_a', model: 'claude-sonnet-5', usage: { input_tokens: 10, output_tokens: 5 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:01.000Z', message: { id: 'msg_b', model: 'claude-sonnet-5', usage: { input_tokens: 20, output_tokens: 2 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:01.500Z', message: { id: 'msg_b', model: 'claude-sonnet-5', usage: { input_tokens: 20, output_tokens: 9 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:02.000Z', message: { id: 'msg_b', model: 'claude-sonnet-5', usage: { input_tokens: 20, output_tokens: 15 } } },
+  ]);
+  const result = extractTokenUsage(text, null);
+  // msg_a's last snapshot (in 10, out 5) + msg_b's last snapshot (in 20, out 15) = in 30, out 20.
+  // NOT the sum of all five lines (in 80, out 32), and NOT the two ids collapsed into one.
+  assert.deepEqual(result.by_model['claude-sonnet-5'], { in: 30, out: 20, cache_create: 0, cache_read: 0, thinking: 0 });
+});
+
+test('a line with no message.id at all is never merged with another id-less line — each keeps its own count', () => {
+  // Not an observed real-transcript shape, but not assumed away either: two id-less lines
+  // must not collide with each other the way two same-id lines correctly do.
+  const text = transcriptLines([
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00.000Z', message: { model: 'claude-sonnet-5', usage: { input_tokens: 1, output_tokens: 1 } } },
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00.500Z', message: { model: 'claude-sonnet-5', usage: { input_tokens: 2, output_tokens: 2 } } },
+  ]);
+  const result = extractTokenUsage(text, null);
+  assert.deepEqual(result.by_model['claude-sonnet-5'], { in: 3, out: 3, cache_create: 0, cache_read: 0, thinking: 0 });
+});
+
+// --- TASK 77: T-04, the central red-path test -------------------------------
+// message.model is TRANSCRIPT TEXT — the ledger this codebase treats as "everything that was
+// said," never something the trace may copy verbatim (docs/harness/evidence.md). A
+// non-matching value must bucket under the fixed sentinel "unknown-model", NEVER under the
+// raw string, which would otherwise be a second, unaudited path for arbitrary text (including
+// a confidential term) to reach the trace as an object key. The planted string is a synthetic
+// placeholder shaped like something that COULD be a banned term — never a real one (H-04).
+
+test('RED: T-04 — a private/-shaped model string never appears anywhere in the output, not as a key or a value', () => {
+  const poison = 'internal-system-zephyr';
+  const text = transcriptLines([
+    { type: 'assistant', timestamp: '2026-08-28T10:00:00Z', message: { model: poison, usage: { input_tokens: 42, output_tokens: 7 } } },
+  ]);
+  const result = extractTokenUsage(text, null);
+  const serialized = JSON.stringify(result);
+  assert.ok(!serialized.includes(poison), `the poisoned model string leaked into the output: ${serialized}`);
+  assert.ok('unknown-model' in result.by_model, `expected the sentinel bucket to hold the usage: ${serialized}`);
+  assert.equal(result.by_model['unknown-model'].in, 42);
+});
+
+// --- TASK 77: traceFilePathFor ------------------------------------------------
+// Pure, string-building only, no I/O. Reproduces trace-writer.mjs's own inline file-naming
+// logic exactly, so a hook reading "the file record() would write to" gets the same path
+// record() itself computes.
+
+test('RED: traceFilePathFor matches the orchestrator path record() would compute', () => {
+  const input = { session_id: 's1' };
+  const expected = join(ROOT, 'evidence/runs', 's1', 'orchestrator.jsonl');
+  assert.equal(traceFilePathFor(ROOT, input), expected);
+});
+
+test('RED: traceFilePathFor matches the delegated path record() would compute', () => {
+  const input = { session_id: 's1', agent_id: 'a9', agent_type: 'implementer' };
+  const expected = join(ROOT, 'evidence/runs', 's1', 'implementer-a9.jsonl');
+  assert.equal(traceFilePathFor(ROOT, input), expected);
+});
+
+test('traceFilePathFor slugs a session_id and agent_id the same way record() does', () => {
+  const input = { session_id: 'weird/session:id', agent_id: 'a?9', agent_type: 'implementer' };
+  const expected = join(ROOT, 'evidence/runs', 'weird_session_id', 'implementer-a_9.jsonl');
+  assert.equal(traceFilePathFor(ROOT, input), expected);
+});
+
+test('traceFilePathFor falls back to "unknown-role" for an empty agent_type, matching runIdFor', () => {
+  const input = { session_id: 's1', agent_id: 'a9', agent_type: '' };
+  const expected = join(ROOT, 'evidence/runs', 's1', 'unknown-role-a9.jsonl');
+  assert.equal(traceFilePathFor(ROOT, input), expected);
+});
+
+// --- TASK 77: eventsFor emits [run.footer, run.cost] on SubagentStop / SessionEnd ---
+// The by_model-absent-vs-empty distinction is the whole of the measured-zero-vs-unmeasured
+// contract: opts.transcriptError set means NO by_model key at all; otherwise, even a genuinely
+// empty usage extraction means by_model IS present, as {}.
+
+test('RED: SubagentStop now emits two events — the existing run.footer, plus a run.cost', () => {
+  const input = { hook_event_name: 'SubagentStop', session_id: 's1', agent_id: 'a9', agent_type: 'implementer' };
+  const events = eventsFor(input, [], {});
+  assert.equal(events.length, 2);
+  assert.equal(events[0].ev, 'run.footer');
+  assert.equal(events[1].ev, 'run.cost');
+});
+
+test('RED: SessionEnd now emits two events — the existing run.footer, plus a run.cost', () => {
+  const input = { hook_event_name: 'SessionEnd', session_id: 's1' };
+  const events = eventsFor(input, [], {});
+  assert.equal(events.length, 2);
+  assert.equal(events[0].ev, 'run.footer');
+  assert.equal(events[1].ev, 'run.cost');
+});
+
+test('RED: run.cost sums token usage from opts.transcriptText, windowed from opts.existingTraceText', () => {
+  const existingTraceText = lines([
+    { ev: 'run.header', seq: 1, ts: '2026-08-28T10:00:00Z', run_id: 's1', permission_mode: 'default', reason: 'delegated' },
+  ]);
+  const transcriptText = transcriptLines([
+    { type: 'assistant', timestamp: '2026-08-28T10:00:01Z', message: { model: 'claude-sonnet-5', usage: { input_tokens: 50, output_tokens: 60 } } },
+  ]);
+  const input = { hook_event_name: 'SubagentStop', session_id: 's1', agent_id: 'a9', agent_type: 'implementer' };
+  const [, costEv] = eventsFor(input, [], { existingTraceText, transcriptText });
+  assert.equal(costEv.ev, 'run.cost');
+  assert.deepEqual(costEv.by_model, {
+    'claude-sonnet-5': { in: 50, out: 60, cache_create: 0, cache_read: 0, thinking: 0 },
+  });
+});
+
+test('RED: run.cost carries wall_ms computed from Date.now() minus the window-start ts', () => {
+  const startTs = new Date(Date.now() - 5000).toISOString();
+  const existingTraceText = lines([
+    { ev: 'run.header', seq: 1, ts: startTs, run_id: 's1', permission_mode: 'default', reason: 'startup' },
+  ]);
+  const input = { hook_event_name: 'SessionEnd', session_id: 's1' };
+  const [, costEv] = eventsFor(input, [], { existingTraceText, transcriptText: '' });
+  assert.ok(costEv.wall_ms >= 4900 && costEv.wall_ms < 60000, `wall_ms out of expected range: ${costEv.wall_ms}`);
+});
+
+test('RED: with no prior boundary at all, wall_ms is null rather than a fabricated number', () => {
+  const input = { hook_event_name: 'SessionEnd', session_id: 's1' };
+  const [, costEv] = eventsFor(input, [], { existingTraceText: '', transcriptText: '' });
+  assert.equal(costEv.wall_ms, null);
+});
+
+test('RED: a malformed boundary ts (Date.parse -> NaN) also yields wall_ms null, never NaN', () => {
+  const existingTraceText = lines([
+    { ev: 'run.header', seq: 1, ts: 'not-a-real-timestamp', run_id: 's1', permission_mode: 'default', reason: 'startup' },
+  ]);
+  const input = { hook_event_name: 'SessionEnd', session_id: 's1' };
+  const [, costEv] = eventsFor(input, [], { existingTraceText, transcriptText: '' });
+  assert.equal(costEv.wall_ms, null);
+});
+
+test('RED: opts.transcriptError present means run.cost carries error_class and NO by_model key at all — not by_model: {}', () => {
+  const input = { hook_event_name: 'SubagentStop', session_id: 's1', agent_id: 'a9', agent_type: 'implementer' };
+  const [, costEv] = eventsFor(input, [], { existingTraceText: '', transcriptError: 'not_found' });
+  assert.equal(costEv.error_class, 'not_found');
+  assert.equal('by_model' in costEv, false, `by_model must be absent, not present: ${JSON.stringify(costEv)}`);
+});
+
+test('RED: no transcriptError, and a genuinely empty transcript, still yields by_model PRESENT as {} — a measured zero, not an absence', () => {
+  const input = { hook_event_name: 'SessionEnd', session_id: 's1' };
+  const [, costEv] = eventsFor(input, [], { existingTraceText: '', transcriptText: '' });
+  assert.equal('by_model' in costEv, true, 'by_model must be present even when empty');
+  assert.deepEqual(costEv.by_model, {});
+});
+
+test('an absent opts still produces a run.cost event with a defaulted-empty transcript', () => {
+  const input = { hook_event_name: 'SessionEnd', session_id: 's1' };
+  const events = eventsFor(input, [], {});
+  const costEv = events.find((e) => e.ev === 'run.cost');
+  assert.ok(costEv);
+  assert.deepEqual(costEv.by_model, {});
 });
 
 test('the rejection event is itself in the schema, so it validates rather than compounding', () => {

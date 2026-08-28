@@ -25,7 +25,8 @@
       "policy.decision",
       "tool.result",
       "instructions.loaded",
-      "trace.rejected"
+      "trace.rejected",
+      "run.cost"
     ],
     "_traceEventsRationale": "The event vocabulary, as data. check-trace derives what it accepts from this list rather than carrying its own copy, so adding an event to the writer without declaring it here fails loudly instead of validating as 'unknown' forever.",
     "traceHeaderReasons": [
