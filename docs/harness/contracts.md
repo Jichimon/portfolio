@@ -242,11 +242,15 @@ done:
   security:   { status: not_applicable, reason: "no auth surface, no public endpoint" }
   docs:       { status: passed,         evidence: [docs/adr/README.md#L12] }
   ci:         { status: not_applicable, reason: "no remote exists" }
+  iterations:      { status: passed,    evidence: ["3"] }
+  iteration_split: { status: passed,    evidence: ["checkpoint=1", "verify=2"] }
 ```
 
 Three rules stop this becoming bookkeeping. **Evidence is a pointer** — a trace event, a guard name and exit code, a file path, a run id — never a sentence. **`not_applicable` carries a one-line reason** and needs no evidence. **Only applicable dimensions are listed**, so a content item costs three lines, not nine.
 
 `wrap-up` fails when any dimension reads `passed` with empty evidence.
+
+**Two dimensions carry a narrowed shape, because a future evaluator reads them without interpreting prose.** `iterations`'s evidence is a bare integer; `iteration_split`'s is `bucket=count` pairs that must sum to it, drawn from a vocabulary **derived** from the `work-item` procedure's own step headings and the register's own type table — never a list configured in the guard, which is `INC-07`'s shape (`P-13`).
 
 ### The rule above all of these
 
@@ -296,7 +300,7 @@ Three outcome metrics and two metric families. The scorecard template names all 
 
 | KPI | What it counts | Substrate | Read from |
 |---|---|---|---|
-| **K1** · passes-to-done | Implement→verify iterations before the human accepts done. **The hydra metric**, and the single most important number here: it is the exact failure the harness was built to kill (`INC-01`). Target ≤ 2 | observable | the work log's iteration record, corroborated by the trace |
+| **K1** · passes-to-done | Implement→verify iterations before the human accepts done, **and where they went** — `iterations` carries the count, `iteration_split` attributes it to the procedure step each cycle returned to. **The hydra metric**, and the single most important number here: it is the exact failure the harness was built to kill (`INC-01`). Target ≤ 2 | observable | the work log's iteration record, corroborated by the trace |
 | **K2** · done-reopens | Times a work item declared done was reopened. A reopen means "done" meant something different to the two parties, which is `INC-01`'s mechanism rather than its symptom | observable | `TASKS.md` status transitions and `progress/` |
 | **K3** · escaped defects | Defects found after a done claim, counted per work item. The lagging measure the other two are supposed to move | observable | `progress/` findings, later work items citing an earlier one |
 | **L** · context load | Did the rule file enter context? A hygiene indicator, **never a compliance claim** | observable | `instructions.loaded` events |

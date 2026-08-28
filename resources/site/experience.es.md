@@ -2,10 +2,10 @@
 slug: experience
 lang: es
 type: page
-title: "Luis Antelo — Experiencia"
+title: "Luis Octavio Antelo — Experiencia"
 confidentiality: sanitized
-h1: "Cada empleador fue distinto. El problema nunca lo fue."
-intro: "Un sistema demasiado importante para tocar, y un negocio que necesitaba que hiciera algo para lo que nunca fue pensado. Otra industria, otro stack, la misma forma — siempre."
+h1: "El mismo problema tuve que resolver en cada lugar en el que estuve"
+intro: "Un sistema construido para una realidad que ya no existía, y un negocio que evolucionó más rápido que él. Otra industria, la misma forma. Una vez más."
 roles:
   - company: "NICE"
     period: "2025–2026"
@@ -13,37 +13,36 @@ roles:
     body:
       - "Entré a una plataforma que atiende a millones de usuarios y pasé seis meses en dos tipos de responsabilidad distintos: la técnica —funcionalidades multitenant y una mejora de performance que empujé como ADR en vez de mandarla en silencio— y la de personas, haciendo mentoría a la mitad junior del equipo de backend y construyendo el tooling de IA agéntica que hoy es parte de cómo revisamos código."
       - "La plataforma es un producto CX empresarial distribuido globalmente — PHP legacy y JavaScript vanilla conviviendo con un stack moderno en .NET, el mismo problema de \"hacer que lo viejo y lo nuevo se hablen\", a otra escala. Trabajar para clientes en jurisdicciones de US y EU significó diseñar teniendo en cuenta cómo difieren realmente sus regímenes de protección de datos, no solo tildar un casillero de cumplimiento."
-    stack: [".NET", "PHP legacy", "JavaScript vanilla", "protección de datos multi-jurisdicción"]
+    stack: [".NET", "PHP legacy", "JavaScript vanilla", "elasticSearch", "AWS", "Jenkins", "RAG", "LLMs", "Snowflake"]
 
   - company: "Banco Solidario S.A."
     period: "2023–2025"
     title: "Backend Developer → Solution Architect en la práctica"
     body:
-      - "Mi cargo nunca pasó de backend developer, pero a los dos años ya estaba tomando las decisiones que toma un solution architect — al banco simplemente no le actualizaron el papeleo. Entré a un equipo que traía la banca móvil in-house, sacándola de un producto de proveedor del que el banco nunca fue dueño, y terminé a cargo de la arquitectura de identidad y pagos detrás de la app que usan cientos de miles de personas."
-      - "La fuente de verdad era un core legacy on-premise que el banco no podía mover, así que cada funcionalidad cruzaba a la vez una frontera de confianza, una de latencia y una de cumplimiento."
+      - "Como desarrollador en Banco Solidario S.A., trabajé en la transformación de la banca móvil del banco, llevándola de una solución de proveedor externo a una plataforma propia utilizada por millones de personas. Aunque mi cargo seguía siendo desarrollador, mi scope fue creciendo hasta asumir decisiones propias de arquitectura: diseñé la arquitectura de identidad y pagos, desacoplamos el servicio de OTP que era un punto crítico de dependencia y migré el historial de pagos desde la plataforma legacy sin perder información. También fui el encargado del diseño y desarrollo del módulo de QR Business, una extensión de la aplicación que permite que alguien más realice cobros por vos sin tener cuenta en el banco. Desde cero hasta producción alcanzando más de cien mil usuarios en 3 meses. Implementé transferencias con TOTP y construí APIs y servicios distribuidos utilizando .NET, todo el ecosistema de AWS, RabbitMQ y arquitecturas orientadas a comunicación asíncrona."
     case_studies:
       - otp-provider-decoupling
       - qr-collections-for-merchants
       - legacy-payment-data-migration
-    stack: [".NET", "AWS", "SNS/SQS", "MassTransit", "Polly", "SQL Server", "BIAN"]
+    stack: [".NET", "AWS", "SNS/SQS", "MassTransit", "SQL Server", "BIAN", "Flutter"]
 
   - company: "Mamaya Tech"
     period: "2022–2023"
     title: "Analista de Sistemas"
     body:
-      - "El equipo de Sistemas de mi rol anterior se independizó como esta empresa, y me fui con ellos. Mismo problema, otra empresa: integrando sistemas ERP satélite a un core de Oracle EBS, y evaluando a los proveedores del otro lado de esas integraciones."
+      - "El equipo de Sistemas de mi rol anterior se independizó como esta empresa, y me fui con ellos. Mismo problema, otra empresa: integrando soluciones satélites a un ERP, evaluando a los proveedores del otro lado de esas integraciones. También ví plataformas low-code"
       - "El trabajo tenía la misma forma que antes de la separación y el core era literalmente el mismo — solo que ahora integraba sistemas satélite desde el otro lado de una frontera corporativa en vez de desde adentro."
-    stack: ["Oracle EBS", "integración ERP", "evaluación de proveedores"]
+    stack: ["Oracle EBS", "PL/SQL", "integración ERP", "Android", "Angular", ".NET", "low-code", "javascript"]
 
   - company: "Avícola Sofía"
     period: "2021–2022"
-    title: "Analista de Sistemas"
+    title: "Trainee → Analista de Sistemas"
     body:
-      - "Mi primer sistema real, de punta a punta: una plataforma de asistencia multitenant que conectaba terminales biométricas en varias plantas industriales con el core de Oracle EBS y el sistema de RRHH de la empresa, diseñada y llevada a producción mientras todavía estaba aprendiendo qué significaba \"producción\" en serio."
-      - "Un holding agroindustrial que llevaba producción, caja y almacenes sobre Oracle EBS — pensado para papeleo, no para las terminales biométricas que el negocio necesitaba después. Ese hueco es en el que vengo trabajando desde entonces."
+      - "Mi primer sistema real, de punta a punta: una plataforma de asistencia multitenant que conectaba terminales biométricas en varias plantas industriales con el sistema de RRHH de la empresa. El proyecto nació como una mejora a los módulos de integración de HRMS que se utilizaban, reemplazando procesos más limitados por una solución propia, escalable y adaptada a la operación distribuida a nivel nacional. Llevada a producción mientras todavía estaba aprendiendo qué significaba \"producción\" en serio."
+      - "También desarrollé integraciones entre los sistemas de producción y Oracle EBS, participando en la evolución de los sistemas que soportaban procesos críticos del negocio."
     case_studies:
       - multi-tenant-biometric-attendance
-    stack: ["Oracle EBS", "hardware biométrico", "monolito modular"]
+    stack: ["Oracle EBS", "hardware biométrico", "monolito modular", "Angular", ".NET", "SQL Server", "PL/SQL", "PLCs"]
 ---
 
 **Nada renderiza este cuerpo.** Todos los elementos de esta página salen del frontmatter de arriba, y esta nota es el registro de trazabilidad — la misma forma que tomó `home.{en,es}.md` cuando su prosa dejó de renderizarse.

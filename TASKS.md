@@ -2,8 +2,10 @@
 
 The Work Item register. Read `CLAUDE.md` first.
 
-Status values: `TODO` · `IN PROGRESS` · `BLOCKED` · `DONE`
+Status values: `TODO` · `IN PROGRESS` · `BLOCKED` · `DONE` · `RETIRED`
 Update the status line when a task changes state, and log the session in `progress/`.
+
+**`RETIRED` means the deliverable moved to another id, never that it was dropped.** Added 2026-08-27, when `EVAL-001`'s nine items were consolidated. A retired entry **stays in place** carrying a pointer to the id that absorbed it: ids are stable and never reused, `progress/` and the scorecards cite them, and deleting the section would break every citation while making the consolidation invisible. A retired entry is not a done one, and nothing may close against it. **Reconciled 2026-08-28 (`P-07`).** This paragraph used to say the status token was not parsed by any guard and that the type was *"the first backticked token after the em dash"*. `TASK 74` made both false: `parseWorkItemTypes` now reads the status against the `Status values:` line above, and takes the type from the code span **immediately before it**, validated against the type table below. So `RETIRED` had to be added to that line for a retired item to resolve at all — and it did, which is the property that matters for `H-05`.
 
 **Work Item model.** Every entry is one deliverable with a checkable done and a `type`. Ids are stable and never reused — `progress/` cites them.
 
@@ -15,6 +17,7 @@ Update the status line when a task changes state, and log the session in `progre
 | `feature` · `migration` | **Yes** | `docs/specs/SPEC-TASK-N-*.spec.md` |
 | `bugfix` · `maintenance` | No | the diff |
 | `harness` | No | the architecture document + the acceptance suite |
+| `documentation` | No | the reconciled document |
 
 **Entry shape.** Instances of this shape are the sections below — which is why it is documented here rather than in a separate templates directory.
 
@@ -1036,6 +1039,8 @@ This is `INC-15`'s family in a second place. `INC-15` was the same collision ins
 
 **Moved from position 1 to position 11 on 2026-08-23**, when the backlog was re-cut local-first. Nothing downstream of this item is needed to reach a presentable `localhost`, and the author judges the site before publishing it. The constraint below that mattered most gets *more* true as a result, not less: by the time this runs, the working tree additionally carries all of `site/`, so there is more to review in the first diff, not less.
 
+**Blocked by `TASK 76` as of 2026-08-28.** The Spanish was rewritten across three pages and the English was not. Publishing now makes a bilingual portfolio that contradicts itself public, in the locale most of the target audience reads. That is not a thing to fix after the first push.
+
 **Deliverable:** the repository public on GitHub, `main` tracking the remote.
 
 **Done:** `git remote -v` shows the origin; the GitHub page renders `README.md`; `private/` and `evidence/` are absent from the remote, confirmed by browsing the pushed tree rather than by trusting `.gitignore`.
@@ -1921,6 +1926,8 @@ Detail: `progress/2026-08-27-07-task59-write-time-scrubber.md`.
 
 Filed 2026-08-27 from `progress/evaluation-results/EVAL-001-first-non-harness-work.md`'s "Improvement work items filed" section. The evaluator wrote twelve; it cannot write this register, so the orchestrator files them (`P-06`). **Twelve became seven, and the two compressions are recorded rather than silent:** four trace-writer defects share one surface and became `TASK 64`, on the precedent `TASK 12` set for exactly this; and three of the twelve are already tracked — the omitted-dimension check is `TASK 14`, which gains its live specimen below rather than a duplicate id, and the CI item is `GAP-12`, blocked on `TASK 30` and already carried by it.
 
+> **Consolidated again 2026-08-27, later the same day**, when the author asked for one or two units of work rather than nine scattered ids. `TASK 62` retired into `TASK 64`; `TASK 68` retired into `TASK 65`; both stay in place carrying pointers, because ids are stable and the scorecard cites them. The survivors are sequenced by **THE HARNESS ECONOMY** milestone below, which also opens `TASK 70`–`TASK 73`. **Three were deliberately not merged:** `TASK 61` is rung 1 and needs its own red battery, `TASK 63` is the eight-escape finding and the largest single outcome item, and `TASK 69` belongs to the site suite rather than the harness. Merging those would recreate `INC-01` — one "done" meaning four things.
+
 ## TASK 61 — `path-boundary` denies reads that `H-02` and `H-03` exist to permit · `bugfix` · `TODO`
 
 **Opened 2026-08-27 by `EVAL-001`, which measured it as 44% of the harness's entire denial volume.** `H-02` makes `resources/**` read-only *input*; reading it is the permitted use, and 15 of the 34 post-baseline denials refused a read. Three were read verbatim from the trace and all three are pure reads — `sed -n '1,200p' resources/site/ui.en.md | grep -n "article" -A 40` is the clearest.
@@ -1933,7 +1940,11 @@ Filed 2026-08-27 from `progress/evaluation-results/EVAL-001-first-non-harness-wo
 
 **The trade-off, stated in both directions (`C-11`).** The current rule is deliberately over-broad and says so, and over-denial is the safe direction for a rung-1 boundary. What `EVAL-001` priced is the other side: 15 false denials teach every delegated agent that the boundary is arbitrary, and a boundary agents learn to route around is worth less than one that is occasionally inconvenient. Fix the precision, not the rung.
 
-## TASK 62 — `L` on the delegated path: instrument it, or record that it cannot be · `harness` · `TODO`
+## TASK 62 — `L` on the delegated path: instrument it, or record that it cannot be · `harness` · `RETIRED`
+
+> **Retired 2026-08-27 into `TASK 64`, clause 5.** Same surface: the hook writers. `instructions.loaded` is written by `record-event.mjs` through `eventsFor`, which is the file `TASK 64`'s other four clauses already open — and two items editing one module is `G-12`'s collision, not two work items. The entry stays here because `EVAL-001`'s scorecard and `progress/2026-08-27-13-task60-eval001.md` both cite this id.
+>
+> **The substance below is unchanged and still governs**; only the id that closes it moved.
 
 **Opened 2026-08-27 by `EVAL-001`. `GAP-03`, now unactioned across three scorecards.** All 332 `instructions.loaded` events sit in `orchestrator.jsonl` files across 34 traces; **zero** appear in any of the 70 delegated trace files. Verified inside a single directory rather than corpus-wide only: `b4add49b-…/orchestrator.jsonl` carries 19, and its five `implementer` files and one `test-engineer` file carry none.
 
@@ -1957,14 +1968,21 @@ Filed 2026-08-27 from `progress/evaluation-results/EVAL-001-first-non-harness-wo
 2. **`GAP-08` recurred six times.** Footer-only trace files with an empty `agent` field: `17db4bf1-…/-a7752c22c8902b6b7.jsonl`, `2b631645-…/-aaa9d96eb5a76d81b.jsonl`, `5a10d8af-…/-a11c2beeef0e2dc4a.jsonl`, `9d06a627-…/-a31b7b600a2b25900.jsonl`, `ff549b41-…/-a45856924a1e6862a.jsonl`, `ff549b41-…/-a5e02d76a2eb61671.jsonl` — plus the baseline's original, seven on disk in total. **Done:** no file under `evidence/runs/` has a footer as its only event, and no event carries `agent: ""`.
 3. **A distinct variant: a run that started, reported success, and made no tool call.** `evidence/runs/b6218083-…/unknown-role-aeb35e8a584709486.jsonl` — header at `seq:1` (`agent:"unknown-role"`, `permission_mode:"plan"`), footer at `seq:2` (`COMPLETE/objective_reported`), nothing between. It **has** a header, so it is not `GAP-08`: the writer emitted a placeholder role name rather than failing. **Done:** `check-trace` fails any trace whose `agent` is neither a role file present in `.claude/agents/` nor the reserved `orchestrator`, and the writer records why it could not resolve the agent instead of emitting a placeholder.
 4. **`permission_mode` coverage, not mechanism (`GAP-05`, partially closed).** 167 of 176 headers still read `unknown`. The mechanism landed in `TASK 12`'s posture slice and the coverage did not. **Done:** every `run.header` written after this item closes carries a real `permission_mode`, so a scorecard can honour the template's instruction to exclude a `bypassPermissions` run — which today it cannot do for 95% of the corpus.
+5. **`L` on the delegated path — absorbed from `TASK 62`, retired 2026-08-27.** All 332 `instructions.loaded` events sit in `orchestrator.jsonl` files; **zero** appear in any of the 70 delegated trace files. The reportable value is `unmeasurable`, never 0 — a zero implies a measurement was taken and came back empty. **Done:** either a delegated (non-orchestrator) trace file on disk carries at least one `instructions.loaded` event, **or** `docs/harness/evidence.md` and `docs/harness/contracts.md` §6 both state that `L` is orchestrator-only and why, `EC-003`'s `required_evidence` line stops demanding an artifact the harness does not produce, and no scorecard reports a delegated `L` figure again (`G-11` requires the honest claim including downward). The full reasoning stays under `TASK 62`.
 
-## TASK 65 — `check-evals` cannot detect a stale `proof: none` · `bugfix` · `TODO`
+**A sixth measurement lands here rather than opening a third id**, found 2026-08-27 while prototyping `TASK 70` and belonging to the same writer: **`run.header` carries `model` only on `reason: startup`** — 8 of 139 headers, every `reason: delegated` header `null`. `TASK 70` works around it by joining the header's `agent` to the role file's `model:` frontmatter, which is a derivation and not a record: a dispatch-time model override is invisible to it. **Done:** a delegated `run.header` carries the model that actually ran, or `docs/harness/evidence.md` records that the runtime does not supply it on `SubagentStart` and that the join is the substitute.
+
+## TASK 65 — Two gate checkers pass on an artifact they cannot classify · `bugfix` · `TODO`
 
 **Opened 2026-08-27 by `EVAL-001`, which found the live instance.** `EC-014`'s control shipped — `scripts/guards/lib/evidence.mjs:170-183` and `:275-279` thread `opaqueFields` blanked by field name rather than by a "looks opaque" heuristic, with three red tests at `scripts/guards/lib/evidence.test.mjs:182`, `:192`, `:201` — and `TASK 18` is `DONE`. **The case file still reads `proof: none`, `outcome: Gap`, and a `proof_reason` asserting that the fix "is not implemented yet."** `check-evals` passes, because it exempts `proof: none` from every staleness assertion.
 
 This is `INC-07`'s shape — a check that passes forever — inside the checker `contracts.md` §6 built to prevent exactly that. The evaluator scored the case `Caught` from the artifacts and left the file alone, correctly: it never edits what it scores.
 
-**Done:** `check-evals` fails a case carrying `proof: none` whose `proof_reason` names a work item that `TASKS.md` marks `DONE`; the check fails when that assertion is removed; and `EC-014` carries its real `proof` block (`scripts/guards/lib/evidence.test.mjs`, test `RED: a banned term inside an opaque tool_use_id is not a redaction finding`) with `outcome: Caught`.
+**Done, clause 1 — `check-evals`:** `check-evals` fails a case carrying `proof: none` whose `proof_reason` names a work item that `TASKS.md` marks `DONE`; the check fails when that assertion is removed; and `EC-014` carries its real `proof` block (`scripts/guards/lib/evidence.test.mjs`, test `RED: a banned term inside an opaque tool_use_id is not a redaction finding`) with `outcome: Caught`.
+
+**Done, clause 2 — `check-procedures`, absorbed from `TASK 68`, retired 2026-08-27.** The instance: `check-procedures` requires a `done:` block in every `progress/*.md` written after 2026-08-18, and fails on `progress/2026-08-27-13-eval001-workitem-extract.md` — a **generated** artifact, reproducible byte-for-byte from a read-only script, which records no work and finishes nothing. **The three obvious fixes are all wrong and `TASK 68` records why**, so nobody re-derives them: an exclusion roster is `INC-07`'s shape and the guard's own rationale refuses it; moving the file breaks `check-docs` instead, since both the scorecard and `TASK 60`'s log cite its path; and emitting a `done:` block from the generator makes the guard green by making the artifact lie. **Done:** `check-procedures` passes on a `progress/` file that declares itself generated and carries a reproduce command, fails on one that does neither, and still fails a real session log that omits its `done:` block; each assertion fails when its clause is removed (`P-14`); and the marker is a declared property of the file rather than a list of filenames in a config.
+
+**Why one item and not two.** The two clauses share the defect, not the code: a checker deciding what an artifact *is* by a shape it happens to match, rather than by a property the artifact declares. They sit on two modules with two test files, so the fold is wider than `TASK 64`'s — see the note under `TASK 68` for why it holds and where the idiom stops.
 
 ## TASK 66 — Record work-item status transitions, so `K2` has a substrate · `harness` · `TODO`
 
@@ -1980,7 +1998,13 @@ This is `INC-07`'s shape — a check that passes forever — inside the checker 
 
 **Referenced, not duplicated (`P-06`).** Three of the evaluator's twelve are already tracked: the omitted-dimension check is `TASK 14`; the CI result is `GAP-12`, blocked on `TASK 30`; and `EC-013`'s case-folding residual is `TASK 11`.
 
-## TASK 68 — `check-procedures` cannot tell a work log from generated tool output · `bugfix` · `TODO`
+## TASK 68 — `check-procedures` cannot tell a work log from generated tool output · `bugfix` · `RETIRED`
+
+> **Retired 2026-08-27 into `TASK 65`, clause 2.** Both are gate checkers that pass — or fail — on an artifact they cannot classify, and both fixes are the same move: derive the property from the artifact instead of exempting a shape (`P-13`).
+>
+> **This fold is wider than `TASK 64`'s and the difference is recorded rather than glossed.** `TASK 64` folded four defects on **one** surface, the hook writers, and `TASK 12` set that precedent. This one spans **two** guard modules — `check-evals`/`evals.mjs` and `check-procedures`/`procedures.mjs` — with two test files, so it is a fold on a shared *property*, not a shared file. It holds because each clause is independently checkable and neither can be closed by the other; it is the boundary of the idiom, and a third checker joining would be `INC-01` (one "done" meaning several things) rather than a further saving.
+>
+> **The substance below is unchanged and still governs**; only the id that closes it moved. **The `procedures` gate step stays red for `progress/2026-08-27-13-eval001-workitem-extract.md` until `TASK 65` ships**, and every item closing in the meantime declares that in its `done:` block rather than letting a red step become background noise — which is `TASK 34`'s lesson.
 
 **Opened 2026-08-27 by `TASK 60`, which produced the instance while running.** `check-procedures` requires a `done:` block in every `progress/*.md` written after 2026-08-18, and it now fails on `progress/2026-08-27-13-eval001-workitem-extract.md` — a **generated** artifact, reproducible byte-for-byte from a read-only script, which records no work and finishes nothing. A done block on it would be a machine-written claim that a work item completed, which is ceremony in the one register that must not contain any.
 
@@ -2007,6 +2031,280 @@ This is `INC-07`'s shape — a check that passes forever — inside the checker 
 `T-06` is explicit that a flake is a finding and that intermittent means a real race, a real timing assumption or a real ordering bug. The timeout is on navigation rather than on an assertion, which points at contention for the single preview server the suite manages in `globalSetup`, not at the byline markup.
 
 **Done:** the mechanism is named — server contention, a fixed 30s navigation budget under parallel load, or an ordering dependency — with the evidence that distinguishes them; the fix addresses that mechanism rather than raising the timeout; and the full three-engine suite passes twice consecutively from a cold build. **Raising the timeout closes the symptom and is not this item's done**, because `TASK 57` already established that this class survives that treatment.
+
+## TASK 75 — `C-09` claims rung 2, and `check-content` only sees the structure · `bugfix` · `TODO`
+
+**Opened 2026-08-27, from a live divergence rather than a hypothesis.** `C-09` states locale parity as *"never modify one locale without modifying the other in the same change"* and claims **rung 2, mechanized by `check-content`**. The check passes on a working tree where `about.es.md` and `experience.es.md` were rewritten and their English counterparts were not — 20 files, 9 locale pairs, PASS.
+
+**What the check actually asserts** is that the pair exists and shares a `slug`. That is the *structural* half. The rung-2 claim covers the whole rule, so the semantic half — the two locales still saying the same thing — is asserted at a rung nothing reaches. `G-11` requires the claim to move when the mechanism does, **including downward**.
+
+**The live specimen, as of this session** (recorded so the item has something to check, not to direct the content — `resources/**` is the author's under `H-02`): `title:` reads *"Luis Octavio Antelo"* in both `.es` pages and *"Luis Antelo"* in both `.en` pages; and the `h1` pairs are now different statements rather than translations of one, in both `about` and `experience`.
+
+**Done:** either `check-content` gains an assertion that fails when one locale of a pair is modified without the other — a `git`-independent property, since the check must work on a clean tree too, so most likely a per-pair content hash or a declared `parity_reviewed` marker — **or** `C-09`'s row is amended to say that rung 2 covers structural pairing only and that semantic parity is rung 4, with the uncovered half named (`G-11`). Whichever is chosen, the specimen above is resolved or explicitly accepted by the author.
+
+**Constraint:** do not "fix" this by editing `resources/**`. That is the author's content and `H-02` denies it; this item owns the *guard*, not the copy.
+
+## TASK 76 — The English half of the Spanish rewrite · `content` · `TODO` · **blocks `TASK 30`**
+
+**Opened 2026-08-28.** The author rewrote the Spanish across `about`, `experience` and `ui` — new `h1`s, a new voice, expanded stacks, new photo captions, one corrected job title — and the English was not touched in the same change. `C-09` makes that a violation on its face; `TASK 75` is the guard that should have caught it and did not. This item owns the **copy**; `TASK 75` owns the **check**. They are separate because fixing one does not fix the other.
+
+**Why it blocks publication.** `npm test` green is half the localhost milestone; the other half is a site whose two locales say the same thing. Worse than staleness: the English half currently **understates the author's largest system by roughly an order of magnitude**, in the language most of the target audience reads. Publishing now ships a bilingual portfolio that contradicts itself and undersells in the locale that matters most.
+
+### The scale figures — settled first, before any English is written
+
+Four distinct subjects, currently collapsed into one number in three files. Each is true; each needs its own qualifier, propagated to every page that states it (`C-03`).
+
+| Subject | Figure | Source | State today |
+|---|---|---|---|
+| Bank mobile app — **total users** | **≥2 million** | the author directly, which `C-04` accepts | correct **only** in `experience.es.md:22` (*"utilizada por millones de personas"*) |
+| Bank mobile app — **active users** | hundreds of thousands | `mobile-banking-platform.{en,es}.md` — `scale: "+100,000s"`, `scale_caption: "active users"` | **correct and properly qualified.** This file is the model to copy |
+| **QR Business module** | 100,000 users in the first three months | `qr-collections-for-merchants.{en,es}.md` | correct in the case study and in `experience.es.md`; **absent from `experience.en.md`** |
+| NICE CX platform | millions of users | both locales of `experience` already agree | correct; a **different** system, and must not be conflated with the bank's |
+
+**What changes:** `about.{en,es}.md` and `experience.en.md` say *"hundreds of thousands ... depend on / use"* of the **total**, which is the active-user figure applied to the wrong subject; `profile-README.md` repeats it. `about.es.md` says *"cientos de miles"*, so Spanish currently disagrees with itself between its own two pages. **Settle this before authoring any English**, or the understated number is baked into a second locale.
+
+### The divergence, enumerated as objects (`P-09`)
+
+| File | What diverged |
+|---|---|
+| `about.en.md` | `h1` · the `me-profile` and `bolivia-landscape` captions (ES gained one, ES rewrote one) · the whole opening section, rewritten from a career summary into a first-person account with a different claim structure · the judgment paragraph · the university paragraph (ES adds *auxiliar en varias materias*) |
+| `experience.en.md` | `h1` · `intro` · **all four `stack:` lists** — ES adds elasticSearch/AWS/Jenkins/RAG/LLMs/Snowflake (NICE), Flutter (bank, and drops Polly), PL/SQL/Android/Angular/.NET/low-code/javascript (Mamaya), Angular/.NET/SQL Server/PL/SQL/PLCs (Avícola) · the bank's two body paragraphs collapsed into one that names the QR module, TOTP and RabbitMQ · the Mamaya and Avícola bodies rewritten · one job title: `Analista de Sistemas` → `Trainee → Analista de Sistemas` |
+| `ui.en.md` | `home.employers_heading` · `work_heading` · `stack_heading` · `contact_invite` (one question in EN, four in ES) · `contact_note` · `standalone_label` |
+
+**Two findings inside the divergence that are not "translate this":**
+
+- **`experience.es.md` dropped the thesis anchor.** The English Avícola entry ends *"That gap is the one I have been working in ever since"* — the sentence that ties the first job to the professional thesis (`C-15`). The Spanish replaced it with a different statement and the anchor is gone. Restoring it in Spanish is part of this item, not a separate one.
+- **`ui.es.md` `rail.timezone` lost *"· full overlap with US business hours"*,** which English keeps. That clause is a selling point for exactly the roles being targeted, and it is the locale that dropped it, not the one that gained it.
+
+### Two records that became false and must be reconciled (`P-07`)
+
+Both files carry a traceability body asserting where each value came from. The rewrite made those bodies wrong, and a traceability record nobody can trust is worse than none:
+
+- `ui.es.md`'s table claims `home.contact_invite`, `contact_note` and the four headings were lifted from `HomeES.dc.html` *"sin tocar una coma"*. They were rewritten.
+- The same body states `home.stack_heading` reads *"Tecnologías con las que trabajé"*. Its own frontmatter now says *"Tecnologías que manejo"*.
+
+**No action needed, checked and recorded so nobody redoes it:** `title:` and `rail.wordmark:` already carry *Luis Octavio Antelo* in **both** locales; the QR figure matches `qr-collections-for-merchants.{en,es}.md` exactly; `Banco Solidario S.A.` was already the `company:` value in both locales, so naming it in prose discloses nothing new and `check-terms` passes.
+
+**Done:**
+
+1. The four scale figures above are settled with their qualifiers and consistent across every page and both locales — verifiable by `grep -rn "millones\|millions\|hundreds of thousands\|cientos de miles" resources/` returning one claim per subject.
+2. Each file in the divergence table carries English matching its Spanish in substance, and the two Spanish gaps above (the thesis anchor, the timezone clause) are closed.
+3. The two traceability bodies are reconciled with the values they describe.
+4. `check-content` and `check-terms` pass.
+
+**Constraints**
+
+- **This is authorship, not translation.** The new Spanish is deliberately colloquial and regional — *peladingo*, *todingos*, *dizque me veo 'pintudo'*, *(yala)*. `C-09` makes the Spanish first-class rather than a translation artifact, and the same holds in reverse. But `C-13` sets English at **B2–C1, plain and direct**, and says flat technical English reads more senior than ornate English. **Do not render the Bolivian register literally.** Match the warmth and the directness; drop the localisms.
+- **`H-02`: no agent writes `resources/**`.** The deliverable is the proposed English in a `progress/` file for the author to apply — the precedent `TASK 20` set, where drafted content was applied to frozen `resources/` by the author.
+- The expanded `stack:` lists are factual claims about the author's experience. `C-04` requires each to trace to the author or a case study; where one does not, ask rather than assume (`P-17`).
+
+---
+
+# THE HARNESS ECONOMY
+
+**Opened 2026-08-27**, after `EVAL-001` closed and the author named the cost directly: delegated agents burn their budget searching, slices lose their seams, runs die and report success anyway. The milestone exists because nine scattered ids were the wrong unit — this is one arc, and its order encodes **measure → decide → mechanize**. `TASK 9`'s export trigger fired with `EVAL-001`, so everything here feeds the export rather than competing with it.
+
+**Four measurements taken before any of it was designed.** Two kill hypotheses that were on the table, which is why they are recorded here rather than inside an item:
+
+| Question | Measured | What it means |
+|---|---|---|
+| Do the always-loaded rules cost too much per request? | **276 of 320 lines**, `check-context-budget` PASS | **No.** The static surface is small and already governed |
+| Do the per-request hooks cost tokens? | **~200 ms per process, two per tool call**; of that, **~145 ms is bare `node -e ""`** on this machine, imports 10–12 ms, the 31 KB config parse ~2 ms. 4,445 requests ≈ **29.6 min** against 497 min of tool execution | **No tokens — a ~6% latency tax, and 93% of it is Node booting rather than guard code.** Rewriting the guards addresses the other 7% |
+| Where do the result bytes go? | orchestrator **4.42 MB / 2,453 calls** · every delegated role together **1.66 MB** | The orchestrator carries **72%** of every byte the harness has pulled into a context window, runs Opus, and `G-09` denies it a role file — so no `model:` governs the most expensive actor |
+| Which role finishes what it starts? | Footer rate: `Explore` **5/5** · `researcher` 8/10 · `adversarial-auditor` 3/5 · `harness-evaluator` 4/7 · **`implementer` 21/48** · `test-engineer` 0/3 | "Se marcan como completas sin estarlo", quantified. The **write-capable** roles are the unreliable ones. `G-06` bounds it: a missing footer means the run did not terminate normally, never that a budget caused it |
+
+**The finding that shaped the sequence.** The instinct — *the orchestrator should gather all the context and assemble it* — points at the actor already holding three quarters of the load, and the one whose context must survive the whole session. What worked twice on 2026-08-27 was cheaper: **a deterministic script did the expensive read, wrote an extract to disk, and neither the orchestrator nor the agent ever held the corpus.** 104 trace files and 96 logs became two files, and `harness-evaluator` finished in ~37 of 60 turns. **The context assembler is the script.** `ADR-009` makes that policy rather than a habit.
+
+**No hook registration is removed, and the measurement above is the reason rather than caution.** `PreToolUse` *is* every rung-1 boundary (`H-01`–`H-05`, `G-03`, `G-13`); `PostToolUse` writes the `bytes` and `duration_ms` this whole milestone measures. Cutting the second to save 6% latency would delete the instrument and keep the problem. The other seven events are already free — 139 headers, 64 footers and 350 `instructions.loaded` against 4,445 tool calls.
+
+## Run order
+
+| # | Item | Phase | Blocked by |
+|---|---|---|---|
+| 0 | `TASK 74` — a title word displaces the work-item type, and `H-05` fails open | **rung 1 — runs first** · `DONE` | — |
+| 1 | `TASK 70` — the cost report | measure · `DONE` | — |
+| 2 | `TASK 72` — record where the iterations go | measure | — |
+| 3 | `TASK 71` — `ADR-009`, delegation economics and the brief contract | decide · `DONE` | `TASK 70` |
+| 3b | `TASK 79` — the hand-off packet becomes a documented convention | decide · `DONE` | — |
+| 3c | `TASK 77` — the trace records what a run cost, in tokens and wall-clock | **measure — runs before the fix phase** | — |
+| 4 | `TASK 65` — two checkers that cannot classify (absorbs `TASK 68`) | fix | — |
+| 5 | `TASK 63` — the paired-predicate assertion reaches every gate step | fix | — |
+| 6 | `TASK 61` — `path-boundary` denies reads the rules exist to permit | fix | — |
+| 7 | `TASK 64` — trace fidelity, second pass (absorbs `TASK 62`) | fix | — |
+| 8 | `TASK 66` — a substrate for `K2` | fix | — |
+| 9 | `TASK 67` — `harness-evaluator`'s conditional budget | fix | — |
+| 10 | `TASK 75` — `C-09` claims rung 2 and `check-content` sees only structure | fix | — |
+| — | `TASK 69` — the load-sensitive `/about` e2e | **site suite, not this milestone** | — |
+| — | `TASK 76` — the English half of the Spanish rewrite | **site suite** · blocks `TASK 30` | — |
+| 11 | `TASK 78` — cost per completed item becomes computable | mechanize · **after the fix phase** | `TASK 77` |
+| 12 | `TASK 73` — the brief contract becomes a guard | mechanize | `TASK 71` · **runs after the site is published** |
+
+**Reordered 2026-08-28 by the author.** The fix phase now runs `65 → 63` first and everything else after, because those two are what make the rest verifiable: `TASK 65` is the **only red gate step**, so until it lands every *"the gate passes"* is a partial; and `TASK 63` closes the failure mode behind **eight of `EVAL-001`'s fifteen escaped defects** — a check reporting PASS while asserting nothing. Fixing `61`, `64`, `66` or `67` before those two means verifying each of them with an instrument known to be blind.
+
+**`TASK 77` inserted ahead of the fix phase 2026-08-28, by the same reasoning one level down.** It is the substrate every item after it is measured against: with it, each fix-phase item's real cost in tokens and wall-clock is recorded as it runs, and `TASK 78` can later turn those into cost per item — including the comparison the author asked for, one item run on Sonnet against the ones run on Opus. Without it, that data is gone by the time anyone wants it, because the transcripts it comes from are ephemeral and the fix phase is where the items are.
+
+## TASK 74 — A title word displaces the work-item type, and `H-05` fails open · `bugfix` · `DONE`
+
+**Opened 2026-08-27, found while verifying that the milestone's own new entries parse the way the gate reads them** — the check `P-11` asks for, on a register edit that looked purely editorial.
+
+**The defect.** `parseWorkItemTypes` (`scripts/guards/lib/delegation-gate.mjs:93-97`) reads the type with ``/^##\s+TASK\s+(\d+)\s+—.*?`([a-z]+)`/gim``. The `.*?` is lazy and the `i` flag makes `[a-z]+` case-insensitive, so it captures **the first backticked all-letter token anywhere in the heading** — the title's own words included — rather than the type field. Two entries misparse today, both predating this session: **`TASK 53` reads `version`** (from *"sits at `version` 1.1"*) and **`TASK 62` reads `L`** (from *"`L` on the delegated path"*).
+
+**Why this is rung 1 and not cosmetic.** The parsed type feeds `specRequiredFor`, which is the half of `H-05` that demands an approved spec before a write-capable delegation. Proven by running the real function rather than reasoning about it: a heading reading *TASK 99 — Fix the `slug` join · `feature` · `TODO`* parses as type **`slug`**, and the gate demands **no spec**; strip the backticks from the title and the same item parses as `feature` and the spec **is** demanded. **A `feature` escapes `H-05` because of a word in its title.** That is a boundary failing open, and `INC-05` — three implementers delegated against a spec nobody had signed off — is the incident it exists to prevent.
+
+**Not yet exploitable, and the entry says so rather than overclaiming (`C-01`).** Both live misparses land on types outside `specRequiredFor` (`planning`, `harness`), so no delegation has been wrongly permitted. This is a latent fail-open, and the reason to fix it now is that the trigger is *someone writing a natural title*.
+
+**Done:** the type is read from the heading's **type field** — the register's documented entry shape puts the type in the **second-to-last** `·`-separated field of the heading, so it is positional rather than "the first backticked word"; `TASK 53` parses as `planning` and `TASK 62` as `harness`; a heading whose type is outside the documented vocabulary is a **finding rather than a silent pass**, per `G-13` — a gate that cannot classify an item must not clear it for delegation; and the red battery in `scripts/guards/lib/delegation-gate.test.mjs` carries the ``` `slug` ```/`feature` case above and fails when the positional fix is reverted (`T-04`, `P-14`).
+
+**Constraints**
+
+- **Do not fix this by renaming the two headings.** That is the roster shape `P-13` forbids: it makes today's two green and leaves the next natural title to reopen it. Fix the parser.
+- **The positional read must tolerate the trailing annotations the register already uses** — several headings carry a fourth field (`· **ran third**`, `· **runs after the localhost milestone**`), so "second-to-last" is derived from the fields present, not counted from the end blindly. Check it against every heading in the file, not against a sample (`P-13`).
+- The vocabulary is derived from the type table at the head of this file, not hardcoded in the guard — the same table `TASKS.md` already publishes.
+
+**Closed 2026-08-27.** The type is now the code span immediately **before** the status span, and the status is matched against the register's own declared vocabulary rather than by shape — because `L` matches `/^[A-Z ]+$/`, so "looks like a status" reintroduces the same bug one layer down. Both vocabularies are derived from the head of this file (`Status values:` and the `type` table), so a type added there is honoured without touching the guard, and a type outside it is a finding: `parseWorkItemTypes` omits the item, and `decideDelegation` already denies on a missing type.
+
+**Verified against the whole register rather than the two known cases:** old and new parsers both yield **75 items — none lost, none gained, exactly two corrected** (`TASK 53` `version`→`planning`, `TASK 62` `L`→`harness`). Seven red tests, and the battery fails 3 when the positional read is neutered (`P-14`).
+
+**Two consequences worth recording.** `documentation` was used by `TASK 67` and **absent from the type table** — the guard now derives from that table, so the table has been reconciled with the register it documents (`P-07`); previously the omission was invisible because nothing read it. And the guard now denies **all** delegation if the register head is unparseable, which is `G-13` accepted deliberately: loud, correct and recoverable, against a boundary that fails open in silence. Two test fixtures that carried a register with no head were updated rather than the throw being softened.
+
+## TASK 70 — What a run costs: the report · `harness` · `DONE`
+
+**Opened 2026-08-27.** Every proposal about slice seams, delegation break-even and model tiers is currently a guess, because nothing reports what a run cost. The substrate already exists and is unused: every `tool.result` carries `bytes` and `duration_ms` (`scripts/guards/lib/evidence.mjs:403-413`), written by a hook the scored agent cannot edit (`H-03`).
+
+**Done:** a reproducible read-only report over `evidence/runs/` emits, per dispatch and per session — role, model tier, **turns**, **result bytes**, **duration**, footer state and deny count; a second run over the same corpus is byte-identical; and the segment method is anchored against a run whose cap is known.
+
+**The anchor named here when this item was opened was wrong, and the correction is recorded rather than quietly swapped (`C-02`).** The entry said *"the two `budget-probe` runs read 12 and 25 against a cap of 25"*, read from `G-06`'s sentence *"the reusable probe is `.claude/agents/budget-probe.md`"*. Measured: `budget-probe` declares `maxTurns: 2` and its two runs read **1 and 2**. The 12/25 pair is **`researcher` in run `53898bfe`** — `maxTurns: 25`, dispatched twice in one session, 12 turns with a footer and 25 without. `budget-probe` was written *after* that measurement as the reusable version, not as the run that produced it. Both anchors are now asserted, at opposite ends of the scale: one method that reproduces 25 and 2 is a method rather than a coincidence.
+
+**Closed 2026-08-27.** `scripts/guards/lib/cost.mjs` + `cost.test.mjs` (18 tests) + `scripts/guards/gate/check-cost.mjs`. Byte-identical across consecutive runs; red path proven by neutering the turn counter and the byte sum, which fails 5 tests. **A fourth honest limit was found while verifying a number rather than accepting it:** `researcher` reported 0.00 MB across 158 turns, and the cause is that `WebFetch` records **~78 bytes per result** and `WebSearch` ~154 — the response wrapper, not the page the model read. The role whose entire job is fetching therefore reads as nearly free, so `ADR-009`'s break-even rule may not be computed for it from this column. The report states this in its own header.
+
+**Constraints**
+
+- Pure functions in `scripts/guards/lib/cost.mjs` with a thin CLI in `scripts/guards/gate/check-cost.mjs` — the shape every existing check uses, which puts the logic inside the mutation-covered surface (`D3`) rather than beside it. **Report-only: not a failing gate step.** A cost figure is not a pass/fail property yet, and `TASK 63` is what makes gate steps mean something.
+- Reuse, do not reinvent: the turn-segment method is `TASK 55`'s (a `tool.result` → `tool.requested` transition; a dispatch is a segment between `run.header` events), and the two extract scripts in `progress/` are the working precedent for read-only corpus walks.
+- **The model tier is derived, not read.** `run.header` carries `model` only on `reason: startup` — 8 of 139 headers. The header does carry `agent`, so the tier joins to the role file's own `model:` frontmatter: a property, not a roster (`P-13`). The report states the limit — that is the model the role *declares*, and a dispatch-time override is invisible. Recording it properly is `TASK 64` clause 6.
+- **Three honest limits stated in the report's own header, or it will be quoted as a token count within a week** (`C-01` applied to the harness's own figures): `bytes` measures tool **results** only — not the prompt, not the re-sent conversation history, not model output, so it is a proxy for marginal context inflow and **never tokens billed**; the earliest runs record every result as **0 bytes** (the `tool_result`/`tool_response` bug documented at `scripts/guards/lib/evidence.mjs:375`, which is why `test-engineer` reads 128 calls and 0.00 MB), so the report partitions on the fix date exactly as `EVAL-001` partitioned its scoring, or it will publish a role as free; and a missing footer is not evidence of budget exhaustion (`G-06`).
+- Wall-clock per session is reported, so "los agentes tardan demasiado" gets a number and the Defender lever below can be judged rather than argued.
+
+**One machine-level lever, measured rather than assumed.** A ~145 ms bare-Node boot is characteristic of on-access antivirus scanning; unscanned, Node boots in ~40 ms. Excluding the repository and the Node install from Windows Defender is free to test and is the largest single lever on hook latency. It is **not** a repository change and closes nothing here — the report times `node -e ""` before and after, three runs each, and if it does not move, that is recorded as a dead lever. **A Node SEA or startup snapshot is declined in advance**: it targets the 10–12 ms import slice, not the 145 ms boot.
+
+## TASK 71 — `ADR-009`: delegation economics and the brief contract · `research` · `DONE`
+
+**Opened 2026-08-27.** The harness has no recorded answer to *when not to delegate*, and the cheapest win available is refusing a delegation that costs more than doing the work inline. Our delegated dispatches run **0.18–0.45 MB of result bytes** against a **4,588-byte median brief** across 80 dispatches.
+
+> **Corrected 2026-08-28, before the ADR was written (`C-01`).** This paragraph originally read *"external cost math puts the break-even where a worker absorbs ~500k+ tokens … so several of our delegations are plausibly below break-even."* A dedicated search found **no source for that figure**, and published estimates vary by more than an order of magnitude with task shape. Both halves of the sentence fail: the figure is withdrawn, and the hypothesis it supported is **contradicted** by our own ratio — 4,588 bytes of brief against 0.18–0.45 MB absorbed is 39×–98×, which is favourable. The waste is in runs that do not finish, not in the arithmetic. An unsourced number in the register is the same defect as an unmeasured number in a case study.
+
+**Done:** `ADR-009` — delegation economics — exists under `docs/adr/`, in the template's shape, and settles seven questions, each resting on a measured number from `TASK 70` or an explicit *"not measurable, and here is why"* — a decision resting on an unmeasured figure is `C-01`'s failure applied to the harness itself.
+
+1. **When NOT to delegate** — a break-even rule for this repository.
+2. **The brief contract** — required sections: objective · inputs **as extracts, by path** · output format · boundaries · definition of done. `P-08` already forbids pasting rules into briefs, so the contract governs *inputs and outputs*, never policy.
+3. **Deterministic assembly as policy, always** — the extract goes to a file, the brief hands over the path. Per the author's instruction: keep it deterministic wherever possible.
+4. **The numeric gate a summarizer role must pass before it exists** — it uses the deterministic tooling *and* costs fewer tokens than the alternative, stated as a number from `TASK 70` on a real corpus. If it does not clear the gate it is not built, and the decision is recorded so nobody re-proposes it.
+5. **What a delegated run must return** — a bounded summary, not a transcript, and the report is part of the deliverable. `TASK 55` found this the hard way when the artifacts landed and the reports were the casualty.
+6. **Model tier per role, and the orchestrator's own tier** — the allocation is `implementer`/`researcher`/`test-engineer` on Sonnet, `adversarial-auditor`/`harness-evaluator` on Opus, the orchestrator on Opus, with the footer rates above as the evidence. **The standing answer on Haiku is recorded so it is not re-proposed each session:** a summarizer role must beat a script on decision 4's number, and both extracts built on 2026-08-27 were scripts — zero model tokens, byte-reproducible, auditable. Haiku's remaining slot is prose a script cannot parse, which has not appeared, plus `budget-probe`. The orchestrator's tier is a **prose policy verified from the trace**, because `G-09` denies it a role file and a fake `model:` field would be worse than the honest shape.
+7. **The headline metric: cost per completed item** — observable, written by hooks the agent cannot edit, and it captures both stated goals at once. `K1` becomes a factor of it rather than the headline. Amending `docs/harness/contracts.md` §6 and `docs/harness/architecture.md` §K is this ADR's consequence, not a side edit.
+
+**Constraints**
+
+- The `researcher` role gathers the external evidence and **does not write the ADR** — a researcher arriving with a recommendation finds the evidence for it. Sources arrive dated and quoted, never obeyed (`G-02` `D3`).
+- Do not re-open `ADR-006`'s or `ADR-008`'s settled ground; cite them.
+
+**An eighth sub-decision was added 2026-08-28, before acceptance, and it is recorded here because the entry asked for seven.** The author read the draft and asked where the cost of each slice and each trace is *captured* and *stored* — a question decision 7 named a metric without answering. Checking it produced a finding against this ADR's own first draft: **tokens are measurable and the draft was about to record their absence as a fact.** Hook payloads carry no usage field, but every hook receives `transcript_path`, and the transcript's `message.usage` carries per-message, per-model token counts. Sub-decision 8 is the capture matrix, the `run.cost` event that `TASK 77` builds, the declared work-item join that `TASK 78` builds, and what stays unmeasurable. `G-06`'s *"`maxCost` is not available"* remains true of the **budget control** and had been read as true of the **measurement**; `TASK 77` splits the claim.
+
+**Closed 2026-08-28 — `ADR-009` accepted by the author, eight sub-decisions, status `Current`.** The `P-02` checkpoint was the acceptance and it happened; nothing here closed against a proposal. Two of the ADR's conclusions are worth carrying forward because they point away from where the discussion naturally goes: the **model tier is the smaller lever** (widest adjacent-tier gap 2.5×, against `implementer`'s 44% footer rate worth ~2.3× on runs that produced nothing), and **our dispatches are not below break-even** (4,588-byte median brief against 0.18–0.45 MB absorbed, 39×–98×) — the waste is in the cut runs, not in the arithmetic. The unsourced ~500k figure this item was opened on is withdrawn, and the ADR leaves that slot empty and named rather than substituting the nearest number.
+
+## TASK 72 — Record where the iterations go · `harness` · `DONE`
+
+**Opened 2026-08-27.** `K1` reports that an item took nine passes and nothing says whether they were implementation, integration between slices, or author review. Every proposal about slice seams is a guess without that split, and "the seams are wasteful" is exactly the claim the author raised.
+
+**Done:** the `done:` block carries an iteration-attribution field alongside the existing `iterations` count; `wrap-up` and `check-procedures` accept the extended shape and still fail a block claiming success with nothing behind it (`P-03`, `A22`); and the vocabulary is derived from the work item's own `type` rather than a hardcoded list (`P-13`).
+
+**Constraints**
+
+- One field. This is the cheap half of the measurement, and an item that grows a taxonomy stops being cheap.
+- It counts **human-visible implement→verify cycles**, never tool calls — `work-item` §7 is explicit, and a tool-call count moves for reasons unrelated to what `K1` measures.
+
+**Closed 2026-08-28.** The field is `iteration_split`, and its evidence is `bucket=count` pairs that **must sum to `iterations`** — the sum check is what stops the field being decorative, because without it the split can say anything and still pass, which is worse than not having it: it looks like a measurement.
+
+**The vocabulary is derived from two live artifacts and appears nowhere in the guard (`P-13`).** The buckets are the `work-item` procedure's own `## N · Name` steps, minus the first (nothing returns to the entry point) and the last (a return to Close is a reopen, which is `K2`); then the register's own type table narrows them — a type answering **No** to *"Produces a spec?"* has no `spec` bucket, because it never had a spec to iterate on. A step added to the procedure becomes a bucket without the guard being touched, which is asserted by a test rather than claimed. Both derivations **throw** when their source stops parsing (`G-13`): an empty vocabulary accepts every bucket name, so the check would report PASS while asserting nothing — `INC-07` exactly.
+
+**Reuse rather than a second reader:** the per-log type join is `parseWorkItemTypes`, the single reader of the register's heading shape and the one `TASK 74` had just made correct; the cutoff is `iterationSplitRequiredFrom`, the third use of `doneBlockRequiredFrom`'s dated-threshold mechanism.
+
+**Red battery: nine neuters, nine caught** (`T-04`, `P-14`) — including the two that matter most, a flat vocabulary that accepts `spec` on a `content` item, and a dropped sum invariant. `check-procedures` reports a derivation failure as a **named finding** rather than a stack trace, which is the presentation half of `G-13`.
+
+**Measured at close:** 706 guard tests pass (+24), mutation **75.61** against the 74.5 floor, gate **19 of 20** — the one red step is `procedures`, on this item's own sibling defect (`TASK 65` clause 2), unchanged by this work.
+
+**One finding worth recording, because it will surprise the next session (`P-16`).** `check-procedures` fails any dated log whose `done:` block is empty — so a log opened as a **skeleton**, which is `P-09`'s one measured mitigation against a cut run, turns the gate red until it is filled. That is correct behaviour (an empty conjunction is true of everything) and the tension is real; it is now stated in `wrap-up` §3 so it reads as a known cost rather than a bug.
+
+## TASK 73 — The brief contract becomes a guard · `harness` · `TODO` (needs `TASK 71` · **runs after the site is published**)
+
+**Opened 2026-08-27, deliberately last.** Contracts that are advisory drift; this is the difference between a convention and a boundary. It is scheduled after the site so harness work does not delay the portfolio, which is the author's sequencing decision.
+
+**Done:** `scripts/guards/lib/delegation-gate.mjs` denies, at rung 1, a **write-capable** delegation whose brief lacks the contract's sections — the way `H-05` already denies one naming no work item; the battery proves each clause in red and fails when the clause is removed (`T-04`, `P-14`); and a read-only delegation is unaffected.
+
+**Constraints**
+
+- **Extend the existing guard; never register a second guard on the same matcher.** One `PreToolUse` registration is a deliberate property — N registrations mean N process spawns per call, and the measurement above is what that costs.
+- Write-capability is read off the role's own `tools` list, never a roster (`H-05`).
+- `G-13`: a guard that cannot evaluate must deny.
+
+## TASK 77 — The trace records what a run cost, in tokens and wall-clock · `harness` · `TODO`
+
+**Opened 2026-08-28 by `ADR-009`'s eighth sub-decision, from a claim that turned out to be false.** The harness has been treating token cost as unavailable. `G-06` says `maxCost` *"is not available and is never reported as a number"* — true of the **budget control** — and `ADR-009`'s first draft said `bytes` is *"never tokens billed"*, true of that column. Together they read as *tokens cannot be measured*, and that is wrong. Hook payloads carry no usage field, but **every hook receives `transcript_path`**, and the transcript's `message.usage` carries `input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens` and `thinking_tokens` per assistant message, tagged with its `model`. Measured 2026-08-28: one session totals 1,062,469 output and 168,464,001 cache-read tokens, and an earlier session carries two model tiers in one file, so per-model attribution already works.
+
+**Done:** every `SubagentStop` and `SessionEnd` writes one `run.cost` event carrying `wall_ms` and per-model token counts; `check-trace` validates its shape as it validates every other event; and the red battery proves that **no string from the transcript can reach the trace**, and that a missing, truncated or reshaped transcript records an **absence** rather than a crash or a silent zero (`G-13`).
+
+**Constraints**
+
+- **Integers only.** The extractor takes named numeric fields and nothing else — not a message id, not an error string, not a `model` value it did not itself derive. The transcript holds everything that was said, including anything read near `private/`; `docs/harness/evidence.md` states that the trace records *what was attempted, decided and happened*, never *what was said*, and this constraint is what keeps that true. It is the reason the red battery exists, not a style preference.
+- **A zero is not an absence.** A transcript that cannot be read records the fact. Writing `0` would publish a run as free — the exact defect `TASK 70` found in `WebFetch`'s byte column, and the reason that report had to partition on a fix date.
+- **Reuse the writer.** `eventsFor` in `scripts/guards/lib/evidence.mjs` is where every event is built. Do not add a second write path, and do not register another hook: the per-call hook cost is already measured and one more registration is one more process spawn per tool call.
+- **`G-06`'s row is amended in the same change (`G-11`).** `maxCost` stays unavailable as a *budget control*; cost as a *measurement* stops being an overclaim. Both halves stated, neither deleted.
+- Per dispatch and per session — **never per turn**. That is the taxonomy `TASK 72` already declined.
+
+## TASK 78 — Cost per completed item becomes computable · `harness` · `TODO` (needs `TASK 77` · **runs after the fix phase**)
+
+**Opened 2026-08-28.** `ADR-009` names cost per completed work item as the headline metric, and it is currently **uncomputable**: `run.header` carries no work-item id, the parent's `Agent` request and the child's run id are different values, and no parent `tool_use_id` reaches `SubagentStart`. Two figures already in the trace are also never reported — a dispatch's wall-clock (first and last `ts` of its segment) and the brief's own size (`target.bytes` on the parent's `Agent` request, 3,819 bytes for the `TASK 71` researcher dispatch).
+
+**Done:** `check-cost.mjs` prints a **per-work-item** row — tokens, wall-clock, result bytes, brief bytes, dispatches, footers — joined through a `cost:` `done:`-block dimension that `check-procedures` verifies **resolves to a real run** under `evidence/runs/`.
+
+**Constraints**
+
+- **Compute the two that already exist; do not add events for them.** Wall-clock and brief bytes are in the trace already.
+- The `cost:` dimension is a **self-reported pointer into an observable artifact**, and the report says so where it prints it. A hook cannot know which work item is being worked on, so a heuristic that guessed would be worse than an honest declaration.
+- Validate it the way `iteration_split` is validated: **derived** — the named file exists and the run id appears in it — never a roster (`P-13`).
+- **Still report-only.** A cost figure becomes a failing gate step only after someone calibrates a threshold, and that is not this item (`TASK 34`'s lesson).
+
+## TASK 79 — The hand-off packet becomes a documented convention · `documentation` · `DONE`
+
+**Opened and closed 2026-08-28, from a live gap found while planning the session split.** `progress/handoff/` holds three working packets and **no document mentions the directory** — not `progress/README.md`, not a rule, not `wrap-up`. A convention nobody can find is one that gets reinvented at a lower standard each time, and the plan to run one work item per session depends entirely on it.
+
+**Why it matters more than its size.** This is `P-09`'s reading half applied to a session instead of an agent, and the extension is exact: **a fresh session is economically a delegated agent with a cold context.** `P-09` measured 0 of 3 slices cut when handed a pre-written extract against 2 of 4 when sent to read. A packet that says *"read `TASKS.md` and work it out"* has handed over an unbounded read; one that says *"here is the state, here are the traps, here is your prompt"* has not.
+
+**Done:** `progress/README.md` carries the packet's shape and when one is written; `wrap-up`'s hand-over step names the directory and requires a packet whenever the next work item will start in a fresh session; and the shape is **derived from the packets that exist** rather than invented.
+
+**Constraints**
+
+- **Describe what those files do; do not redesign them** (`C-02`). Two of them worked.
+- The packet's centre is the **ready-to-paste prompt**. Without one the next session opens by deciding what to do rather than doing it.
+- No new directory and no template file — `progress/README.md` already carries the work-log template, and the packet goes beside it.
+
+**Closed 2026-08-28.** The derivation found something the plan had assumed away: **the directory holds two different kinds of document, and only one of them is a session hand-off.** `2026-08-27-task27.md` and `2026-08-27-eval001.md` hand context to a *fresh session*; `2026-08-26-task26-content.md` hands drafted content to the *author* to apply to `resources/**` under `H-02`. Writing one shape over both would have produced a convention that fits neither. Four sections are shared by the two session packets and are required — the goal in one sentence, the ready-to-paste prompt, why this item now, and boundaries — and everything else the two do individually is declared optional, because a section present in one of two is not a convention.
+
+## TASK 80 — The session close is a spoken hand-over, not only a written packet · `documentation` · `DONE`
+
+**Opened and closed 2026-08-28, from the author's own feedback on the previous session's ending.** `TASK 79` made the packet a documented convention, and the packet is a **file**. What the author found useful was the ending *in the terminal*: the cut said out loud, the prompt to paste, and the tier with its reason. `wrap-up` §5 required the file and said nothing about the message.
+
+**Why this is not deferred for a trial, which is what was proposed.** The suggestion was to run the format two more sessions and then write it down. It cannot be trialled unwritten: **a fresh session does not inherit an unwritten habit**, which is the entire premise `TASK 79` documented. Session two would not produce the ending, and session three would read that as the format not sticking rather than as nobody having been told. A three-line procedure step is cheaper than a wrong conclusion.
+
+**And it does not go in `CLAUDE.md`,** which states of itself that no rule bodies live there because a rule stated twice drifts (`G-10`). `wrap-up` already owns hand-over; a second home for it would be the drift that file exists to prevent.
+
+**Done:** `wrap-up` §5 requires the closing message and names its three parts — the cut stated explicitly, the paste-ready prompt reproduced **in the terminal** rather than only in the packet, and the tier with its one-line reason — plus what is left for the human to decide.
+
+**Constraints**
+
+- **Three parts, no template.** The moment this becomes a form to fill, it stops being read.
+- The prompt appears in **both** places on purpose, and that is not the duplication `G-10` forbids: the packet is the durable artifact and the terminal is where a human actually copies from. One copy is authored, the other is quoted from it.
+- The tier line carries its **reason**, never a bare name — `ADR-009` §6 decided that allocation, and a recommendation with no reason gets ignored the first time it is inconvenient.
 
 ---
 

@@ -22,6 +22,23 @@ const CFG = {
   specRequiredFor: ['feature', 'migration'],
 };
 
+const REGISTER_HEAD = [
+  'Status values: `TODO` · `IN PROGRESS` · `BLOCKED` · `DONE` · `RETIRED`',
+  '',
+  '| type | Produces a spec? |',
+  '|---|---|',
+  '| `content` | No |',
+  '| `research` | No |',
+  '| `planning` | No |',
+  '| `feature` · `migration` | **Yes** |',
+  '| `bugfix` · `maintenance` | No |',
+  '| `harness` · `documentation` | No |',
+  '',
+].join('\n');
+
+const withHead = (...headings) => `${REGISTER_HEAD}\n${headings.join('\n\ntext\n\n')}\n`;
+
+
 /** A minimal env: one role, one work item, no specs. */
 function env(over = {}) {
   return {
@@ -67,7 +84,15 @@ test('extractWorkItems finds every spelling and normalizes them', () => {
 });
 
 test('parseWorkItemTypes reads the register heading shape', () => {
-  const md = '## TASK 0 — Case studies · `content` · `DONE`\n\ntext\n\n## TASK 7 — Founding ADRs · `research` · `TODO`\n';
+  // The register head is part of the shape, not decoration: TASK 74 made the type
+  // positional against the register's own declared status and type vocabularies.
+  const md = `${REGISTER_HEAD}
+## TASK 0 — Case studies · \`content\` · \`DONE\`
+
+text
+
+## TASK 7 — Founding ADRs · \`research\` · \`TODO\`
+`;
   const m = parseWorkItemTypes(md);
   assert.equal(m.get('TASK-0'), 'content');
   assert.equal(m.get('TASK-7'), 'research');
@@ -233,7 +258,9 @@ test('INC-05 end to end: a fixture repo denies on draft, allows once approved, d
 
   try {
     put('scripts/guards/guards.config.json', readFileSync(join(ROOT, 'scripts/guards/guards.config.json'), 'utf8'));
-    put('TASKS.md', '## TASK 42 — Build the thing · `feature` · `TODO`\n');
+    // The register head carries the status and type vocabularies the parser reads (TASK 74),
+    // so a fixture register without it is not a register the guard can classify.
+    put('TASKS.md', withHead('## TASK 42 — Build the thing · `feature` · `TODO`'));
     put('.claude/agents/implementer.md', '---\nname: implementer\ntools: Read, Write, Edit, Bash\n---\n\nbody\n');
     put('.claude/agents/researcher.md', '---\nname: researcher\ntools: Read, Grep, Glob, WebFetch\n---\n\nbody\n');
     const brief = { subagent_type: 'implementer', prompt: 'Implement behaviors in TASK-42' };
@@ -262,4 +289,69 @@ test('LIVENESS: the real spec template would be rejected if it were mistaken for
   // exactly what the consequence is rather than letting it pass quietly.
   const t = parseYamlish(readFileSync(join(ROOT, 'docs/specs/SPEC-TEMPLATE.md'), 'utf8'));
   assert.equal(t.status, 'draft');
+});
+
+// --- TASK 74: a title word must not displace the type -----------------------
+// The old parser took the FIRST backticked all-letter token anywhere in the heading,
+// because `.*?` is lazy and the /i flag made [a-z]+ case-insensitive. The type field is
+// positional, and reading it by shape rather than by position let a word in the title
+// silently answer a rung-1 question.
+
+test('RED (TASK 74): a backticked word in the title does not displace the type', () => {
+  const m = parseWorkItemTypes(withHead('## TASK 99 — Fix the `slug` join · `feature` · `TODO`'));
+  assert.equal(m.get('TASK-99'), 'feature',
+    'a `feature` whose title carries a backticked word must still parse as feature — otherwise specRequiredFor never fires and H-05 fails OPEN');
+});
+
+test('RED (TASK 74): the two live misparses in the real register parse correctly', () => {
+  const m = parseWorkItemTypes(readFileSync(join(ROOT, 'TASKS.md'), 'utf8'));
+  assert.equal(m.get('TASK-53'), 'planning', 'TASK 53 read as "version", from "sits at `version` 1.1"');
+  assert.equal(m.get('TASK-62'), 'harness', 'TASK 62 read as "L", from "`L` on the delegated path"');
+});
+
+test('RED (TASK 74): a single capital letter in the title is not mistaken for the status', () => {
+  // `L` matches /^[A-Z ]+$/, so anchoring on "looks like a status" reintroduces the bug
+  // one layer down. The status vocabulary is derived from the register's own header.
+  const m = parseWorkItemTypes(withHead('## TASK 98 — `L` on the delegated path · `harness` · `RETIRED`'));
+  assert.equal(m.get('TASK-98'), 'harness');
+});
+
+test('RED (TASK 74): trailing annotations and parenthetical status text do not break the read', () => {
+  // Every shape the real register actually uses, not a sample (P-13).
+  const m = parseWorkItemTypes(withHead(
+    '## TASK 91 — Astro skeleton · `feature` · `DONE` · **ran fifth**',
+    '## TASK 92 — CI deploy pipeline · `feature` · `TODO` (needs TASK 30)',
+    '## TASK 93 — Trace redaction · `bugfix` · `DONE` — closed inside `TASK 12`',
+    '## TASK 94 — The brief contract · `harness` · `TODO` (needs `TASK 71` · **runs after the site**)',
+    '## TASK 95 — Resolve input · `content` · `IN PROGRESS`',
+  ));
+  assert.equal(m.get('TASK-91'), 'feature');
+  assert.equal(m.get('TASK-92'), 'feature');
+  assert.equal(m.get('TASK-93'), 'bugfix');
+  assert.equal(m.get('TASK-94'), 'harness');
+  assert.equal(m.get('TASK-95'), 'content', 'a two-word status must resolve');
+});
+
+test('RED (TASK 74): a type outside the declared vocabulary is omitted, not silently accepted', () => {
+  // The typo variant of the same fail-open: `bugfixx` is in no specRequiredFor list, so
+  // accepting it would clear the item for delegation. An unclassifiable item is absent
+  // from the map, and decideDelegation already denies on a missing type.
+  const m = parseWorkItemTypes(withHead('## TASK 97 — A typo · `bugfixx` · `TODO`'));
+  assert.equal(m.get('TASK-97'), undefined);
+});
+
+test('RED (TASK 74): an underivable vocabulary throws rather than returning an empty map', () => {
+  // G-13. An empty map would make every item "not in the register" — which denies, so it
+  // is safe — but it would deny with a reason that sends the human to the wrong file.
+  assert.throws(() => parseWorkItemTypes('## TASK 1 — No header here · `content` · `TODO`\n'),
+    /vocabulary/i);
+});
+
+test('RED (TASK 74): the fix is load-bearing end to end — a feature with a backticked title still demands its spec', () => {
+  const types = parseWorkItemTypes(withHead('## TASK 96 — Fix the `slug` join · `feature` · `TODO`'));
+  const v = decideDelegation(
+    { subagent_type: 'implementer', prompt: 'Implement TASK 96.' },
+    env({ workItemTypes: types, specs: [] }),
+  );
+  assert.equal(v.allowed, false, 'H-05 must still require an approved spec for a feature');
 });

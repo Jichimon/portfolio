@@ -2,7 +2,7 @@
 slug: experience
 lang: en
 type: page
-title: "Luis Antelo — Experience"
+title: "Luis Octavio Antelo — Experience"
 confidentiality: sanitized
 h1: "Every employer was different. The problem never was."
 intro: "A system too important to touch, and a business that needed it to do something it was never built for. Different industry, different stack, same shape — every time."

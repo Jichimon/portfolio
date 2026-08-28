@@ -2,7 +2,7 @@
 slug: about
 lang: en
 type: page
-title: "Luis Antelo — About"
+title: "Luis Octavio Antelo — About"
 confidentiality: sanitized
 h1: "I'd rather design the system than run the room it lives in."
 lead: ""

@@ -2,7 +2,7 @@
 slug: home
 lang: es
 type: page
-title: "Luis Antelo — Senior Software Engineer"
+title: "Luis Octavio Antelo — Senior Software Engineer"
 confidentiality: sanitized
 thesis: "Cuando un sistema es demasiado crítico para tocar y demasiado viejo para ignorar, ese es mi problema."
 ---

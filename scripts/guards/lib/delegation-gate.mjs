@@ -88,11 +88,71 @@ export function extractWorkItems(brief) {
   return [...out];
 }
 
-/** The register's heading shape: `## TASK 7 — title · \`type\` · \`STATUS\`` */
+/**
+ * The register's own vocabulary, derived from the register (`P-13`).
+ *
+ * Both lists are published at the head of `TASKS.md` — a `Status values:` line and a table
+ * whose first header cell is `type`. Reading them from there rather than hardcoding them
+ * means a type added to the table is honoured without touching this guard, and a type that
+ * exists only in a heading is a finding rather than a silent pass.
+ */
+function registerVocabulary(lines) {
+  const statuses = new Set();
+  const types = new Set();
+  let inTypeTable = false;
+
+  for (const line of lines) {
+    const s = line.match(/^Status values:\s*(.+)$/);
+    if (s) for (const m of s[1].matchAll(/`([^`]+)`/g)) statuses.add(m[1]);
+
+    if (/^\|\s*type\s*\|/i.test(line)) { inTypeTable = true; continue; }
+    if (inTypeTable) {
+      if (!line.startsWith('|')) { inTypeTable = false; continue; }
+      // The separator row (`|---|---|`) carries no code spans, so it needs no special case.
+      for (const m of (line.split('|')[1] ?? '').matchAll(/`([a-z]+)`/g)) types.add(m[1]);
+    }
+  }
+
+  // G-13: a guard that cannot evaluate must deny. An empty vocabulary would make every item
+  // "not in the register" — which does deny — but with a reason pointing at the wrong file.
+  if (types.size === 0 || statuses.size === 0) {
+    throw new Error(
+      'the work-item vocabulary could not be derived from the register: expected a "Status values:" line and a table whose first column header is `type`. A guard that cannot classify an item must not clear it for delegation (G-13).',
+    );
+  }
+  return { statuses, types };
+}
+
+/**
+ * The register's heading shape: `## TASK 7 — title · \`type\` · \`STATUS\``, where the type is
+ * the code span immediately BEFORE the status — positional, not "the first backticked word".
+ *
+ * TASK 74: it was the latter, and `.*?` being lazy with the /i flag meant the first
+ * all-letter code span anywhere in the heading answered a rung-1 question. A `feature`
+ * titled ``Fix the `slug` join`` parsed as type `slug`, which is in no `specRequiredFor`
+ * list, so `H-05` stopped demanding a spec — a boundary failing OPEN on a word in a title.
+ * Two entries misparsed on disk when this was found (`TASK 53` as `version`, `TASK 62` as `L`).
+ *
+ * The status is matched against the register's declared vocabulary rather than by shape:
+ * `L` matches /^[A-Z ]+$/, so "looks like a status" would reintroduce the same bug one layer
+ * down. Real headings also carry trailing annotations (`· **ran fifth**`), parenthetical
+ * status text (`` `TODO` (needs TASK 30) ``) and post-status code spans, all of which this
+ * tolerates because it anchors on the status rather than counting fields from either end.
+ */
 export function parseWorkItemTypes(tasksMd) {
+  const lines = String(tasksMd).split(/\r?\n/);
+  const { statuses, types } = registerVocabulary(lines);
   const out = new Map();
-  for (const m of tasksMd.matchAll(/^##\s+TASK\s+(\d+)\s+—.*?`([a-z]+)`/gim)) {
-    out.set(`TASK-${m[1]}`, m[2]);
+
+  for (const line of lines) {
+    const h = line.match(/^##\s+TASK\s+(\d+)\s+—\s*(.*)$/);
+    if (!h) continue;
+    const spans = [...h[2].matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+    const statusAt = spans.findIndex((s) => statuses.has(s));
+    if (statusAt < 1) continue;               // no status, or nothing before it to be the type
+    const type = spans[statusAt - 1];
+    if (!types.has(type)) continue;           // unclassifiable — absent, and the caller denies
+    out.set(`TASK-${h[1]}`, type);
   }
   return out;
 }

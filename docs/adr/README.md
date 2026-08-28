@@ -6,6 +6,10 @@ TASK 7 writes the founding set: site stack, hosting and deploy, i18n strategy, c
 
 `TASK 33` adds the seventh on 2026-08-23 — the UI component model — and amends the testing toolchain in the same change. `TASK 35` adds the eighth on 2026-08-24 — how the implementation tree is arranged. It was the first ADR to sit in this index **before** being accepted, so it was findable while it was still a proposal rather than only after; accepted the same day. **The level-2 table below stopped being empty on that date**, so the three-part discipline it describes is now load-bearing rather than theoretical.
 
+`TASK 71` adds the ninth on 2026-08-28 — delegation economics — and it is **the first ADR about the harness rather than about the site**. It was listed here while `Proposed`, following `ADR-008`'s precedent, so it was findable before it was accepted — **accepted the same day**. It adds **no level-2 row**: it opens ground none of the eight covered, and cites `ADR-006` and `ADR-008` rather than reopening them.
+
+**Its own eighth sub-decision was added the same day, and there is no level-2 row for that either — deliberately.** The level-2 table records amendments to **accepted** decisions, so that a reader who trusts a point learns it has moved. `ADR-009` was not yet accepted when §8 was written; no reader could have been relying on it, and the sub-decision it corrects is one of its own drafts. **From now on it is accepted, so the next change to any of its eight points does take a level-2 row.** Revising a proposal is not amending a decision, and recording it as one would make the level-2 table describe something other than what it claims to. The revision is recorded **inside** `ADR-009` instead, where its review-trigger note says which trigger fired and why it was replaced.
+
 ## Level 1 — status of each ADR
 
 **States:** `Current` · `Current-with-amendments` (still standing, some points amended — see level 2) · `Superseded by ADR-<NNN>` (refuted in full).
@@ -20,6 +24,7 @@ TASK 7 writes the founding set: site stack, hosting and deploy, i18n strategy, c
 | [ADR-006](ADR-006-testing-toolchain.md) | Testing toolchain — `node:test`, Stryker (`tap-runner`), Playwright | 2026-08-19 · amended 2026-08-23, 2026-08-24 (×2) | `Current-with-amendments` |
 | [ADR-007](ADR-007-ui-component-model.md) | UI component model — `.astro` by default, Preact for islands, zero islands today | 2026-08-23 | `Current` |
 | [ADR-008](ADR-008-site-implementation-architecture.md) | Site implementation architecture — framework-free core, Astro gateway, content as the only source of copy, and how the code reads | 2026-08-24 · amended 2026-08-24, 2026-08-27 | `Current-with-amendments` |
+| [ADR-009](ADR-009-delegation-economics.md) | Delegation economics — when not to delegate, what a brief carries, who assembles the context, and what a run costs | 2026-08-28 · §8 added the same day, pre-acceptance | `Current` |
 
 ## Level 2 — amendments, point by point
 

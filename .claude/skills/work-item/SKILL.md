@@ -73,6 +73,15 @@ Run `/wrap-up`. It refuses a `done` block that claims success with nothing behin
 
 Closing a work item records an `iterations` dimension in the done block: the count of human-visible implement→verify cycles it took — a checkpoint round, a delegated slice returning for verification, a rejected artifact sent back — never a tool-call count, which would move for reasons unrelated to what K1 measures.
 
+And it records **where those cycles went**, in `iteration_split` — `bucket=count` pairs summing to `iterations`. The buckets are the steps above that an iteration can return **to**: this procedure's own numbered steps, minus step 1 (nothing returns to the entry point) and minus Close (a return to Close is a reopen, which is `K2`). A type that produces no spec has no `spec` bucket, because it never had a spec to iterate on.
+
+```yaml
+iterations:      { status: passed, evidence: ["3"] }
+iteration_split: { status: passed, evidence: ["checkpoint=1", "verify=2"] }
+```
+
+A bare count says an item took nine passes without saying whether they were author review, slice rework or gate rework — which is the split every slice-seam proposal is otherwise guessing at.
+
 ## Boundaries
 
 - Never invoke a git write. The human owns commits (`H-01`).

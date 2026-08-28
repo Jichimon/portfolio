@@ -64,7 +64,72 @@ needs no evidence. `wrap-up` fails on any dimension reading `passed` with empty
 evidence.
 
 Dimensions in use: `tests` · `mutation` · `ci` · `security` · `docs` ·
-`loose_ends` · `scope` · `content`.
+`loose_ends` · `scope` · `content` · `iterations` · `iteration_split`.
+
+**`iterations` and `iteration_split` travel together.** The first is a bare
+integer; the second says where those cycles went, as `bucket=count` pairs that
+must sum to it. The buckets are derived from the `work-item` procedure's own
+steps and narrowed by the item's `type` — `check-procedures` prints the legal
+set when it rejects one, so there is nothing to memorize.
+
+```yaml
+iterations:      { status: passed, evidence: ["3"] }
+iteration_split: { status: passed, evidence: ["checkpoint=1", "verify=2"] }
+```
+
+## `handoff/` — the packet that starts the next session
+
+`progress/handoff/` holds documents written **by the session that is ending, for
+the one that has not started.** The convention existed and worked for three
+files before anything described it; this section is that description (`TASK 79`).
+
+**Two different kinds live here, and conflating them is the mistake to avoid.**
+
+- A **session hand-off** carries context to a fresh session — `2026-08-27-task27.md`,
+  `2026-08-27-eval001.md`. This is the shape below.
+- An **author packet** carries drafted content to the human to apply to
+  `resources/**`, which no agent may write (`H-02`) — `2026-08-26-task26-content.md`.
+  It is a different document with a different reader, and it has no fixed shape.
+
+### When to write a session hand-off
+
+Whenever the next work item will begin in a **fresh session** — which is the
+normal case, because a long session re-sends its whole context on every turn and
+that cost grows with its length. Write it **last**, as the closing act, while the
+context that makes it cheap is still loaded.
+
+This is `P-09`'s reading half applied to a session rather than an agent: a fresh
+session is economically a delegated agent with a cold context. `P-09` measured
+0 of 3 slices cut when handed a pre-written extract, against 2 of 4 when sent to
+go and read. **A packet that says "read `TASKS.md` and work it out" has handed
+over an unbounded read; one that hands over the extract has not.**
+
+### Shape — four required sections, derived from the two that exist
+
+`YYYY-MM-DD-<task>.md`, and any section beyond these four is optional because a
+section appearing in one of two packets is not yet a convention.
+
+1. **`# Hand-off — TASK N: <goal>`**, then one line naming the session that wrote
+   it and stating that the packet is a **claim, not ground truth** — the next
+   session validates it against the repository before acting (`P-04`, `P-11`).
+2. **`## The goal, in one sentence`** — what the next session produces. If it
+   needs two sentences, it is two work items (`P-01`).
+3. **`## How to start`** — a fenced block holding the **prompt to paste, verbatim**.
+   This is the centre of the packet. Without it the next session opens by
+   deciding what to do instead of doing it. Name the procedure if one applies,
+   and say if it is `disable-model-invocation` and must be typed by a human.
+4. **`## Boundaries`** — what this session must not do, restated because they are
+   easy to forget mid-run.
+
+Sections the existing packets add where they earn it, none of them required:
+*why this item and not another* · *why now* · *what to read, in order* · *what
+already exists, so it is not rebuilt* · *the traps* — the failure that will
+otherwise be rediscovered the expensive way, which is usually the most valuable
+part · *the slices* · *what is out of scope for this hand-off*.
+
+**A packet is not a work log.** The log records what happened; the packet is
+what the next session needs. They are written in the same session and neither
+substitutes for the other.
 
 ## Rules
 

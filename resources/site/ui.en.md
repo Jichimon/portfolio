@@ -23,7 +23,7 @@ rail:
   theme_to_dark: "Dark mode"
   theme_to_light: "Light mode"
   menu: "Menu"
-  wordmark: "Luis Antelo"
+  wordmark: "Luis Octavio Antelo"
 
 socials:
   - name: "GitHub"

@@ -23,7 +23,7 @@ rail:
   theme_to_dark: "Modo oscuro"
   theme_to_light: "Modo claro"
   menu: "Menú"
-  wordmark: "Luis Antelo"
+  wordmark: "Luis Octavio Antelo"
 
 socials:
   - name: "GitHub"
@@ -32,13 +32,13 @@ socials:
     url: "https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/"
 
 home:
-  standalone_label: "Fuera de la plataforma — otro empleador, otro sistema"
-  employers_heading: "Dónde he trabajado"
-  work_heading: "Lo que he construido"
-  stack_heading: "Tecnologías con las que trabajé"
+  standalone_label: "Fuera de la plataforma - otro empleador, otro sistema"
+  employers_heading: "Acá ya trabajé"
+  work_heading: "Lo que hice"
+  stack_heading: "Tecnologías que manejo"
   contact_heading: "Hablemos"
-  contact_invite: "¿Tenés un sistema que cuesta hasta explicar? ¿O una idea que todavía no sabés cómo bajar a tierra? Veámoslo juntos."
-  contact_note: "Abierto a remoto o híbrido/relocation."
+  contact_invite: "¿Tenés un sistema complicado? ¿Necesitás que haga algo pero no sabés cómo? ¿Capaz tenés una idea que todavía no sabés aterrizarla? ¿O tal vez tuvieras alguna duda técnica? Veámoslo juntos."
+  contact_note: "Abierto a oportunidades en remoto o híbrido/relocation."
   contact_email: "luis.antm@hotmail.com"
   seam_legacy: "Legacy, denso"
   seam_modern: "Moderno, abierto"

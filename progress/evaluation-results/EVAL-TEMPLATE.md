@@ -36,10 +36,13 @@ for. Both must be answered, including "no" with a reason.>
 | KPI | Substrate | Value | Baseline | Previous | Verdict |
 |---|---|---|---|---|---|
 | K1 passes-to-done | observable | | | | Improved / Flat / Regressed |
+| K1b where the iterations went | observable | | | | |
 | K2 done-reopens | observable | | | | |
 | K3 escaped defects | observable | | | | |
 | L context load | observable | | | | |
 | V rule violations | observable | | | | |
+
+**`K1b` is read from each log's `iteration_split`** — `bucket=count` pairs summing to `iterations`, added by `TASK 72` after `EVAL-001` reported a bare count of ~7 against a target of ≤2 and could attribute it to nothing. Aggregate the buckets across items and report which one carries the mass; that is the number a slice-seam proposal has to move. An item whose logs predate `iterationSplitRequiredFrom` contributes to `K1` and **not** to `K1b`, and the split is stated rather than the two totals being silently mismatched.
 
 **Substrate values:** `observable` (read from an artifact the scored entity does not author) · `self-reported` (read from its prose) · `unmeasurable` (the signal does not exist — report the raw count, never a ratio that claims precision it does not have).
 
