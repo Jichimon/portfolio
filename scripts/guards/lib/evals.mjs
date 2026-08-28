@@ -16,7 +16,7 @@
 // only thing that could have produced a pass is a model behaving well that day, and that is
 // a measurement of the model (A16).
 
-import { stripComment, unquote } from './delegation-gate.mjs';
+import { stripComment, unquote, extractWorkItems } from './delegation-gate.mjs';
 
 const KEY = /^([a-z_][a-z0-9_]*):(.*)$/i;
 const INDENTED = /^(\s+)(.*)$/;
@@ -123,8 +123,11 @@ const asList = (v) => (Array.isArray(v) ? v : v === undefined || v === '' ? [] :
  * @param {Set<string>} incidentIds     from parseIncidentIds
  * @param {object} config               guards.config.json .evals
  * @param {{exists:(p:string)=>boolean, read:(p:string)=>string}} io  injected, so this stays pure
+ * @param {Map<string,string>} workItemStatuses  TASK-N -> its status in TASKS.md, from
+ *   parseWorkItemStatuses. Defaults to empty, which makes the staleness check below inert —
+ *   the caller that has no register to read gets the same behaviour as before this existed.
  */
-export function validateCases(cases, incidentIds, config, io) {
+export function validateCases(cases, incidentIds, config, io, workItemStatuses = new Map()) {
   const findings = [];
   const at = (path, message) => findings.push({ file: path, message });
   const outcomes = config.outcomes ?? ['Caught', 'Partial', 'Gap'];
@@ -181,6 +184,11 @@ export function validateCases(cases, incidentIds, config, io) {
       }
       if (outcome === 'Caught') {
         at(path, 'claims Caught with no executable proof. Without a control to remove, the only thing that could have produced a pass is the model behaving well, and that measures the model rather than the harness (A16)');
+      }
+      for (const item of extractWorkItems(data.proof_reason ?? '')) {
+        if (workItemStatuses.get(item) === 'DONE') {
+          at(path, `proof_reason cites ${item} as not yet implemented, but TASKS.md marks it DONE — this case is stale and needs its real proof (P-13)`);
+        }
       }
     } else if (typeof proof !== 'object') {
       at(path, `proof must be a map with file and test, or the literal none — got "${proof}"`);

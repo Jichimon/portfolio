@@ -24,16 +24,23 @@ required_evidence:
 
 control: "validateTrace's whole-file scan in scripts/guards/lib/evidence.mjs, once TASK 18 narrows it"
 
-proof: none
-proof_reason: "TASK 18 (the fix) is not implemented yet — there is no test to point at. This incident happened for real this session (a researcher trace's tool_use_id coincidentally contained a 4-character banned term, failing the gate on a true string match with zero actual confidentiality risk), transcribed as INC-15 in architecture.md §C. Returns to `proof` once TASK 18 ships its red tests."
+proof:
+  file: scripts/guards/lib/evidence.test.mjs
+  test: "RED: a banned term inside an opaque tool_use_id is not a redaction finding"
 
-outcome: Gap
+outcome: Caught
 notes: |
-  Found live, not constructed: a real researcher-role trace failed check-trace this session
-  over a banned term appearing inside an Anthropic-API-generated tool_use_id. The human located
-  and removed the affected lines (only a human can write evidence/, H-03), which broke seq
-  continuity — a second, correct finding from the same guard. The redaction design itself is
+  Found live, not constructed: a real researcher-role trace failed check-trace this session over
+  a banned term appearing inside an Anthropic-API-generated tool_use_id. The human located and
+  removed the affected lines (only a human can write evidence/, H-03), which broke seq
+  continuity — a second, correct finding from the same guard. The redaction design itself was
   sound (whole-file scanning exists specifically to catch leaks nobody wrote a redactor for);
-  the gap is that it does not yet distinguish three known-opaque fields from content.
+  the gap was that it did not yet distinguish three known-opaque fields from content.
+
+  TASK 18 closed the gap: validateTrace in scripts/guards/lib/evidence.mjs now accepts an
+  opaqueFields option (tool_use_id, run_id, parent_run_id) and blanks those fields by name,
+  never by a "looks like an id" heuristic, before the whole-file redaction scan runs. Every
+  other field, including one nobody has thought of yet, and a line that fails to parse, is
+  still scanned exactly as before — proven by the sibling tests in the same file.
 
 retired:

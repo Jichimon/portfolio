@@ -9,6 +9,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCase, parseIncidentIds, validateCases, requiredFieldsFrom } from '../lib/evals.mjs';
+import { parseWorkItemStatuses } from '../lib/delegation-gate.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const cfg = JSON.parse(readFileSync(join(ROOT, 'scripts/guards/guards.config.json'), 'utf8')).evals;
@@ -37,7 +38,18 @@ if (incidents.size === 0) {
   process.exit(1);
 }
 
-const findings = validateCases(cases, incidents, { ...cfg, requiredFields }, io);
+// The register's own status per work item, so a stale proof_reason (TASK 65) is caught
+// rather than trusted forever. An unparseable register is a finding, never a crash (G-13) —
+// the same pattern check-procedures.mjs already uses for parseWorkItemTypes.
+let workItemStatuses = new Map();
+const preFindings = [];
+try {
+  workItemStatuses = parseWorkItemStatuses(readFileSync(join(ROOT, 'TASKS.md'), 'utf8'));
+} catch (e) {
+  preFindings.push({ file: 'TASKS.md', message: `the register head no longer parses, so no work-item status can be resolved and no stale proof_reason can be checked — ${e.message}` });
+}
+
+const findings = [...preFindings, ...validateCases(cases, incidents, { ...cfg, requiredFields }, io, workItemStatuses)];
 
 const scored = cases.filter((c) => (c.data.outcome ?? '').trim());
 const proven = cases.filter((c) => typeof c.data.proof === 'object');

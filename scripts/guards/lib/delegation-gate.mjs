@@ -139,11 +139,10 @@ function registerVocabulary(lines) {
  * status text (`` `TODO` (needs TASK 30) ``) and post-status code spans, all of which this
  * tolerates because it anchors on the status rather than counting fields from either end.
  */
-export function parseWorkItemTypes(tasksMd) {
+function scanWorkItemHeadings(tasksMd) {
   const lines = String(tasksMd).split(/\r?\n/);
   const { statuses, types } = registerVocabulary(lines);
-  const out = new Map();
-
+  const out = [];
   for (const line of lines) {
     const h = line.match(/^##\s+TASK\s+(\d+)\s+—\s*(.*)$/);
     if (!h) continue;
@@ -152,9 +151,20 @@ export function parseWorkItemTypes(tasksMd) {
     if (statusAt < 1) continue;               // no status, or nothing before it to be the type
     const type = spans[statusAt - 1];
     if (!types.has(type)) continue;           // unclassifiable — absent, and the caller denies
-    out.set(`TASK-${h[1]}`, type);
+    out.push({ id: `TASK-${h[1]}`, type, status: spans[statusAt] });
   }
   return out;
+}
+
+export function parseWorkItemTypes(tasksMd) {
+  return new Map(scanWorkItemHeadings(tasksMd).map((w) => [w.id, w.type]));
+}
+
+/** The register's own status per work item — same heading scan as parseWorkItemTypes,
+ * reading the status span instead of the type span. A second hand-rolled heading regex
+ * is exactly the drift TASK 74 already paid for once (TASK 65). */
+export function parseWorkItemStatuses(tasksMd) {
+  return new Map(scanWorkItemHeadings(tasksMd).map((w) => [w.id, w.status]));
 }
 
 /** Does this spec authorize write-capable work right now? */

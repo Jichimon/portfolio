@@ -1972,7 +1972,7 @@ Filed 2026-08-27 from `progress/evaluation-results/EVAL-001-first-non-harness-wo
 
 **A sixth measurement lands here rather than opening a third id**, found 2026-08-27 while prototyping `TASK 70` and belonging to the same writer: **`run.header` carries `model` only on `reason: startup`** — 8 of 139 headers, every `reason: delegated` header `null`. `TASK 70` works around it by joining the header's `agent` to the role file's `model:` frontmatter, which is a derivation and not a record: a dispatch-time model override is invisible to it. **Done:** a delegated `run.header` carries the model that actually ran, or `docs/harness/evidence.md` records that the runtime does not supply it on `SubagentStart` and that the join is the substitute.
 
-## TASK 65 — Two gate checkers pass on an artifact they cannot classify · `bugfix` · `TODO`
+## TASK 65 — Two gate checkers pass on an artifact they cannot classify · `bugfix` · `DONE`
 
 **Opened 2026-08-27 by `EVAL-001`, which found the live instance.** `EC-014`'s control shipped — `scripts/guards/lib/evidence.mjs:170-183` and `:275-279` thread `opaqueFields` blanked by field name rather than by a "looks opaque" heuristic, with three red tests at `scripts/guards/lib/evidence.test.mjs:182`, `:192`, `:201` — and `TASK 18` is `DONE`. **The case file still reads `proof: none`, `outcome: Gap`, and a `proof_reason` asserting that the fix "is not implemented yet."** `check-evals` passes, because it exempts `proof: none` from every staleness assertion.
 
@@ -1983,6 +1983,8 @@ This is `INC-07`'s shape — a check that passes forever — inside the checker 
 **Done, clause 2 — `check-procedures`, absorbed from `TASK 68`, retired 2026-08-27.** The instance: `check-procedures` requires a `done:` block in every `progress/*.md` written after 2026-08-18, and fails on `progress/2026-08-27-13-eval001-workitem-extract.md` — a **generated** artifact, reproducible byte-for-byte from a read-only script, which records no work and finishes nothing. **The three obvious fixes are all wrong and `TASK 68` records why**, so nobody re-derives them: an exclusion roster is `INC-07`'s shape and the guard's own rationale refuses it; moving the file breaks `check-docs` instead, since both the scorecard and `TASK 60`'s log cite its path; and emitting a `done:` block from the generator makes the guard green by making the artifact lie. **Done:** `check-procedures` passes on a `progress/` file that declares itself generated and carries a reproduce command, fails on one that does neither, and still fails a real session log that omits its `done:` block; each assertion fails when its clause is removed (`P-14`); and the marker is a declared property of the file rather than a list of filenames in a config.
 
 **Why one item and not two.** The two clauses share the defect, not the code: a checker deciding what an artifact *is* by a shape it happens to match, rather than by a property the artifact declares. They sit on two modules with two test files, so the fold is wider than `TASK 64`'s — see the note under `TASK 68` for why it holds and where the idiom stops.
+
+**Closed 2026-08-28.** Both clauses shipped as two independent `implementer` slices (disjoint files, no shared object — `G-12`), each test-first. Clause 1: `parseWorkItemStatuses` added to `delegation-gate.mjs` (a shared heading scan behind it and `parseWorkItemTypes`, rather than a second hand-rolled regex — `TASK 74`'s lesson applied preemptively); `validateCases` takes an optional `workItemStatuses` map and flags a `proof: none` case whose `proof_reason` cites a `DONE` work item; `EC-014` now carries its real proof and `outcome: Caught`. Clause 2: `isGeneratedArtifact` and `missingDoneBlockFinding` added to `procedures.mjs`, requiring **both** the `` tool output (`D2`) `` disclosure and a `**Reproduce this file**` command together — proven in red that either alone is not enough (`P-14`). `progress/2026-08-27-13-eval001-workitem-extract.md` needed no edit: it already carried both signals, and the guard now reads them. `docs/harness/contracts.md` §5 and §6 gained one paragraph each. `node scripts/guards/gate/check-evals.mjs` and `check-procedures.mjs` both pass; `node --test "scripts/guards/**/*.test.mjs"` is green (124 new/changed-file tests re-verified directly, no regressions).
 
 ## TASK 66 — Record work-item status transitions, so `K2` has a substrate · `harness` · `TODO`
 
@@ -2004,7 +2006,7 @@ This is `INC-07`'s shape — a check that passes forever — inside the checker 
 >
 > **This fold is wider than `TASK 64`'s and the difference is recorded rather than glossed.** `TASK 64` folded four defects on **one** surface, the hook writers, and `TASK 12` set that precedent. This one spans **two** guard modules — `check-evals`/`evals.mjs` and `check-procedures`/`procedures.mjs` — with two test files, so it is a fold on a shared *property*, not a shared file. It holds because each clause is independently checkable and neither can be closed by the other; it is the boundary of the idiom, and a third checker joining would be `INC-01` (one "done" meaning several things) rather than a further saving.
 >
-> **The substance below is unchanged and still governs**; only the id that closes it moved. **The `procedures` gate step stays red for `progress/2026-08-27-13-eval001-workitem-extract.md` until `TASK 65` ships**, and every item closing in the meantime declares that in its `done:` block rather than letting a red step become background noise — which is `TASK 34`'s lesson.
+> **The substance below is unchanged and still governs**; only the id that closes it moved. **The `procedures` gate step stayed red for `progress/2026-08-27-13-eval001-workitem-extract.md` until `TASK 65` shipped, 2026-08-28** — every item that closed in the meantime declared that in its `done:` block rather than letting a red step become background noise, which is `TASK 34`'s lesson.
 
 **Opened 2026-08-27 by `TASK 60`, which produced the instance while running.** `check-procedures` requires a `done:` block in every `progress/*.md` written after 2026-08-18, and it now fails on `progress/2026-08-27-13-eval001-workitem-extract.md` — a **generated** artifact, reproducible byte-for-byte from a read-only script, which records no work and finishes nothing. A done block on it would be a machine-written claim that a work item completed, which is ceremony in the one register that must not contain any.
 
@@ -2018,7 +2020,7 @@ This is `INC-07`'s shape — a check that passes forever — inside the checker 
 
 **Done:** `check-procedures` passes on a `progress/` file that declares itself generated and carries a reproduce command, fails on one that does neither, and still fails a real session log that omits its `done:` block; each assertion fails when its clause is removed (`P-14`); and the marker is a declared property of the file rather than a list of filenames in a config.
 
-**Until it ships, the `procedures` step is red for this one file** and every item closing in the meantime should declare that in its `done:` block rather than let a red step become background noise — which is `TASK 34`'s lesson.
+**Until it shipped, the `procedures` step was red for this one file** and every item closing in the meantime declared that in its `done:` block rather than let a red step become background noise — which is `TASK 34`'s lesson. Shipped as `TASK 65` clause 2, 2026-08-28.
 
 ## TASK 69 — An `/about` assertion passes alone and times out under load, on Firefox · `bugfix` · `TODO`
 
@@ -2127,7 +2129,7 @@ Both files carry a traceability body asserting where each value came from. The r
 | 3 | `TASK 71` — `ADR-009`, delegation economics and the brief contract | decide · `DONE` | `TASK 70` |
 | 3b | `TASK 79` — the hand-off packet becomes a documented convention | decide · `DONE` | — |
 | 3c | `TASK 77` — the trace records what a run cost, in tokens and wall-clock | measure · `DONE` | — |
-| 4 | `TASK 65` — two checkers that cannot classify (absorbs `TASK 68`) | fix | — |
+| 4 | `TASK 65` — two checkers that cannot classify (absorbs `TASK 68`) | fix · `DONE` | — |
 | 5 | `TASK 63` — the paired-predicate assertion reaches every gate step | fix | — |
 | 6 | `TASK 61` — `path-boundary` denies reads the rules exist to permit | fix | — |
 | 7 | `TASK 64` — trace fidelity, second pass (absorbs `TASK 62`) | fix | — |

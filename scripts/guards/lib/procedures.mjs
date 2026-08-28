@@ -54,6 +54,28 @@ export function logDate(filename) {
   return m ? m[1] : null;
 }
 
+/**
+ * A generated artifact declares itself in its own body, not by filename (P-13). Both
+ * signals the harness already writes for a precomputed D2 corpus (TASK 55, TASK 60) must
+ * be present together — either alone (a stray code fence, an incidental "D2" mention)
+ * proves nothing.
+ */
+export function isGeneratedArtifact(text) {
+  const declaresToolOutput = /tool output \(`D2`\)/.test(text);
+  const hasReproduceCommand = /\*\*Reproduce this file\*\*[^\n]*\n+```[\s\S]*?```/.test(text);
+  return declaresToolOutput && hasReproduceCommand;
+}
+
+/**
+ * Whether a progress/ file with no `done:` block is an omission, once the convention date
+ * and the generated-artifact exemption are both applied. Null = no finding.
+ */
+export function missingDoneBlockFinding(text, date, since) {
+  if (!date || date < since) return null;
+  if (isGeneratedArtifact(text)) return null;
+  return `carries no \`done\` block. The convention has existed since ${since}, and a log without one records that work happened, not that it finished (P-03)`;
+}
+
 export const DONE_STATUSES = ['passed', 'failed', 'blocked', 'partial', 'not_applicable'];
 
 /**

@@ -251,6 +251,8 @@ done:
 
 Three rules stop this becoming bookkeeping. **Evidence is a pointer** — a trace event, a guard name and exit code, a file path, a run id — never a sentence. **`not_applicable` carries a one-line reason** and needs no evidence. **Only applicable dimensions are listed**, so a content item costs three lines, not nine.
 
+**A generated artifact is exempt from the `done:` requirement, by a property of its own text rather than a filename list** (`P-13`, `TASK 65`). A `progress/` file that declares itself tool output (`` tool output (`D2`) ``) *and* carries a **Reproduce this file** section with a runnable command records no work and finishes nothing, so `check-procedures` does not demand a `done:` block from it. Either signal alone is not enough — a stray code fence or an incidental mention of `D2` proves nothing — and everything else, including a real session log, still needs one.
+
 `wrap-up` fails when any dimension reads `passed` with empty evidence.
 
 **Two dimensions carry a narrowed shape, because a future evaluator reads them without interpreting prose.** `iterations`'s evidence is a bare integer; `iteration_split`'s is `bucket=count` pairs that must sum to it, drawn from a vocabulary **derived** from the `work-item` procedure's own step headings and the register's own type table — never a list configured in the guard, which is `INC-07`'s shape (`P-13`).
@@ -282,6 +284,8 @@ outcome:                   # Caught | Partial | Gap
 ```
 
 `check-evals` asserts that `proof.file` exists **and contains `proof.test` verbatim**. Existence alone would pass forever after a rename, which is `INC-07`'s shape inside the checker built to prevent it. A case writing `proof: none` carries a `proof_reason` and **cannot claim `Caught`** — without a control to remove, the only thing that could have produced a pass is a model behaving well.
+
+**A `proof: none` case is also checked against the register** (`TASK 65`): if its `proof_reason` names a work item `TASKS.md` marks `DONE`, that is a finding, not a pass — the reason claims the fix does not exist yet, and the register says otherwise. `EC-014` was exactly this: it cited `TASK 18` as unimplemented three sessions after `TASK 18` closed, and nothing checked the claim against the artifact it was a claim about.
 
 Coverage is checked in both directions: every incident in architecture §C has a case **or** a reasoned entry in `evals.excluded`, and an exclusion whose incident no longer exists is reported as stale. Adding a fourteenth incident fails the gate until someone decides which it is.
 

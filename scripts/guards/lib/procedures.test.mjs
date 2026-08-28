@@ -7,6 +7,7 @@ import {
   validateIterationsRequired, validateIterationsEvidence,
   procedureReturnPoints, specProducingTypes, iterationBuckets, workItemIdFromLog,
   validateIterationSplitRequired, validateIterationSplit,
+  isGeneratedArtifact, missingDoneBlockFinding,
 } from './procedures.mjs';
 import { parseWorkItemTypes } from './delegation-gate.mjs';
 
@@ -136,6 +137,66 @@ test('a log predating the convention is not retroactively required to carry a bl
   // Demanding one would force either inventing evidence for finished work, or an exclusion
   // roster. Both are worse than a dated threshold with a written reason.
   assert.ok(logDate('2026-08-15-01-task2-intake.md') < '2026-08-18');
+});
+
+// --- generated artifacts (TASK 65 clause 2) ---------------------------------
+//
+// A generated artifact declares itself in its own body, not by filename (P-13). The two
+// signals the harness already writes for a precomputed D2 corpus (TASK 55, TASK 60) — the
+// `D2` tool-output disclosure and the reproduce-command fence — must both be present, or a
+// stray code fence, or an incidental "D2" mention, would falsely exempt a real work log.
+
+const GENERATED_FIXTURE = `# An extract
+
+This is tool output (\`D2\`), generated so nobody re-derives it by hand.
+
+**Reproduce this file** with:
+
+\`\`\`
+node progress/build-extract.mjs > progress/extract.md
+\`\`\`
+`;
+
+test('a generated artifact carrying both signals is recognized', () => {
+  assert.equal(isGeneratedArtifact(GENERATED_FIXTURE), true);
+});
+
+test('RED: the D2 phrase alone, with no reproduce block, does not exempt a file', () => {
+  const onlyD2 = GENERATED_FIXTURE.split('**Reproduce this file**')[0];
+  assert.equal(isGeneratedArtifact(onlyD2), false);
+});
+
+test('RED: a reproduce block alone, with no D2 phrase, does not exempt a file', () => {
+  const onlyReproduce = GENERATED_FIXTURE.replace(
+    'This is tool output (`D2`), generated so nobody re-derives it by hand.\n\n', '');
+  assert.equal(isGeneratedArtifact(onlyReproduce), false);
+});
+
+test('ordinary prose with neither signal is not a generated artifact', () => {
+  assert.equal(isGeneratedArtifact('# A log\n\nJust prose about what happened.\n'), false);
+});
+
+test('a predating date yields no finding regardless of markers', () => {
+  // Same precedent as the other dated thresholds: nothing is retroactively demanded.
+  assert.equal(missingDoneBlockFinding(GENERATED_FIXTURE, '2026-08-15', '2026-08-18'), null);
+  assert.equal(missingDoneBlockFinding('just prose, no markers', '2026-08-15', '2026-08-18'), null);
+});
+
+test('RED: a post-convention date with neither marker is a finding', () => {
+  const msg = missingDoneBlockFinding('# A log\n\nJust prose.\n', '2026-08-19', '2026-08-18');
+  assert.match(msg, /done/);
+});
+
+test('a post-convention date with both markers is exempt — a generated artifact has nothing to finish', () => {
+  assert.equal(missingDoneBlockFinding(GENERATED_FIXTURE, '2026-08-19', '2026-08-18'), null);
+});
+
+test('RED: a post-convention date with only ONE of the two markers is still a finding (P-14)', () => {
+  // The test that proves the fix requires BOTH signals together, not either alone: a stray
+  // "D2" mention or an incidental fenced command must not exempt a real, unfinished log.
+  const onlyD2 = GENERATED_FIXTURE.split('**Reproduce this file**')[0];
+  const msg = missingDoneBlockFinding(onlyD2, '2026-08-19', '2026-08-18');
+  assert.match(msg, /done/);
 });
 
 // --- iterations (K1) ---------------------------------------------------------

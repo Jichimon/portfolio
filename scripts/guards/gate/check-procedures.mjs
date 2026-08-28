@@ -15,6 +15,7 @@ import {
   validateIterationsRequired, validateIterationsEvidence,
   iterationBuckets, workItemIdFromLog,
   validateIterationSplitRequired, validateIterationSplit,
+  missingDoneBlockFinding,
 } from '../lib/procedures.mjs';
 import { parseWorkItemTypes } from '../lib/delegation-gate.mjs';
 
@@ -66,13 +67,13 @@ let checked = 0;
 let predating = 0;
 
 for (const f of logs) {
-  const block = parseDoneBlock(readFileSync(join(ROOT, 'progress', f), 'utf8'));
+  const text = readFileSync(join(ROOT, 'progress', f), 'utf8');
+  const date = logDate(f);
+  const block = parseDoneBlock(text);
   if (!block) {
-    if (logDate(f) >= since) {
-      findings.push({ message: `progress/${f} carries no \`done\` block. The convention has existed since ${since}, and a log without one records that work happened, not that it finished (P-03)` });
-    } else {
-      predating++;
-    }
+    if (date && date < since) predating++;
+    const msg = missingDoneBlockFinding(text, date, since);
+    if (msg) findings.push({ message: `progress/${f} ${msg}` });
     continue;
   }
   checked++;

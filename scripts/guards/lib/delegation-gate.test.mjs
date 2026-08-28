@@ -9,6 +9,7 @@ import {
   isWriteCapable,
   extractWorkItems,
   parseWorkItemTypes,
+  parseWorkItemStatuses,
   specVerdict,
   decideDelegation,
   loadEnv,
@@ -96,6 +97,28 @@ text
   const m = parseWorkItemTypes(md);
   assert.equal(m.get('TASK-0'), 'content');
   assert.equal(m.get('TASK-7'), 'research');
+});
+
+test('parseWorkItemStatuses reads the register heading shape', () => {
+  // Mirrors "parseWorkItemTypes reads the register heading shape" — same heading scan,
+  // reading the status span instead of the type span (TASK 65).
+  const md = `${REGISTER_HEAD}
+## TASK 0 — Case studies · \`content\` · \`DONE\`
+
+text
+
+## TASK 7 — Founding ADRs · \`research\` · \`TODO\`
+`;
+  const m = parseWorkItemStatuses(md);
+  assert.equal(m.get('TASK-0'), 'DONE');
+  assert.equal(m.get('TASK-7'), 'TODO');
+});
+
+test('LIVENESS: the real TASKS.md parses into work items with statuses', () => {
+  const m = parseWorkItemStatuses(readFileSync(join(ROOT, 'TASKS.md'), 'utf8'));
+  assert.ok(m.size >= 9, `expected the register to yield >= 9 work items, got ${m.size}`);
+  assert.equal(m.get('TASK-0'), 'DONE');
+  assert.equal(m.get('TASK-5'), 'DONE');
 });
 
 // --- write-capability -------------------------------------------------------

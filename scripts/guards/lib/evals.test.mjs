@@ -130,7 +130,8 @@ const caseFile = (id, over = {}) => ({
 });
 const IO = { exists: (p) => p === 't.test.mjs', read: () => "test('a name', () => {});" };
 
-const run = (cases, cfg = CFG, io = IO) => validateCases(cases, INCIDENTS, cfg, io);
+const run = (cases, cfg = CFG, io = IO, workItemStatuses = new Map()) =>
+  validateCases(cases, INCIDENTS, cfg, io, workItemStatuses);
 const msgs = (f) => f.map((x) => x.message).join(' | ');
 
 test('a well-formed suite covering every incident passes', () => {
@@ -220,6 +221,23 @@ test('RED property 5: an unproven case may not claim Caught', () => {
   const cases = [caseFile('EC-001', { proof: 'none', proof_reason: 'rung 4', outcome: 'Caught' }),
                  caseFile('EC-002', { descends_from: 'INC-02' })];
   assert.match(msgs(run(cases)), /Caught/);
+});
+
+test('RED (TASK 65): a proof_reason citing a work item TASKS.md marks DONE is a finding', () => {
+  // INC-07's shape: a stale proof_reason saying a fix "is not implemented yet" for a work
+  // item the register already marks DONE would pass forever with nothing to check it.
+  const cases = [caseFile('EC-001', { proof: 'none', proof_reason: 'TASK 1 is not implemented yet' }),
+                 caseFile('EC-002', { descends_from: 'INC-02' })];
+  const f = msgs(run(cases, CFG, IO, new Map([['TASK-1', 'DONE']])));
+  assert.match(f, /TASK-1/);
+  assert.match(f, /DONE/);
+});
+
+test('a proof_reason citing a work item that is not DONE is not a finding', () => {
+  const cases = [caseFile('EC-001', { proof: 'none', proof_reason: 'TASK 1 is not implemented yet' }),
+                 caseFile('EC-002', { descends_from: 'INC-02' })];
+  assert.deepEqual(run(cases, CFG, IO, new Map([['TASK-1', 'TODO']])), []);
+  assert.deepEqual(run(cases, CFG, IO, new Map()), []);
 });
 
 test('an unproven case may claim Partial or Gap', () => {
