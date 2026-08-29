@@ -189,3 +189,71 @@ test('a redirect inside an EXPANDING heredoc substitution is still denied', () =
   const cmd = ['cat <<EOF', 'x: $(echo y ' + RD + ' evidence/runs/t.jsonl)', 'EOF'].join(NL2);
   assert.equal(checkBashPaths(cmd, B, '').allowed, false);
 });
+
+// --- TASK 61: write-intent decided by argument ROLE, not exec name or position -----
+// sed/perl/awk without an in-place flag are READS; dd only writes through `of=`; cp/ln/
+// install only write their DESTINATION (the source is read). mv still writes both ends —
+// H-02 forbids "moves", not just writes.
+
+test('RED: sed/perl/awk without an in-place flag are reads, not writes', () => {
+  bAllowed("sed -n '1,200p' resources/site/ui.en.md");
+  bAllowed("sed -n '9p' evidence/runs/x/y.jsonl");
+  bAllowed("awk '{print}' resources/x.md");
+  bAllowed('perl -ne print resources/x.md');
+});
+
+test('RED: cp/ln read their source, write only their destination', () => {
+  bAllowed('cp resources/site/ui.en.md /tmp/ui.md');
+  bAllowed('ln -s resources/x.md /tmp/l');
+});
+
+test('RED: dd reads if=, and writing only through of= elsewhere is fine', () => {
+  bAllowed('dd if=evidence/x of=/tmp/y');
+});
+
+test('RED: dd of= into a boundary is denied — the folded live bypass', () => {
+  bDenied('dd of=resources/x.md');
+  bDenied('dd if=/dev/null of=evidence/runs/t.jsonl');
+});
+
+test('anti-regression: in-place edits and destination writes into a boundary stay denied', () => {
+  bDenied("sed -i 's/a/b/' resources/x.md");
+  bDenied('sed --in-place=.bak s/a/b/ resources/x.md');
+  bDenied('perl -pi -e s/a/b/ resources/x.md');
+  bDenied('cp /tmp/x.md resources/y.md');
+  bDenied('cp -t resources/ /tmp/x.md');
+  bDenied('mv resources/a.md /tmp/a.md');
+  bDenied('mv /tmp/a.md resources/a.md');
+  bDenied('rm -rf resources/');
+  bDenied('tee evidence/runs/t.jsonl');
+});
+
+// Verify-time backfill (T-03): mutation testing on the closing run found two branches of
+// the new logic with no test exercising them — not a defect (checked directly against the
+// real code first), a coverage gap. `awk`'s in-place flag is symmetric to sed/perl's and
+// untested; `destinationArgs`' positional fallback was only ever exercised with the
+// destination as the LAST token, so a mutant collapsing its `.filter(...)` to a no-op still
+// picked the right element by coincidence.
+
+test('RED: awk in-place flags are denied exactly like sed/perl, not just recognized when absent', () => {
+  bDenied("awk -i inplace '{print}' resources/x.md");
+  bDenied("awk --include=x '{print}' resources/x.md");
+});
+
+test('RED: a flag AFTER the destination does not defeat the positional fallback', () => {
+  bDenied('cp /tmp/x.md resources/y.md -v');
+});
+
+test('the how reason names the deciding argument, not the bare command name', () => {
+  const sedR = checkBashPaths("sed -i 's/a/b/' resources/x.md", B, ROOT);
+  assert.equal(sedR.allowed, false);
+  assert.equal(sedR.findings.find((f) => f.boundary === 'resources').how, 'sed -i');
+
+  const cpR = checkBashPaths('cp /tmp/x.md resources/y.md', B, ROOT);
+  assert.equal(cpR.allowed, false);
+  assert.equal(cpR.findings.find((f) => f.boundary === 'resources').how, 'cp (destination)');
+
+  const ddR = checkBashPaths('dd of=resources/x.md', B, ROOT);
+  assert.equal(ddR.allowed, false);
+  assert.equal(ddR.findings.find((f) => f.boundary === 'resources').how, 'dd of=');
+});

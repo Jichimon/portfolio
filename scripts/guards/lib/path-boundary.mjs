@@ -78,12 +78,67 @@ export function checkPath(filePath, boundaries, mode, root = '') {
   return { allowed: true, path: rel, mode };
 }
 
-/** Commands whose arguments name files they will modify or destroy. */
-const MUTATORS = new Set(['rm', 'rmdir', 'mv', 'cp', 'tee', 'truncate', 'dd', 'shred',
-  'install', 'chmod', 'chown', 'touch', 'ln']);
+/**
+ * Which of a command's arguments it WRITES, decided by argument role rather than by
+ * executable name alone (TASK 61). `'all'` keeps the old behavior for commands where
+ * every non-flag argument is a target; `mv` stays `'all'` deliberately — a move writes
+ * BOTH ends, and H-02 forbids "moves", not just writes. The narrower modes buy back the
+ * real reads the old blanket rule denied, and close the `dd of=` bypass it missed.
+ */
+const WRITES = {
+  rm: 'all', rmdir: 'all', tee: 'all', truncate: 'all', shred: 'all',
+  chmod: 'all', chown: 'all', touch: 'all',
+  mv: 'all',
+  cp: 'dest', ln: 'dest', install: 'dest',   // the source is read
+  dd: 'of',                                  // only of=; if= is a read
+  sed: 'inplace', perl: 'inplace', awk: 'inplace',
+};
 
-/** In-place editors: only dangerous with the relevant flag, but cheap to treat as such. */
-const INPLACE = new Set(['sed', 'perl', 'awk']);
+/**
+ * The argument that turns a sed/perl/awk invocation into an in-place edit, or `null` if
+ * none is present — in which case the command contributes no findings at all.
+ *
+ * sed/perl: `--in-place[=SUFFIX]`, or a short-flag cluster containing `i` (`-i`, `-i.bak`,
+ * `-pi`, `-ni`). awk: `-i` / `--include` — gawk's in-place extension is `-i inplace`, and
+ * disambiguating that from its unrelated `-i` (library include) meaning is not attempted;
+ * over-denying is the safe direction here.
+ */
+function inPlaceFlag(head, args) {
+  if (head === 'sed' || head === 'perl') {
+    return args.find((a) => /^--in-place(=|$)/.test(a) || /^-(?!-)[a-zA-Z]*i/.test(a)) ?? null;
+  }
+  if (head === 'awk') {
+    return args.find((a) => a === '-i' || /^--include(=|$)/.test(a)) ?? null;
+  }
+  return null;
+}
+
+/**
+ * The destination argument(s) of a `cp`/`ln`/`install` invocation: the value of
+ * `-t VALUE` / `--target-directory=VALUE` / `--target-directory VALUE` when present,
+ * otherwise the last non-flag argument.
+ *
+ * The `-t` branch matters on its own: `cp -t resources/ /tmp/x.md` must flag `resources/`
+ * (the `-t` value), not `/tmp/x.md` — the last positional there is the SOURCE, and a naive
+ * "flag the last argument" rule would wrongly allow it.
+ */
+function destinationArgs(args) {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '-t' || a === '--target-directory') {
+      return args[i + 1] !== undefined ? [args[i + 1]] : [];
+    }
+    const m = a.match(/^--target-directory=(.*)$/);
+    if (m) return [m[1]];
+  }
+  const positional = args.filter((a) => !a.startsWith('-'));
+  return positional.length ? [positional[positional.length - 1]] : [];
+}
+
+/** Every `of=` argument of a `dd` invocation, with the `of=` prefix stripped. `if=` reads. */
+function ddTargets(args) {
+  return args.filter((a) => /^of=/.test(a)).map((a) => a.replace(/^of=/, ''));
+}
 
 /**
  * Best-effort detection of a Bash command writing inside a protected boundary.
@@ -111,10 +166,25 @@ export function checkBashPaths(command, boundaries, root = '') {
     for (const target of redirectTargets(ctx.raw)) flag(target, 'redirect');
 
     const head = basename(ctx.argv[0]);
-    if (!MUTATORS.has(head) && !INPLACE.has(head)) continue;
-    for (const arg of ctx.argv.slice(1)) {
-      if (arg.startsWith('-')) continue;
-      flag(arg, head);
+    const mode = WRITES[head];
+    if (!mode) continue;
+    const args = ctx.argv.slice(1);
+
+    if (mode === 'all') {
+      for (const arg of args) {
+        if (arg.startsWith('-')) continue;
+        flag(arg, head);
+      }
+    } else if (mode === 'dest') {
+      for (const d of destinationArgs(args)) flag(d, `${head} (destination)`);
+    } else if (mode === 'of') {
+      for (const d of ddTargets(args)) flag(d, 'dd of=');
+    } else if (mode === 'inplace') {
+      if (!inPlaceFlag(head, args)) continue;
+      for (const arg of args) {
+        if (arg.startsWith('-')) continue;
+        flag(arg, `${head} -i`);
+      }
     }
   }
 
