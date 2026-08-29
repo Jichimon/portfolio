@@ -223,3 +223,110 @@ test('the TAP-reporter form of the same summary line is recognized too', () => {
   const r = runGate(list, run);
   assert.notEqual(r.results[0].status, 'PASS');
 });
+
+// TASK 63: `countTestsRun` recognized only node:test's own summary shape, so the two
+// gate steps that run Vitest ('component tests') and Playwright ('e2e smoke') got no
+// zero-tests protection at all - judged on exit code alone, the exact escaped-defect
+// shape TASK 39 exists to close. The fixtures below are real captured stdout, obtained
+// by spawning each tool the same way gate.mjs does (spawnSync, piped, non-TTY - which
+// is why neither carries ANSI colour codes) against this repository's real suites.
+
+test('RED: a step whose stdout is Vitest\'s real zero-tests summary does not report PASS', () => {
+  // Captured by running `node node_modules/vitest/vitest.mjs run <file>` (via the same
+  // spawnSync shape gate.mjs uses) against a real .component.test.ts file containing
+  // zero test()/describe() calls. Vitest treats that as "no test suite found" and its
+  // own summary reporter (getStateString() in
+  // node_modules/vitest/dist/chunks/utils.BS4fH3nR.js) prints the literal "no tests"
+  // on the "Tests" line whenever the total collected task count is zero - the same
+  // "total, not pass count" shape node:test's own "tests <N>" line carries.
+  const { run } = runnerFor(
+    {},
+    {
+      one:
+        '\n RUN  v4.1.11 C:/dev/projects/portfolio/site\n\n' +
+        ' \u2771 src/behaviour/x.component.test.ts (0 test)\n\n' +
+        ' Test Files  1 failed (1)\n' +
+        '      Tests  no tests\n' +
+        '   Start at  19:47:46\n' +
+        '   Duration  3.21s\n',
+    },
+  );
+  const list = steps('one');
+
+  const r = runGate(list, run);
+  assert.notEqual(r.results[0].status, 'PASS');
+});
+
+test('Vitest\'s real N-tests-passed summary still passes', () => {
+  // Captured the same way, running the unmodified command against this repository's
+  // real component-test suite (2 files, 15 tests, all passing).
+  const { run } = runnerFor(
+    {},
+    {
+      one:
+        '\n RUN  v4.1.11 C:/dev/projects/portfolio/site\n\n\n' +
+        ' Test Files  2 passed (2)\n' +
+        '      Tests  15 passed (15)\n' +
+        '   Start at  19:46:44\n' +
+        '   Duration  1.48s\n',
+    },
+  );
+  const list = steps('one');
+
+  const r = runGate(list, run);
+  assert.equal(r.results[0].status, 'PASS');
+});
+
+test('RED: a step whose stdout is Playwright\'s real zero-tests summary does not report PASS', () => {
+  // Playwright's own summary line (generateSummaryMessage() in
+  // node_modules/playwright/lib/runner/index.js) prints "<N> passed (<duration>)" only
+  // when at least one test actually ran (`if (expected) tokens.push(...)`); when every
+  // MATCHED test is skipped it prints only "<N> skipped", with no parenthesized
+  // duration, and the process exits 0 - captured by running
+  // `node node_modules/@playwright/test/cli.js test --project=chromium <file>` (via
+  // the same spawnSync shape gate.mjs uses) against a real spec file whose only test is
+  // `test.skip(...)`. A glob matching zero spec files is a DIFFERENT code path
+  // (runner/index.js throws a plain `Error: No tests found` before any summary is
+  // generated, at exit 1) that the gate's existing exit-code check already catches
+  // without this function's help - confirmed by running that case too and reading
+  // runner/index.js's `throw new Error('No tests found')` site.
+  const { run } = runnerFor(
+    {},
+    {
+      one:
+        '\nRunning 1 test using 1 worker\n\n' +
+        '  -  1 [chromium] \u203a x.smoke.spec.ts:3:6 \u203a never runs\n\n' +
+        '  1 skipped\n',
+    },
+  );
+  const list = steps('one');
+
+  const r = runGate(list, run);
+  assert.notEqual(r.results[0].status, 'PASS');
+});
+
+test('Playwright\'s real N-tests-passed summary still passes', () => {
+  // Captured the same way, running the unmodified command (chromium project only)
+  // against this repository's real e2e suite: 171 tests, all passing.
+  const { run } = runnerFor(
+    {},
+    {
+      one: '\n  ok 1 [chromium] \u203a x.smoke.spec.ts:1:1 \u203a name\n\n  171 passed (2.6m)\n',
+    },
+  );
+  const list = steps('one');
+
+  const r = runGate(list, run);
+  assert.equal(r.results[0].status, 'PASS');
+});
+
+test('the widened regex still leaves plain guard output unrecognized', () => {
+  // Confirms the existing "no test-count line at all" case is unaffected: a plain
+  // guard's PASS-shaped prose contains neither runner's summary shape, so it must
+  // still be judged on exit code alone rather than accidentally matching one.
+  const { run } = runnerFor({}, { one: 'PASS  check-content  no violations found\n' });
+  const list = steps('one');
+
+  const r = runGate(list, run);
+  assert.equal(r.results[0].status, 'PASS');
+});

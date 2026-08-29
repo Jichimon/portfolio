@@ -20,14 +20,36 @@ required_evidence:
   - "the predicate assertion in the same test file"
   - "a mutation run naming which mutants were caught"
 
-control: "the paired predicate assertion in sources.test.mjs"
+control: "validateSteps in scripts/guards/lib/gate-steps.mjs, checked against gate.mjs's real STEPS array"
 
 proof:
-  file: scripts/guards/lib/sources.test.mjs
-  test: "the check would catch a planted control byte"
+  file: scripts/guards/lib/gate-steps.test.mjs
+  test: "adding a step with no redProof to the real STEPS array is caught, not silently accepted"
 
-outcome: Partial
+outcome: Caught
 notes: |
-  The discipline is proven where it was applied, and mutation runs are recorded per work item in progress/. What does not exist is a repo-wide mutation GATE: no tool, no threshold, no automatic enforcement, so nothing fails when the next test is written without its predicate. T-03 names the surfaces; the toolchain is TASK 7 decision 5. Residual risk: mutation coverage depends on the author remembering, which is the rung-4 half of a rule whose other half is mechanized.
+  These notes previously asserted "no repo-wide mutation GATE: no tool, no threshold, no
+  automatic enforcement" — stale even before TASK 63: TASK 15 had already shipped Stryker as
+  gate step 6 with a break threshold (30-testing.md), and nothing here had reconciled these
+  notes against it (P-07's named failure mode, found while closing this case rather than a
+  separate audit). Corrected here as part of TASK 63's own close, since this item is EC-002's
+  actual remedy and leaving its notes wrong while fixing the thing they describe would be the
+  same gap reopening one file over.
+
+  The paired-predicate idiom itself had a second gap the mutation gate does not touch: it
+  existed in exactly one place (sources.test.mjs's "the check would catch a planted control
+  byte") and was never generalized — EVAL-001 traced eight of its fifteen escaped defects
+  (TASK 34, 39, 42, 48, 51, 54, 57, 58) to the same underlying failure mode, a gate step
+  reporting PASS while its own check-logic verified nothing. TASK 63 closed that: every one of
+  scripts/gate.mjs's 20 steps now carries a redProof naming a real test that demonstrates it
+  fails on a planted defect of its own kind, and scripts/guards/lib/gate-steps.mjs's
+  validateSteps checks that property structurally — derived from the step objects themselves,
+  never a hardcoded roster of step names (P-13) — against the REAL, imported STEPS array, not
+  a synthetic fixture standing in for it. The proof above is that check's own paired-predicate
+  proof: a 21st step added with no redProof is caught, which is this case's control applied to
+  itself. Wiring the real values in caught four live bugs immediately (a glob pattern
+  misread as a missing binary, a step with no skipNote, an absolute/relative path mismatch in
+  the checker's own io, and three proof-file matches needing a literal backslash present in
+  the target source) — recorded in progress/2026-08-28-07-task63-paired-predicate-gate-steps.md.
 
 retired:

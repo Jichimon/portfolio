@@ -1952,13 +1952,21 @@ Filed 2026-08-27 from `progress/evaluation-results/EVAL-001-first-non-harness-wo
 
 **Done:** either a delegated (non-orchestrator) trace file on disk carries at least one `instructions.loaded` event, **or** `docs/harness/evidence.md` and `docs/harness/contracts.md` §6 both state that `L` is orchestrator-only and why, `EC-003`'s `required_evidence` line stops demanding an artifact the harness does not produce, and no scorecard reports a delegated `L` figure again. `G-11` requires the honest claim including downward.
 
-## TASK 63 — The paired-predicate assertion reaches every gate step · `harness` · `TODO`
+## TASK 63 — The paired-predicate assertion reaches every gate step · `harness` · `DONE`
 
 **Opened 2026-08-27 by `EVAL-001`, on the strongest outcome signal in the scorecard.** Eight of its fifteen escaped defects are one failure mode — **a check reported PASS while doing nothing** — and the gate caught none of them: `TASK 34`, `TASK 39`, `TASK 42`, `TASK 48`, `TASK 51`, `TASK 54`, `TASK 57`, `TASK 58`.
 
 `T-02`'s mechanization exists in exactly one place, `scripts/guards/lib/sources.test.mjs:57` (*"the check would catch a planted control byte"*), and was never generalized. This is a content failure of the mechanization, not a compliance failure — `T-02` is loaded on every matching path and `EC-002` has a green control.
 
 **Done:** every step in `scripts/gate.mjs` has a test asserting the step **fails** on a planted defect of its own kind; any step producing an artifact — screenshot, build output, type check — fails rather than reporting PASS when the artifact is absent; each assertion fails when its planted defect is removed. **Residual to fold in while here:** `T-03`'s mutation floor sits at 74.5 against a measured 74.74, so the score may fall 0.24 points in silence — a ratchet permitting a silent fall is `EC-002`'s own shape inside the remedy for `EC-002`.
+
+**Closed 2026-08-28.** Every one of the 20 entries in `scripts/gate.mjs`'s `STEPS` array now carries a `redProof: { file, test }` naming a real test that demonstrates it fails on a planted defect of its own kind — the same `file`+`test` idiom `check-evals` already applies to eval-case proofs, generalized to the gate's own steps. `scripts/guards/lib/gate-steps.mjs`'s `validateSteps` derives every assertion from the step objects themselves (never a hardcoded roster), checked twice: once against synthetic fixtures (the module's own red-path battery) and once against `gate.mjs`'s real, imported `STEPS` array — so a 21st step landing next month with no `redProof` is caught, not silently accepted (proven directly, `P-16`). Thirteen already-covered `check-*.mjs` steps got their existing lib batteries wired in; `guard tests`/`site core tests`/`component tests`/`e2e smoke` point at the gate-runner's own zero-tests-ran mechanism, widened this session to recognize Vitest's and Playwright's real summary shapes (previously only `node:test`'s); `type check` and `mutation` point at the structural cmd-path proof, per the author's explicit call to prove this repository's wiring rather than re-testing a vendor's type checker.
+
+**The design canvas got its own split, reshaped from the original plan during the author's review** (`docs/design/canvas/verify.mjs` carried zero test coverage of any kind — outside both the guard-test glob and Stryker's mutate glob). Of its 7 checks, 5 derive from the artifact and are relocated to `scripts/guards/lib/canvas.mjs` with a battery; the other 2 hardcode literals specific to the *current* design version (breakpoints, class names, copy vocabulary) and would have locked that version in as a hidden test dependency if battery-tested as-is — a future redesign would then fail the gate because the design changed, not because anything broke. Those literals moved into a declared `canvas` key in `guards.config.json` instead, with the guard's failure message naming the exact config path to fix. Every structural check now also strips HTML comments before scanning, so commenting out a section while iterating no longer trips the gate.
+
+**Wiring the real `redProof` values in caught four live bugs immediately** — none of which any single slice's own battery could have found, since each slice tested only its own proof file in isolation: a glob pattern (`scripts/guards/**/*.test.mjs`) misread by the cmd-path check as a missing binary; `guard tests` genuinely had no `skipNote` for its `skipIf`; the integration test's own `io` was double-joining already-absolute `cwd`/`cmd` paths; and three proof-file matches needed a literal backslash present in the target source (a test name written as a single-quoted string with an escaped apostrophe is matched against raw source text, not an evaluated string). Full findings and fixes in `progress/2026-08-28-07-task63-paired-predicate-gate-steps.md`.
+
+**The mutation-floor residual folded in as planned**, re-measured rather than assumed: `74.5 -> 75.5` against a closing-run score of `76.07%` (6,800 mutants: 5,098 killed, 72 timed out, 1,376 survived, 250 with no coverage, 4 errors) — the surface grew by `gate-steps.mjs` and `canvas.mjs`, both well-killed by their own batteries. `EC-002` reconciled to `outcome: Caught`, its stale notes (claiming no repo-wide mutation gate existed, when `TASK 15` had already shipped one) corrected in the same pass.
 
 ## TASK 64 — Trace fidelity, second pass: the four writer defects `EVAL-001` found · `bugfix` · `TODO`
 
@@ -2130,7 +2138,7 @@ Both files carry a traceability body asserting where each value came from. The r
 | 3b | `TASK 79` — the hand-off packet becomes a documented convention | decide · `DONE` | — |
 | 3c | `TASK 77` — the trace records what a run cost, in tokens and wall-clock | measure · `DONE` | — |
 | 4 | `TASK 65` — two checkers that cannot classify (absorbs `TASK 68`) | fix · `DONE` | — |
-| 5 | `TASK 63` — the paired-predicate assertion reaches every gate step | fix | — |
+| 5 | `TASK 63` — the paired-predicate assertion reaches every gate step | fix · `DONE` | — |
 | 6 | `TASK 61` — `path-boundary` denies reads the rules exist to permit | fix | — |
 | 7 | `TASK 64` — trace fidelity, second pass (absorbs `TASK 62`) | fix | — |
 | 8 | `TASK 66` — a substrate for `K2` | fix | — |
@@ -2317,11 +2325,13 @@ Both files carry a traceability body asserting where each value came from. The r
 
 **Not urgent.** No gate step depends on this case's current text; it is a documentation-accuracy gap in a scored record, not a defect in what the harness does.
 
-**Constraints**
+## TASK 82 — Vitest's own zero-tests summary is misread as a non-zero count when every test is skipped or todo · `bugfix` · `TODO`
 
-- **Three parts, no template.** The moment this becomes a form to fill, it stops being read.
-- The prompt appears in **both** places on purpose, and that is not the duplication `G-10` forbids: the packet is the durable artifact and the terminal is where a human actually copies from. One copy is authored, the other is quoted from it.
-- The tier line carries its **reason**, never a bare name — `ADR-009` §6 decided that allocation, and a recommendation with no reason gets ignored the first time it is inconvenient.
+**Opened 2026-08-29, a loose end from `TASK 63` (`P-06`).** `TASK 63` widened `countTestsRun` (`scripts/guards/lib/gate.mjs`) to recognize Vitest's and Playwright's real summary shapes, closing the `component tests` and `e2e smoke` gate steps' zero-tests-ran blind spot for the case that matters: a run that exits 0 having verified nothing. One edge case was flagged, not fixed, during that item's own slice: Vitest's all-`.skip`/all-`.todo` summary reads `Tests  N skipped (N)` / `Tests  N todo (N)` — parsed by the widened regex as a **positive** count `N`, so a component-test file where every test is skipped still reports PASS. `node:test` has the identical shape already (a TAP suite that is entirely skipped also reports non-zero), so this is a pre-existing limitation the widening inherited rather than introduced — but it is a real gap in the same failure class `TASK 63` closes: a step that verified nothing can still read PASS.
+
+**Done:** either `countTestsRun` distinguishes an all-skipped/all-todo run from one with at least one real pass (with a red test planting each of the four shapes — `node:test` TAP-all-skipped, `node:test` spec-all-skipped, Vitest all-skipped, Vitest all-todo), or the gap is declared out loud in `scripts/guards/lib/gate.test.mjs`'s own comments and in `docs/harness/contracts.md` as a known, accepted limitation with its reason — never left unstated in prose only.
+
+**Not urgent.** No real test file in this repository is entirely skipped or todo today; this is a latent gap, not a live one.
 
 ---
 

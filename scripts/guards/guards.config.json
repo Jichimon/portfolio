@@ -423,6 +423,46 @@
     ],
     "_sourceExtensionsRationale": "Only these can carry an import. Every other file still counts toward the cap - the rule is about how many files a directory holds, not how many of them are code."
   },
+  "canvas": {
+    "_purpose": "Literals specific to the CURRENT canvas design version — CSS breakpoints, the theme attribute, chrome class names, and the copy-counting vocabulary — that docs/design/canvas/verify.mjs's sections 2, 2b, 5 and 6 assert against every artboard. Declared here, rather than hardcoded in scripts/guards/lib/canvas.mjs, so a redesign edits this file and re-runs verify.mjs instead of going hunting inside a guard (P-13, applied to the guard's own inputs). Every one of the four checks reads its expected value from this key and names the exact path below in its failure message.",
+    "breakpoints": {
+      "medium": 1180,
+      "narrow": 820
+    },
+    "_breakpointsNote": "The two responsive states every live screen (page or document) must declare, as the @media (max-width: <px>) value. Section 2.",
+    "themeAttr": "data-theme=\"{{theme}}\"",
+    "_themeAttrNote": "The literal, unresolved template placeholder wiring a screen to its theme token. A verbatim string match rather than a computed value — this IS what every live artboard emits, character for character. Section 2.",
+    "fixedWidthFloorPattern": "min-width:\\s*\\d+px",
+    "_fixedWidthFloorPatternNote": "Matched against the <style> block only (everything before the first </style>). Its presence means a screen has regressed to a fixed layout floor, which the responsive contract (section 2) forbids on every live screen.",
+    "chrome": {
+      "langSwitcherClass": "lang",
+      "railStaticSelectorPattern": "\\.rail\\s*\\{[^}]*position:\\s*static",
+      "currentLocaleClass": "cur"
+    },
+    "_chromeNote": "Class names the current design's rail chrome is built from. langSwitcherClass marks the language-switcher block, required in the rail of every page (section 2b) and re-scanned to find the switcher block again in section 6. railStaticSelectorPattern is the CSS rule collapsing the rail to a static position at the narrow breakpoint (section 2b). currentLocaleClass marks which language is active inside the switcher block (section 6).",
+    "switcherExcluded": [
+      "NotFound.dc.html"
+    ],
+    "_switcherExcludedNote": "Pages exempt from section 6's switcher-marking check. NotFound.dc.html is designed to have no current locale — it is what every unmatched route renders to, in either language, so there is no 'current' language for its switcher to mark.",
+    "growsVocabulary": [
+      "case stud",
+      "deep dive",
+      "employer",
+      "testimonial",
+      "technolog",
+      "casos? de estudio",
+      "empleador",
+      "tecnolog",
+      "recomendacion"
+    ],
+    "countsVocabulary": [
+      "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+      "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez"
+    ],
+    "_vocabularyNote": "Section 5. growsVocabulary names every list on this site expected to grow — case studies, deep dives, employers, testimonials, technologies, and their Spanish equivalents — as regex-ready fragments; a sentence matching one is checked for a count next to it, because 'five case studies' goes stale the day a sixth lands and nothing else would catch it. countsVocabulary is the number words checked in a GROWS sentence, English and Spanish, two through ten (a bare digit sequence is checked too, as a regex alternative built alongside this list, not as a word of it). 'one'/'uno' are DELIBERATELY ABSENT: they are almost always rhetorical here — 'one recurring problem at every employer', 'one of these is the platform' — and flagging them trained the check to cry wolf on real copy, which is how a check gets switched off. Do not add them back without re-checking that finding.",
+    "yearExclusionPattern": "\\b\\d{4}\\b",
+    "_yearExclusionPatternNote": "Stripped from a matched sentence before countsVocabulary is checked. A four-digit year is a fact about the past and does not grow, so 'since 2019' must not misread as a count. Section 5."
+  },
   "terms": {
     "opaqueFields": [
       "integrity"

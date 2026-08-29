@@ -83,10 +83,48 @@ function evaluate(step, verdict, run) {
  * ran - from the runner's own summary line, never from a hardcoded per-step count
  * (P-13). `node:test`'s default reporter and its TAP reporter both print one, as
  * "<marker> tests <N>" where <marker> is "ℹ" (spec/default) or "#" (TAP).
+ *
+ * TASK 63 widened this to two more runners, whose stdout the pattern above never
+ * matched at all - so the 'component tests' (Vitest) and 'e2e smoke' (Playwright)
+ * gate steps had NO zero-tests protection, judged on exit code alone. Both additions
+ * are derived from the installed tool's own reporter source and a real invocation
+ * (spawned the same way gate.mjs spawns them), never guessed:
+ *
+ * Vitest's summary reporter (`getStateString()`,
+ * node_modules/vitest/dist/chunks/utils.BS4fH3nR.js) prints a "Tests" line reading
+ * "<breakdown> (<total>)" once at least one test ran - e.g. "Tests  15 passed (15)" -
+ * and the literal "no tests" instead when the total collected task count is zero,
+ * with no parenthesized count at all. Both confirmed live: the N-passed form against
+ * this repository's real component suite, the zero form against a real
+ * .component.test.ts file containing no test()/describe() calls.
+ *
+ * Playwright's summary line (`generateSummaryMessage()`,
+ * node_modules/playwright/lib/runner/index.js) prints "<N> passed (<duration>)" only
+ * when at least one test actually ran; when every MATCHED test is skipped it prints
+ * only "<N> skipped", with no parenthesized duration, at exit 0. Both confirmed live:
+ * the N-passed form against this repository's real e2e suite, the zero form against a
+ * real spec file whose only test is `test.skip(...)`. (A glob matching zero spec
+ * files is a different code path - runner/index.js throws a plain `Error: No tests
+ * found` before any summary line is generated, at exit 1 - which the gate's existing
+ * exit-code check already catches without this function's help.) The "passed" check
+ * runs first so a run that both skipped some tests and passed others is still
+ * credited with what it actually verified, rather than read as zero.
  */
 function countTestsRun(stdout) {
-  const match = /^[ℹ#]\s*tests\s+(\d+)\s*$/m.exec(stdout ?? '');
-  return match ? Number(match[1]) : null;
+  const text = stdout ?? '';
+
+  const nodeTest = /^[ℹ#]\s*tests\s+(\d+)\s*$/m.exec(text);
+  if (nodeTest) return Number(nodeTest[1]);
+
+  if (/^\s*Tests\s+no tests\s*$/m.test(text)) return 0;
+  const vitest = /^\s*Tests\s+\S.*\((\d+)\)\s*$/m.exec(text);
+  if (vitest) return Number(vitest[1]);
+
+  const playwrightPassed = /^\s*(\d+)\s+passed(?:\s*\([^)]*\))?\s*$/m.exec(text);
+  if (playwrightPassed) return Number(playwrightPassed[1]);
+  if (/^\s*\d+\s+skipped\s*$/m.test(text)) return 0;
+
+  return null;
 }
 
 /**

@@ -104,7 +104,18 @@ export default {
   // OBSERVED within the hour of setting it: the run that set this floor read 74.74, and the
   // gate run minutes later read 74.63 with no code change. 0.11 points of drift, 0.13 of slack
   // left. The mechanism above is not hypothetical.
-  thresholds: { high: 100, low: 100, break: 74.5 },
+  //
+  // RAISED 2026-08-28, TASK 63's closing measurement: 74.5 -> 75.5, against a re-measured
+  // 76.07% over 6,800 mutants: 5,098 killed, 72 timed out, 1,376 survived, 250 with no
+  // coverage, 4 errors. The surface grew (gate-steps.mjs and canvas.mjs both landed this
+  // session, well-covered by their own red-path batteries) and the score rose with it —
+  // TASK 65 had already re-measured 75.91% without moving the floor, flagging that exact gap
+  // as this item's own residual: a ratchet permitting a silent fall is EC-002's shape inside
+  // the remedy for EC-002. Set to 75.5, not the raw 76.07, for the same reason 74.5 was set
+  // against 74.74 rather than at it: timeouts count as killed and the timeout count is
+  // timing-dependent (this run: 72; prior runs on this surface: 21, 45, 66), so a floor set at
+  // the exact measurement fails on a slower machine with no code change. 0.57 points of slack.
+  thresholds: { high: 100, low: 100, break: 75.5 },
 
 
   // The sandbox is a COPY of the working tree, and it is not limited to what git tracks —
