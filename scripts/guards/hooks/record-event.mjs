@@ -40,8 +40,15 @@ try {
   if (existsSync(p)) existingTraceText = readFileSync(p, 'utf8');
 } catch { /* boundary degrades to null inside costWindowStart; never throws */ }
 
+// TASK 64 clause 4: widened from SubagentStop/SessionEnd to also cover SessionStart and
+// SubagentStart, whose payload genuinely omits permission_mode — eventsFor's posture resolver
+// reads opts.transcriptText for those two exactly as runCostEventFor already does for the
+// other two, same file, same read. A brand-new SessionStart's transcript_path may not exist
+// yet; that degrades to transcriptText staying undefined, which extractLastPermissionMode
+// already treats as "nothing observed yet" rather than an error.
+const TRANSCRIPT_READ_EVENTS = ['SubagentStop', 'SessionEnd', 'SessionStart', 'SubagentStart'];
 let transcriptText, transcriptError;
-if (input.hook_event_name === 'SubagentStop' || input.hook_event_name === 'SessionEnd') {
+if (TRANSCRIPT_READ_EVENTS.includes(input.hook_event_name)) {
   try { transcriptText = readFileSync(input.transcript_path, 'utf8'); }
   catch (err) { transcriptError = classifyError(err.message ?? err.code ?? 'unknown'); }
 }

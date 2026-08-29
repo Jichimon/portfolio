@@ -98,6 +98,30 @@ export function countTurns(events) {
 }
 
 /**
+ * TASK 64 clause 6 — the model that ACTUALLY ran, read from the segment's own `run.cost`
+ * event when one exists and measured something, rather than derived from the role file.
+ *
+ * `run.cost` lands inside `seg.events` already: `segmentDispatches` special-cases only
+ * `run.header`/`run.footer`, so this needed no change there. An empty `by_model: {}` is a
+ * legitimate MEASURED zero (`ADR-009` §8 — no new assistant turns since the boundary) and is
+ * treated the same as no `run.cost` at all: there is nothing to name a model FROM. When more
+ * than one model appears (a resumed dispatch can in principle straddle two), the one with the
+ * most combined input+output tokens is reported — the model that did the work, not a
+ * transient interruption.
+ */
+function measuredModel(seg) {
+  const costEvent = seg.events.find((e) => e.ev === 'run.cost' && e.by_model && Object.keys(e.by_model).length > 0);
+  if (!costEvent) return null;
+  let best = null;
+  let bestTokens = -1;
+  for (const [name, usage] of Object.entries(costEvent.by_model)) {
+    const tokens = (usage.in ?? 0) + (usage.out ?? 0);
+    if (tokens > bestTokens) { best = name; bestTokens = tokens; }
+  }
+  return best;
+}
+
+/**
  * One dispatch → one row.
  *
  * `footer` is a literal of what is on disk: `COMPLETE`, or `ABSENT` when none was written.
@@ -105,6 +129,11 @@ export function countTurns(events) {
  * terminate normally, not that a budget stopped it — a crash, a kill and a hook that never
  * fired look identical, and `harness-evaluator` holds the standing counterexample of two
  * footerless segments at ~32 turns against a cap of 60.
+ *
+ * `model` prefers a MEASUREMENT over a derivation (`TASK 64` clause 6): the role-file tier in
+ * `models` can never see a dispatch-time override, so a real `run.cost.by_model` wins when one
+ * exists. `model_source` says which won — `measured`, `declared`, or `unknown` when neither
+ * is available — so a reader is never left guessing which kind of number they are looking at.
  */
 export function summarizeSegment(seg, models = new Map()) {
   let bytes = 0;
@@ -120,9 +149,12 @@ export function summarizeSegment(seg, models = new Map()) {
       denies += 1;
     }
   }
+  const measured = measuredModel(seg);
+  const declared = models.get(seg.agent);
   return {
     agent: seg.agent,
-    model: models.get(seg.agent) ?? '(undeclared)',
+    model: measured ?? declared ?? '(undeclared)',
+    model_source: measured ? 'measured' : declared ? 'declared' : 'unknown',
     reason: seg.reason,
     ts: seg.ts,
     turns: countTurns(seg.events),
@@ -137,10 +169,11 @@ export function summarizeSegment(seg, models = new Map()) {
 /**
  * Role → the model tier its own file declares (`P-13`: a property, not a roster).
  *
- * This is a DERIVATION, and the report says so. `run.header` carries `model` only on
- * `reason: startup` — 8 of 139 headers when this was written, every delegated header
- * `null` — so the tier that actually ran is not recorded and a dispatch-time override
- * would be invisible here. Recording it properly is `TASK 64` clause 6.
+ * This is a FALLBACK now, not the primary source (`TASK 64` clause 6 replaced the derivation
+ * with a measurement): `run.header` still carries a real `model` only on `reason: startup` —
+ * every delegated header `null` — so this stays the answer for a segment whose own
+ * `run.cost.by_model` is absent or empty. `summarizeSegment` prefers the measurement and
+ * falls back here; `model_source` on the row says which one a reader is looking at.
  */
 export function declaredModels(agentsDir) {
   const out = new Map();
@@ -193,7 +226,7 @@ export function formatReport(rows, opts = {}) {
   L.push('## What these numbers are, and what they are not');
   L.push('');
   L.push('- **`bytes` counts tool results only** — not the prompt, not the re-sent conversation history, not model output. It is a proxy for marginal context inflow and is **not tokens billed**. Do not quote it as a token count.');
-  L.push('- **`model` is derived, not recorded.** It is the tier the role file declares, joined by the header\'s `agent`. `run.header` carries a real `model` only on `reason: startup`, so a dispatch-time override is invisible here.');
+  L.push('- **`model` prefers a measurement over a derivation** (`TASK 64` clause 6): when a dispatch\'s own `run.cost.by_model` exists and is non-empty, that is the model that actually ran. Only when it is absent does this fall back to the tier the role file declares, joined by the header\'s `agent` — a fallback that would miss a dispatch-time override. Each row\'s `model_source` (`measured` \\| `declared` \\| `unknown`) says which kind it is looking at.');
   L.push(`- **\`footer: ABSENT\` means the run did not terminate normally — never that a budget stopped it** (\`G-06\`). A crash, a kill and a hook that never fired look identical from outside.`);
   L.push('- **Network tools are under-counted, and `researcher` is the role this distorts.** `WebFetch` averages ~78 recorded bytes per result and `WebSearch` ~154 — the response wrapper, not the page the model actually read. A role whose work is fetching therefore reads as nearly free. Do not compute a delegation break-even for `researcher` from this column.');
   if (substrateStart) {
@@ -223,7 +256,7 @@ export function formatReport(rows, opts = {}) {
 
   L.push('## Per role');
   L.push('');
-  L.push('| role | model (declared) | dispatches | finished | turns | result MB | wall-clock min | denies |');
+  L.push('| role | model (measured or declared — see limits above) | dispatches | finished | turns | result MB | wall-clock min | denies |');
   L.push('|---|---|---|---|---|---|---|---|');
   for (const a of [...byRole.values()].sort((x, y) => y.bytes - x.bytes || x.agent.localeCompare(y.agent))) {
     L.push(`| \`${a.agent || '(none)'}\` | ${a.model} | ${a.dispatches} | ${a.footers}/${a.dispatches} | ${a.turns} | ${mb(a.bytes)} | ${min(a.durationMs)} | ${a.denies} |`);

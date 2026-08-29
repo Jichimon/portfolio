@@ -115,7 +115,7 @@ function prune(runsDir, keep) {
 export function record(root, input, events, opts = {}) {
   if (!events.length) return false;
   try {
-    const { run_id, parent_run_id, agent } = runIdFor(input);
+    const { run_id, parent_run_id, agent, agent_resolution } = runIdFor(input);
     const runsDir = join(root, 'evidence/runs');
     const dir = join(runsDir, slug(input.session_id));
     mkdirSync(dir, { recursive: true });
@@ -146,6 +146,10 @@ export function record(root, input, events, opts = {}) {
 
       const lines = toWrite.map((e) => JSON.stringify({
         ev: e.ev, ts, seq: seq++, run_id, ...(parent_run_id ? { parent_run_id } : {}), agent,
+        // TASK 64 clause 3: agent_resolution's presence IS the "could not resolve" signal, so
+        // it is threaded through unconditionally when runIdFor produced one — same shape as
+        // parent_run_id just above, which is also only sometimes present.
+        ...(agent_resolution ? { agent_resolution } : {}),
         ...Object.fromEntries(Object.entries(e).filter(([k]) => k !== 'ev')),
       }));
       appendFileSync(file, lines.join('\n') + '\n');

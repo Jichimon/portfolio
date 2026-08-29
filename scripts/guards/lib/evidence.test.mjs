@@ -21,7 +21,9 @@ import {
   posturePatch,
   costWindowStart,
   extractTokenUsage,
+  extractLastPermissionMode,
   traceFilePathFor,
+  headerFooterPresence,
 } from './evidence.mjs';
 
 const TERMS = [{ term: 'AcmeCore', line: 1 }];
@@ -44,6 +46,20 @@ test('RED: an empty or whitespace-only agent_type is treated as absent, not as a
   // `??` only catches undefined/null, not the empty string, so this must fall back explicitly.
   assert.equal(runIdFor({ session_id: 's1', agent_id: 'a9', agent_type: '' }).agent, 'unknown-role');
   assert.equal(runIdFor({ session_id: 's1', agent_id: 'a9', agent_type: '   ' }).agent, 'unknown-role');
+});
+
+test('RED: TASK 64 — the unknown-role fallback carries why, not just that', () => {
+  // TASK 64 clause 3, corrected against the real corpus: 3 trace files on disk read
+  // agent: "unknown-role" with nothing distinguishing the fallback from a real (if oddly
+  // named) role — a human or a checker cannot tell "the writer could not resolve this" from
+  // "a role really is called that" without a second field. A real agent_type must NOT carry
+  // this field — its absence IS the signal that resolution succeeded.
+  const unresolved = runIdFor({ session_id: 's1', agent_id: 'a9', agent_type: '' });
+  assert.equal(unresolved.agent, 'unknown-role');
+  assert.equal(unresolved.agent_resolution, 'missing_agent_type');
+
+  const resolved = runIdFor({ session_id: 's1', agent_id: 'a9', agent_type: 'implementer' });
+  assert.equal('agent_resolution' in resolved, false, 'a resolved agent must not carry a resolution reason');
 });
 
 // --- redaction: the property that makes the trace safe to keep --------------
@@ -125,6 +141,52 @@ test('RED: a truncated final line does not reset the counter', () => {
   // A crashed hook can leave a partial line. Restarting seq at 1 would make the gap
   // invisible, which is the one property the counter exists to provide.
   assert.equal(nextSeq('{"seq":1}\n{"seq":2}\n{"seq":3'), 4);
+});
+
+// --- TASK 64 clauses 1+2/3: run-integrity classification, corrected against the real corpus.
+// The register's "distinct variant" reasoning does not hold: every unknown-role file on disk
+// carries an OBSERVED header (injected by posturePatch at SubagentStop), never a real
+// SubagentStart header — so a footer-only file and an unknown-role file are the SAME shape,
+// a run whose SubagentStart never reached the writer. Both are start-side delivery losses,
+// symmetric to the tool.requested/tool.result loss check-trace already measures, and H-03
+// forbids ever cleaning the historical instances — so this is a reported count, never a
+// hard finding, same reasoning as the existing delivery-loss floor.
+
+test('headerFooterPresence: a normal run has both', () => {
+  const text = '{"ev":"run.header"}\n{"ev":"tool.requested"}\n{"ev":"run.footer"}\n';
+  assert.deepEqual(headerFooterPresence(text), { hasHeader: true, hasFooter: true });
+});
+
+test('RED: headerFooterPresence: header with no footer is unterminated (clause 1, GAP-04)', () => {
+  const text = '{"ev":"run.header"}\n{"ev":"tool.requested"}\n';
+  assert.deepEqual(headerFooterPresence(text), { hasHeader: true, hasFooter: false });
+});
+
+test('RED: headerFooterPresence: footer with no header is a start-side delivery loss (clauses 2+3, GAP-08)', () => {
+  const text = '{"ev":"run.footer"}\n';
+  assert.deepEqual(headerFooterPresence(text), { hasHeader: false, hasFooter: true });
+});
+
+test('RED: an "observed" header does not count as a start boundary — corrected against the real corpus', () => {
+  // Found running check-trace against evidence/runs/ itself, not from a hypothesis: all 3
+  // unknown-role files on disk carry a header, but it is the posturePatch-injected
+  // reason:"observed" header written the moment SubagentStop sees a real permission_mode —
+  // never a real SubagentStart header (reason "startup" or "delegated"). Treating ANY header
+  // as proof the run started would silently reclassify this exact defect as healthy — the
+  // same distinction costWindowStart already draws for the identical reason (an "observed"
+  // header is a mid-dispatch posture patch, not a resume boundary).
+  const text = '{"ev":"run.header","reason":"observed"}\n{"ev":"run.footer"}\n';
+  assert.deepEqual(headerFooterPresence(text), { hasHeader: false, hasFooter: true });
+});
+
+test('a real delegated header counts as a start boundary, alongside an observed one', () => {
+  const text = '{"ev":"run.header","reason":"delegated"}\n{"ev":"run.header","reason":"observed"}\n{"ev":"run.footer"}\n';
+  assert.deepEqual(headerFooterPresence(text), { hasHeader: true, hasFooter: true });
+});
+
+test('headerFooterPresence tolerates an unparsable line, matching nextSeq', () => {
+  const text = '{"ev":"run.header"}\nnot json\n{"ev":"run.footer"}\n';
+  assert.deepEqual(headerFooterPresence(text), { hasHeader: true, hasFooter: true });
 });
 
 // --- validateTrace: the gate's check ----------------------------------------
@@ -795,6 +857,62 @@ test('RED: T-04 — a private/-shaped model string never appears anywhere in the
   assert.equal(result.by_model['unknown-model'].in, 42);
 });
 
+// --- TASK 64 clause 4: permission_mode read from the transcript, when SessionStart /
+// SubagentStart's own payload genuinely omits it (measured: 137/196 headers on disk read
+// "unknown", every one from these two hook events). Verified against a real captured payload
+// before writing this (P-04): SubagentStart's own transcript_path points at the SAME shared
+// transcript file the orchestrator writes to, and permissionMode is stamped only on genuine
+// freeform human turns — never on a tool-result "user" line, and not on every human turn
+// either (a slash-command's synthetic turns carry none). This reads the LAST one present, in
+// file order, and is honest about the times none exists rather than fabricating a value.
+
+test('extractLastPermissionMode: no user line at all returns null', () => {
+  assert.equal(extractLastPermissionMode(''), null);
+  assert.equal(extractLastPermissionMode(undefined), null);
+});
+
+test('RED: extractLastPermissionMode reads a genuine human turn, ignoring tool-result "user" lines', () => {
+  const text = transcriptLines([
+    { type: 'user', message: { content: [{ type: 'tool_result', content: 'ok' }] } }, // never carries it
+    { type: 'user', message: { content: [{ type: 'text', text: 'hola' }] }, permissionMode: 'plan' },
+  ]);
+  assert.equal(extractLastPermissionMode(text), 'plan');
+});
+
+test('RED: extractLastPermissionMode returns the LAST occurrence, not the first', () => {
+  const text = transcriptLines([
+    { type: 'user', permissionMode: 'plan' },
+    { type: 'assistant', message: {} },
+    { type: 'user', permissionMode: 'bypassPermissions' },
+  ]);
+  assert.equal(extractLastPermissionMode(text), 'bypassPermissions');
+});
+
+test('extractLastPermissionMode tolerates an unparsable line', () => {
+  const text = '{"type":"user","permissionMode":"default"}\nnot json\n';
+  assert.equal(extractLastPermissionMode(text), 'default');
+});
+
+test('RED: a SessionStart header falls back to the transcript when the payload omits permission_mode', () => {
+  const text = transcriptLines([{ type: 'user', permissionMode: 'acceptEdits' }]);
+  const [ev] = eventsFor({ hook_event_name: 'SessionStart' }, TERMS, { transcriptText: text });
+  assert.equal(ev.permission_mode, 'acceptEdits');
+  assert.equal(ev.permission_mode_source, 'transcript');
+});
+
+test('RED: a SubagentStart header stays "unknown" with source "unavailable" when neither the payload nor the transcript has it', () => {
+  const [ev] = eventsFor({ hook_event_name: 'SubagentStart', agent_id: 'a1', agent_type: 'implementer' }, TERMS, {});
+  assert.equal(ev.permission_mode, 'unknown');
+  assert.equal(ev.permission_mode_source, 'unavailable');
+});
+
+test('RED: a real payload value always wins over the transcript, and is labelled "payload"', () => {
+  const text = transcriptLines([{ type: 'user', permissionMode: 'plan' }]);
+  const [ev] = eventsFor({ hook_event_name: 'SessionStart', permission_mode: 'bypassPermissions' }, TERMS, { transcriptText: text });
+  assert.equal(ev.permission_mode, 'bypassPermissions');
+  assert.equal(ev.permission_mode_source, 'payload');
+});
+
 // --- TASK 77: traceFilePathFor ------------------------------------------------
 // Pure, string-building only, no I/O. Reproduces trace-writer.mjs's own inline file-naming
 // logic exactly, so a hook reading "the file record() would write to" gets the same path
@@ -1032,6 +1150,18 @@ test('RED: a real mode that differs from the last recorded header produces an ob
   assert.equal(patch.ev, 'run.header');
   assert.equal(patch.permission_mode, 'default');
   assert.equal(patch.reason, 'observed');
+});
+
+test('RED: TASK 64 clause 4 — an observed header states its source is the payload', () => {
+  // posturePatch only ever fires from PostToolUse/PostToolUseFailure's input.permission_mode,
+  // which is a real payload field (POST_TOOL_USE_KEYS) — never derived. Making that explicit
+  // here, alongside the transcript-derived case on a SessionStart/SubagentStart header, means
+  // a reader of permission_mode_source never has to special-case "reason: observed" as
+  // implicitly trustworthy; the field says so directly.
+  const text = jl({ ev: 'run.header', seq: 1, run_id: 's1', permission_mode: 'unknown', reason: 'startup' })
+    + jl({ ev: 'tool.requested', seq: 2, run_id: 's1', tool: 'Bash', tool_use_id: 't1', target: {} });
+  const patch = posturePatch(text, 'default');
+  assert.equal(patch.permission_mode_source, 'payload');
 });
 
 test('RED: a candidate of "unknown", or one equal to the mode already recorded, produces nothing', () => {

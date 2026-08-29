@@ -1970,7 +1970,7 @@ Filed 2026-08-27 from `progress/evaluation-results/EVAL-001-first-non-harness-wo
 
 **The mutation-floor residual folded in as planned**, re-measured rather than assumed: `74.5 -> 75.5` against a closing-run score of `76.07%` (6,800 mutants: 5,098 killed, 72 timed out, 1,376 survived, 250 with no coverage, 4 errors) — the surface grew by `gate-steps.mjs` and `canvas.mjs`, both well-killed by their own batteries. `EC-002` reconciled to `outcome: Caught`, its stale notes (claiming no repo-wide mutation gate existed, when `TASK 15` had already shipped one) corrected in the same pass.
 
-## TASK 64 — Trace fidelity, second pass: the four writer defects `EVAL-001` found · `bugfix` · `TODO`
+## TASK 64 — Trace fidelity, second pass: the four writer defects `EVAL-001` found · `bugfix` · `DONE`
 
 **Opened 2026-08-27 by `EVAL-001`.** Four separate findings, folded into one item because they share one surface — the hook writers — which is the same reasoning `TASK 12` recorded when it folded six of `EVAL-000`'s gaps. Each clause below is independently checkable, so the fold costs no precision.
 
@@ -1981,6 +1981,17 @@ Filed 2026-08-27 from `progress/evaluation-results/EVAL-001-first-non-harness-wo
 5. **`L` on the delegated path — absorbed from `TASK 62`, retired 2026-08-27.** All 332 `instructions.loaded` events sit in `orchestrator.jsonl` files; **zero** appear in any of the 70 delegated trace files. The reportable value is `unmeasurable`, never 0 — a zero implies a measurement was taken and came back empty. **Done:** either a delegated (non-orchestrator) trace file on disk carries at least one `instructions.loaded` event, **or** `docs/harness/evidence.md` and `docs/harness/contracts.md` §6 both state that `L` is orchestrator-only and why, `EC-003`'s `required_evidence` line stops demanding an artifact the harness does not produce, and no scorecard reports a delegated `L` figure again (`G-11` requires the honest claim including downward). The full reasoning stays under `TASK 62`.
 
 **A sixth measurement lands here rather than opening a third id**, found 2026-08-27 while prototyping `TASK 70` and belonging to the same writer: **`run.header` carries `model` only on `reason: startup`** — 8 of 139 headers, every `reason: delegated` header `null`. `TASK 70` works around it by joining the header's `agent` to the role file's `model:` frontmatter, which is a derivation and not a record: a dispatch-time model override is invisible to it. **Done:** a delegated `run.header` carries the model that actually ran, or `docs/harness/evidence.md` records that the runtime does not supply it on `SubagentStart` and that the join is the substitute.
+
+**Closed 2026-08-29.** Re-measured against the real corpus before implementing (`P-04`) and two of the register's own claims above did not hold: **clauses 2 and 3 are one defect in two eras, not a distinct variant** — every `unknown-role` file's header is `posturePatch`'s `reason: "observed"` patch, never a real `SubagentStart` header, so "it has a header, so it is not `GAP-08`" was wrong; and clause 3's literal Done (fail any `agent` not matching a role file in `.claude/agents/`) would have failed 5 legitimate `Explore` traces, a runtime built-in with no role file here. Both corrections are recorded in `docs/harness/evidence.md` and this session's log rather than silently fixed.
+
+Shipped, test-first throughout (847 → 852 guard tests):
+1. **Clause 1 (unterminated) + clauses 2/3 (headerless, the corrected `GAP-08`):** `headerFooterPresence` (new, `scripts/guards/lib/evidence.mjs`) classifies a delegated trace as unterminated (header, no footer — 25/82) or headerless (footer, no real start header — 10/82, folding both eras). `check-trace` counts and enumerates both, on every run, **never failing** — `H-03` forbids cleaning a single historical instance, and `evidence.md` already records that a permanently-red trace step was twice "fixed" by a human deleting evidence. User-approved at the plan checkpoint over two alternatives (a ratcheted floor; a hard failure).
+2. **Clause 3, the writer fix:** `runIdFor` adds `agent_resolution: "missing_agent_type"` to every event of a run it could not resolve — present only on the fallback, absent on a real one, so its presence alone is the signal (`P-13`). This changes what new runs write; it cannot touch the historical instances (`H-03`).
+3. **Clause 4:** `extractLastPermissionMode` (new) reads the freshest `permissionMode` off the run's own transcript — verified against a real captured `SubagentStart` payload first (`P-04`): `transcript_path` points at the same shared session file the orchestrator writes to, and the field is stamped only on genuine freeform human turns. `eventsFor`'s posture resolver prefers a real payload value, falls back to the transcript, and never fabricates one; every header now carries `permission_mode_source` (`payload` \| `transcript` \| `unavailable`), including `posturePatch`'s own header.
+4. **Clause 5:** `L`'s orchestrator-only scope is now stated in `docs/harness/architecture.md` §K (the canonical location — `contracts.md` already deferred there, so nothing was restated, per `G-10`); `EC-003`'s `required_evidence` line demanding a delegated `instructions.loaded` event is removed, with the correction recorded in the case's own `notes`.
+5. **Clause 6:** `summarizeSegment` (`scripts/guards/lib/cost.mjs`) now prefers a segment's own `run.cost.by_model` over the role-file-declared tier, labelling which one via `model_source`. Confirmed live against the real corpus: `implementer` now reports as two rows, `sonnet` (declared, pre-`TASK 77`) and `claude-sonnet-5` (measured).
+
+Gate: 19/20 at time of this entry (the 20th, `procedures`, fails only on this item's own still-open work log, which resolves at `/wrap-up`); full guard suite 852/852. Detail: `progress/2026-08-29-01-task64-trace-fidelity-second-pass.md`.
 
 ## TASK 65 — Two gate checkers pass on an artifact they cannot classify · `bugfix` · `DONE`
 
@@ -2141,10 +2152,12 @@ Both files carry a traceability body asserting where each value came from. The r
 | 3c | `TASK 77` — the trace records what a run cost, in tokens and wall-clock | measure · `DONE` | — |
 | 4 | `TASK 65` — two checkers that cannot classify (absorbs `TASK 68`) | fix · `DONE` | — |
 | 5 | `TASK 63` — the paired-predicate assertion reaches every gate step | fix · `DONE` | — |
-| 6 | `TASK 61` — `path-boundary` denies reads the rules exist to permit | fix | — |
-| 7 | `TASK 64` — trace fidelity, second pass (absorbs `TASK 62`) | fix | — |
+| 6 | `TASK 61` — `path-boundary` denies reads the rules exist to permit | fix · `DONE` | — |
+| 7 | `TASK 64` — trace fidelity, second pass (absorbs `TASK 62`) | fix · `DONE` | — |
+| 7b | `TASK 83` — the `'all'`-mode loop's untested trailing-flag shape | fix | — |
 | 8 | `TASK 66` — a substrate for `K2` | fix | — |
 | 9 | `TASK 67` — `harness-evaluator`'s conditional budget | fix | — |
+| 9b | `TASK 84` — `checkBashPaths` has no shell vector for `H-04`'s read boundary | fix | — |
 | 10 | `TASK 75` — `C-09` claims rung 2 and `check-content` sees only structure | fix | — |
 | — | `TASK 69` — the load-sensitive `/about` e2e | **site suite, not this milestone** | — |
 | — | `TASK 76` — the English half of the Spanish rewrite | **site suite** · blocks `TASK 30` | — |
@@ -2154,6 +2167,8 @@ Both files carry a traceability body asserting where each value came from. The r
 **Reordered 2026-08-28 by the author.** The fix phase now runs `65 → 63` first and everything else after, because those two are what make the rest verifiable: `TASK 65` is the **only red gate step**, so until it lands every *"the gate passes"* is a partial; and `TASK 63` closes the failure mode behind **eight of `EVAL-001`'s fifteen escaped defects** — a check reporting PASS while asserting nothing. Fixing `61`, `64`, `66` or `67` before those two means verifying each of them with an instrument known to be blind.
 
 **`TASK 77` inserted ahead of the fix phase 2026-08-28, by the same reasoning one level down.** It is the substrate every item after it is measured against: with it, each fix-phase item's real cost in tokens and wall-clock is recorded as it runs, and `TASK 78` can later turn those into cost per item — including the comparison the author asked for, one item run on Sonnet against the ones run on Opus. Without it, that data is gone by the time anyone wants it, because the transcripts it comes from are ephemeral and the fix phase is where the items are.
+
+**`TASK 83`/`84`/`85` placed 2026-08-29, filed as `TASK 61`'s own residuals rather than in the author's stated sequence (`P-06`).** `83` sits right after `64` (`7b`), not before it: same untested-trailing-flag shape `61` already fixed once, in the pre-existing `'all'`-mode loop `61` did not touch — two red tests with no production change, cheap enough to batch immediately after the item that shares its file, and `G-12` says not to run it concurrently with anything else touching `path-boundary.mjs`, which nothing in this phase does. `84` sits after `67` (`9b`): a **rung-1 boundary with no shell-side enforcement at all** (`cat private/glossary.md` passes clean today) deserves its own session with a red battery, same as `61` got, but it does not block the harness-plumbing items ahead of it. `85` — the `e2e smoke` flake — is **not placed**: its own `Done` requires a captured repro first, which nothing here can force; three consecutive gate runs during `TASK 64` (one mid-session, two full) stayed clean, so watch for it recurring rather than chasing it.
 
 ## TASK 74 — A title word displaces the work-item type, and `H-05` fails open · `bugfix` · `DONE`
 

@@ -21,6 +21,7 @@ const footer = (o = {}) => ev({ ev: 'run.footer', termination: { state: 'COMPLET
 const req = (o = {}) => ev({ ev: 'tool.requested', tool: 'Read', ...o });
 const res = (o = {}) => ev({ ev: 'tool.result', ok: true, bytes: 100, duration_ms: 10, ...o });
 const deny = () => ev({ ev: 'policy.decision', decision: 'deny', source: 'guard' });
+const cost = (by_model, o = {}) => ev({ ev: 'run.cost', wall_ms: 1000, by_model, ...o });
 
 // --- parsing ----------------------------------------------------------------
 
@@ -96,6 +97,55 @@ test('a segment row carries bytes, duration, denies and footer state', () => {
 test('a role with no declared model is reported as unknown, never guessed', () => {
   const seg = segmentDispatches([header('orchestrator'), req(), res(), footer()])[0];
   assert.equal(summarizeSegment(seg, new Map()).model, '(undeclared)');
+});
+
+// --- TASK 64 clause 6: the model that ACTUALLY ran, from the segment's own run.cost event,
+// preferred over the role-file-declared tier which is a derivation and cannot see a
+// dispatch-time override. run.cost already lands inside seg.events — segmentDispatches only
+// special-cases run.header/run.footer, so a run.cost falls through to the same push as a
+// tool.requested/tool.result.
+
+test('RED: a measured model from run.cost wins over the declared tier', () => {
+  const seg = segmentDispatches([
+    header('implementer'), req(), res(), cost({ 'claude-sonnet-5': { in: 10, out: 20 } }), footer(),
+  ])[0];
+  const row = summarizeSegment(seg, new Map([['implementer', 'opus']]));
+  assert.equal(row.model, 'claude-sonnet-5');
+  assert.equal(row.model_source, 'measured');
+});
+
+test('RED: no run.cost event at all falls back to the declared tier, labelled as such', () => {
+  const seg = segmentDispatches([header('implementer'), req(), res(), footer()])[0];
+  const row = summarizeSegment(seg, new Map([['implementer', 'opus']]));
+  assert.equal(row.model, 'opus');
+  assert.equal(row.model_source, 'declared');
+});
+
+test('RED: an empty by_model (a measured zero, ADR-009 §8) is not preferred over the declared tier', () => {
+  // by_model: {} means "no new assistant turns since the boundary" — a real, legitimate zero,
+  // never an error — but there is nothing to report as a model FROM it, so the declared tier
+  // still wins, exactly as if no run.cost existed.
+  const seg = segmentDispatches([header('implementer'), req(), res(), cost({}), footer()])[0];
+  const row = summarizeSegment(seg, new Map([['implementer', 'opus']]));
+  assert.equal(row.model, 'opus');
+  assert.equal(row.model_source, 'declared');
+});
+
+test('RED: neither measured nor declared reports (undeclared), labelled unknown', () => {
+  const seg = segmentDispatches([header('orchestrator'), req(), res(), footer()])[0];
+  const row = summarizeSegment(seg, new Map());
+  assert.equal(row.model, '(undeclared)');
+  assert.equal(row.model_source, 'unknown');
+});
+
+test('RED: multiple models in one by_model report the one with the most combined tokens', () => {
+  const seg = segmentDispatches([
+    header('implementer'), req(), res(),
+    cost({ 'claude-haiku-4-5-20251001': { in: 5, out: 5 }, 'claude-sonnet-5': { in: 100, out: 200 } }),
+    footer(),
+  ])[0];
+  const row = summarizeSegment(seg, new Map());
+  assert.equal(row.model, 'claude-sonnet-5');
 });
 
 test('a missing footer is reported as absent, and NOT as budget exhaustion', () => {

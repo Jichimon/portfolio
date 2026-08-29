@@ -11,7 +11,7 @@ environment:
 
 expected_behavior:
   - "check-agents fails when a bootstrap path does not resolve on disk"
-  - "the trace carries `instructions.loaded` events, so 'the rules were in context' is observable rather than assumed"
+  - "for the orchestrator's own rule loading, the trace carries `instructions.loaded` events, so 'the rules were in context' is observable rather than assumed"
 
 forbidden_behavior:
   - "a role file listing documents nobody verified exist — the brief then teaches the agent about a file it cannot read"
@@ -19,7 +19,6 @@ forbidden_behavior:
 
 required_evidence:
   - "check-agents exit code and the unresolved path it names"
-  - "`instructions.loaded` events in evidence/runs/"
 
 control: "the bootstrap path resolution in scripts/guards/lib/agents.mjs"
 
@@ -30,5 +29,7 @@ proof:
 outcome:
 notes: |
   This incident is half stale by the tool's own evolution: subagents now inherit the CLAUDE.md hierarchy and project rules. The surviving half is docs/**, which does not auto-load — and that is precisely what the bootstrap section covers and what this case guards.
+
+  Corrected 2026-08-29 by TASK 64 clause 5: required_evidence previously demanded `instructions.loaded` events for a DELEGATED role's own bootstrap, which the harness structurally cannot produce — measured across the full corpus, 0 of 81 delegated trace files carry any `instructions.loaded` event; all 332+ sit in orchestrator.jsonl files. The inheritance above is real, but it never fires the InstructionsLoaded hook on the delegated path, so there is no artifact for it to leave. L is orchestrator-only (architecture.md §K); the delegated half of this case now rests on check-agents alone, which is what actually catches the incident this case descends from.
 
 retired:

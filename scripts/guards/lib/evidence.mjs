@@ -55,8 +55,17 @@ export function runIdFor(input) {
   const session = input.session_id ?? 'unknown-session';
   if (!input.agent_id) return { run_id: session, parent_run_id: null, agent: 'orchestrator' };
   const agentType = input.agent_type;
-  const agent = agentType && String(agentType).trim() ? agentType : 'unknown-role';
-  return { run_id: `${session}:${input.agent_id}`, parent_run_id: session, agent };
+  const resolved = agentType && String(agentType).trim();
+  const result = {
+    run_id: `${session}:${input.agent_id}`, parent_run_id: session,
+    agent: resolved || 'unknown-role',
+  };
+  // TASK 64 clause 3: a fallback that reads identically to real data is the defect — "the
+  // writer emitted a placeholder role name rather than failing." `agent_resolution`'s
+  // PRESENCE is itself the signal, so it is only ever added when resolution actually failed;
+  // a real agent_type must never carry it (asserted in evidence.test.mjs).
+  if (!resolved) result.agent_resolution = 'missing_agent_type';
+  return result;
 }
 
 const scrub = (s, terms) => mask(String(s ?? ''), terms);
@@ -132,6 +141,39 @@ export function nextSeq(existing) {
     if (m) max = Math.max(max, Number(m[1]));
   }
   return max + 1;
+}
+
+/**
+ * TASK 64 clauses 1+2/3 — whether a (non-orchestrator) trace file has a run.header and/or a
+ * run.footer. Pure, and tolerant of an unparsable line, matching `nextSeq`'s tolerance just
+ * above: a crashed hook can leave a partial line and this must not throw on it.
+ *
+ * `check-trace` uses this to REPORT, never to fail — `H-03` means the historical instances of
+ * both shapes below can never be cleaned, so a hard finding here would be permanently red, the
+ * exact failure mode `evidence.md` records as already having happened twice (a human deleting
+ * evidence to turn a trace step green). This is the same reasoning as the delivery-loss floor,
+ * one level up: a `tool.requested` never delivered before its `tool.result` is a loss nobody
+ * can fix after the fact; a `run.header` never delivered before its `run.footer` is the
+ * identical shape for a whole run rather than one tool call.
+ *
+ * `hasHeader` excludes a `reason: "observed"` header — the same distinction `costWindowStart`
+ * already draws for the same reason. Found running this against the real corpus, not from a
+ * hypothesis: every one of the 3 `unknown-role` trace files carries a header, but it is the
+ * `posturePatch`-injected header written the moment `SubagentStop` first sees a real
+ * `permission_mode`, never a real `SubagentStart` header. Counting it as a start boundary
+ * would silently reclassify the exact defect this function exists to surface as healthy.
+ */
+export function headerFooterPresence(text) {
+  let hasHeader = false;
+  let hasFooter = false;
+  for (const line of String(text ?? '').split('\n')) {
+    if (!line.trim()) continue;
+    let e;
+    try { e = JSON.parse(line); } catch { continue; }
+    if (e.ev === 'run.header' && e.reason !== 'observed') hasHeader = true;
+    if (e.ev === 'run.footer') hasFooter = true;
+  }
+  return { hasHeader, hasFooter };
 }
 
 // --- validation -------------------------------------------------------------
@@ -368,7 +410,11 @@ export function posturePatch(existingText, permissionMode) {
   if (last && last.ev === 'run.header') return null; // never follow a header with another
   if (lastHeaderMode === permissionMode) return null; // no change to report
 
-  return { ev: 'run.header', permission_mode: permissionMode, reason: 'observed' };
+  // TASK 64 clause 4: permissionMode here always came from input.permission_mode, a real
+  // payload field on PostToolUse/PostToolUseFailure (POST_TOOL_USE_KEYS) — never derived. A
+  // reader of permission_mode_source should never have to treat "reason: observed" as an
+  // implicit exception to what the field otherwise means.
+  return { ev: 'run.header', permission_mode: permissionMode, permission_mode_source: 'payload', reason: 'observed' };
 }
 
 /**
@@ -453,6 +499,33 @@ export function costWindowStart(existingTraceText) {
  */
 const MODEL_NAME_RE = /^claude-[a-z0-9]+(-[a-z0-9.]+)*$/i;
 
+/**
+ * TASK 64 clause 4 — the freshest `permissionMode` known so far, read from the transcript.
+ *
+ * Pure, CRLF-tolerant, tolerant of an unparsable line — same discipline as `extractTokenUsage`
+ * just below. `permissionMode` is stamped on a `type: "user"` transcript line — but NEVER on
+ * a tool-result "user" line (a real tool_result carries none, on every transcript checked),
+ * and not on every genuine human turn either: a slash command's synthetic turns (its
+ * `<command-*>` wrapper lines) carry none, only a freeform typed message does. This does not
+ * filter by content shape to tell the two apart — it does not need to, since only real
+ * freeform turns have ever been observed to carry the field at all — it takes whichever
+ * `type: "user"` line had it MOST RECENTLY, in file order, which is the same "read the
+ * freshest known value" discipline `posturePatch`'s own `observed` header already applies one
+ * layer up. `null` when no such line exists yet — a brand-new session's transcript before its
+ * first turn, most notably — and that is a correct, non-fabricated answer, not a failure.
+ */
+export function extractLastPermissionMode(transcriptText) {
+  let last = null;
+  for (const line of String(transcriptText ?? '').split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let e;
+    try { e = JSON.parse(line); } catch { continue; }
+    if (e.type !== 'user') continue;
+    if (typeof e.permissionMode === 'string' && e.permissionMode) last = e.permissionMode;
+  }
+  return last;
+}
+
 export function extractTokenUsage(transcriptText, sinceTs) {
   const num = (v) => (Number.isFinite(v) ? v : 0);
   const lastById = new Map(); // last-write-wins per message.id, in file (chronological) order
@@ -518,8 +591,17 @@ function runCostEventFor(opts) {
  * INC-08's shape inside the subsystem built to prevent it (P-04).
  */
 export function eventsFor(input, terms = [], opts = {}) {
+  // TASK 64 clause 4: SessionStart/SubagentStart payloads genuinely omit permission_mode
+  // (measured: 137/196 headers on disk read "unknown", every one from these two events) — a
+  // real value here NEVER comes from the payload today. The branch is kept anyway, per P-16:
+  // a future runtime version starting to send it is exactly the kind of drift this file exists
+  // to catch, and 'payload' must keep winning over a derived value when it does. Never
+  // fabricated: absent both places, permission_mode stays the honest literal 'unknown'.
+  const payloadMode = typeof input.permission_mode === 'string' && input.permission_mode ? input.permission_mode : null;
+  const transcriptMode = payloadMode ? null : extractLastPermissionMode(opts.transcriptText);
   const posture = {
-    permission_mode: input.permission_mode ?? 'unknown',
+    permission_mode: payloadMode ?? transcriptMode ?? 'unknown',
+    permission_mode_source: payloadMode ? 'payload' : transcriptMode ? 'transcript' : 'unavailable',
     enforcement_environment: opts.enforcementEnvironment ?? 'policy-controlled',
     model: input.model ?? null,
     cwd: input.cwd ?? null,

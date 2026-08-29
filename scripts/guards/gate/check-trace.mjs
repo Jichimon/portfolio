@@ -17,7 +17,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateTrace, validateWiring, validateVocabulary } from '../lib/evidence.mjs';
+import { validateTrace, validateWiring, validateVocabulary, headerFooterPresence } from '../lib/evidence.mjs';
 import { parseTerms } from '../lib/terms.mjs';
 
 // `--root <dir>` points this at a fixture tree instead of the real repository — this guard's
@@ -55,6 +55,18 @@ let events = 0;
 let toolResults = 0;
 let deliveryLosses = 0;
 
+// TASK 64 clauses 1+2/3: run-level integrity, reported and never failed — H-03 forbids
+// cleaning a historical instance of either shape, and evidence.md already records that a
+// permanently-red trace step was twice "fixed" by a human deleting evidence. Scoped to
+// delegated (non-orchestrator) files only: an orchestrator file legitimately has no footer
+// while its session is still open, which is not a defect of any kind.
+let delegatedRuns = 0;
+let unterminated = 0;
+const unterminatedFiles = [];
+let headerless = 0;
+const headerlessFiles = [];
+const ENUMERATE_LIMIT = 10;
+
 if (existsSync(runsDir)) {
   for (const run of readdirSync(runsDir, { withFileTypes: true }).filter((d) => d.isDirectory())) {
     for (const f of readdirSync(join(runsDir, run.name)).filter((n) => n.endsWith('.jsonl'))) {
@@ -71,6 +83,13 @@ if (existsSync(runsDir)) {
         if (finding.kind === DELIVERY_LOSS) deliveryLosses++;
         else findings.push(finding);
       }
+      if (f !== 'orchestrator.jsonl') {
+        delegatedRuns++;
+        const { hasHeader, hasFooter } = headerFooterPresence(text);
+        const rel = relative(ROOT, path).split('\\').join('/');
+        if (hasHeader && !hasFooter) { unterminated++; unterminatedFiles.push(rel); }
+        else if (!hasHeader && hasFooter) { headerless++; headerlessFiles.push(rel); }
+      }
     }
   }
 }
@@ -81,8 +100,17 @@ const lossRate = toolResults === 0 ? 0 : deliveryLosses / toolResults;
 const lossExceeded = lossRate > maxRequestLossRate;
 const pct = (n) => `${(n * 100).toFixed(2)}%`;
 
+const listFiles = (list) => {
+  for (const f of list.slice(0, ENUMERATE_LIMIT)) console.log(`        ${f}`);
+  if (list.length > ENUMERATE_LIMIT) console.log(`        … ${list.length - ENUMERATE_LIMIT} more`);
+};
+
 console.log(`      ${cfg.recordedHookEvents.length} hook events wired · ${runs} trace file(s), ${events} event(s) validated`);
 console.log(`      delivery loss: ${deliveryLosses}/${toolResults} tool.result event(s) — ${pct(lossRate)} (floor ${pct(maxRequestLossRate)})`);
+console.log(`      unterminated: ${unterminated}/${delegatedRuns} delegated run(s) — header, no footer (G-06: the absence is the signal; reported, never enforced — H-03 forbids cleaning a historical instance)`);
+listFiles(unterminatedFiles);
+console.log(`      headerless: ${headerless}/${delegatedRuns} delegated run(s) — footer, no header (a SubagentStart delivery loss, the same shape one level up)`);
+listFiles(headerlessFiles);
 if (runs === 0) {
   console.log('      no trace on disk yet — gitignored operational output; the wiring above is what is asserted here');
 }

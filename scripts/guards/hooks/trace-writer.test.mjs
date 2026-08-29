@@ -9,7 +9,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { record, loadTerms } from './trace-writer.mjs';
@@ -24,6 +24,15 @@ function readEvents(root, sessionId) {
   const file = join(root, 'evidence/runs', sessionId, 'orchestrator.jsonl');
   if (!existsSync(file)) return [];
   return readFileSync(file, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
+}
+
+/** Same, for whichever single delegated file record() wrote under this session directory. */
+function readDelegatedEvents(root, sessionId) {
+  const dir = join(root, 'evidence/runs', sessionId);
+  if (!existsSync(dir)) return [];
+  const file = readdirSync(dir).find((f) => f !== 'orchestrator.jsonl');
+  if (!file) return [];
+  return readFileSync(join(dir, file), 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
 }
 
 test('RED: a PostToolUse-shaped payload with a real permission_mode writes an observed header', () => {
@@ -99,6 +108,30 @@ test('record never throws when permission_mode is absent, as SessionStart payloa
     });
     const events = readEvents(root, 'sess-5');
     assert.equal(events.filter((e) => e.ev === 'run.header').length, 1);
+  });
+});
+
+test('RED: TASK 64 — a delegated run with no agent_type carries agent_resolution on every line', () => {
+  // runIdFor() now returns a 4th field when it cannot resolve the agent; record() must not
+  // drop it on the way to disk, the same way it already threads parent_run_id through.
+  withTmpRoot((root) => {
+    const input = { session_id: 'sess-6', agent_id: 'a1', hook_event_name: 'SubagentStop' };
+    record(root, input, [{ ev: 'run.footer', termination: { state: 'COMPLETE', reason: 'objective_reported' } }]);
+
+    const [footer] = readDelegatedEvents(root, 'sess-6');
+    assert.equal(footer.agent, 'unknown-role');
+    assert.equal(footer.agent_resolution, 'missing_agent_type');
+  });
+});
+
+test('a delegated run with a real agent_type carries no agent_resolution field', () => {
+  withTmpRoot((root) => {
+    const input = { session_id: 'sess-7', agent_id: 'a1', agent_type: 'implementer', hook_event_name: 'SubagentStop' };
+    record(root, input, [{ ev: 'run.footer', termination: { state: 'COMPLETE', reason: 'objective_reported' } }]);
+
+    const [footer] = readDelegatedEvents(root, 'sess-7');
+    assert.equal(footer.agent, 'implementer');
+    assert.equal('agent_resolution' in footer, false);
   });
 });
 
