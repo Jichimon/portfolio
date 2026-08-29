@@ -244,6 +244,56 @@ test('RED: a flag AFTER the destination does not defeat the positional fallback'
   bDenied('cp /tmp/x.md resources/y.md -v');
 });
 
+test("RED: a flag AFTER an 'all'-mode target does not defeat the loop", () => {
+  bDenied('rm -rf resources/ -v');
+  bDenied('mv resources/a.md /tmp/a.md -v');
+});
+
+// TASK 83, validated by hand-mutating :175 and rerunning: the two commands above kill
+// neither of TASK 61's own surviving mutants at the identical shape (:185) — the target
+// is already flagged before the trailing flag is even reached, so the loop's skip logic
+// on THAT argument never gets exercised. A target whose own name ends in '-' does: it is
+// the one shape where `endsWith('-')` disagrees with `startsWith('-')` about whether the
+// TARGET itself is a flag.
+test("RED: a target ending in '-' is not itself mistaken for a flag", () => {
+  bDenied("rm -rf 'resources/file-'");
+});
+
+// TASK 86. The `startsWith('-')` skip runs on an argument's RAW text, before any path
+// resolution — so an argument crafted to start with '-' but resolve, once joined to root
+// and `..`-resolved, into a protected boundary is skipped outright and never reaches
+// `flag()`/`repoRelative` at all. Same evasion class the guard already defends against for
+// ordinary arguments ("RED: a path that climbs out and back in is still inside the
+// boundary", above) reaching the same tree through a second, unguarded door: the
+// flag/target classification itself.
+test('RED: a flag-shaped argument that resolves through .. into a boundary is still denied', () => {
+  bDenied('rm -rf -/../resources');
+  bDenied('mv -/../resources/a.md /tmp/a.md');
+});
+
+test('RED: the same trick against the in-place loop', () => {
+  bDenied("sed -i 's/a/b/' -/../resources/x.md");
+});
+
+// Anti-regression: an ordinary flag is still just a flag, and checking it instead of
+// skipping it never turns a legitimate command into a false denial — no realistic flag
+// resolves, once joined to root, to a path that equals or starts with a protected boundary.
+test('an ordinary flag stays harmless once every argument is checked', () => {
+  bAllowed('rm -rf docs/harness -v');
+  bAllowed("sed -i 's/a/b/' -v docs/harness/architecture.md");
+});
+
+// The `false` mutant (never skip anything) cannot be killed the same way: skipping fewer
+// arguments only ever adds MORE flag() calls, and an ordinary flag (`-rf`, `-v`) never
+// resolves to a path inside a boundary, so `allowed`/`findings` are identical either way.
+// The one construction that does distinguish it is an argument that starts with '-' (so
+// `startsWith('-')` skips it, unresolved) but resolves through `..` into the boundary once
+// joined to root — `-/../resources`. That is a genuine, separate bypass in the CURRENT
+// code, not a test gap: fixing it means resolving an argument's path before deciding it
+// looks like a flag, which is a production change outside this item's declared scope
+// (test-only, per the TASK 83 hand-off). Tracked as its own item — TASK 86 — rather than
+// silently patched in here (P-06) or claimed killed when it was not (P-11).
+
 test('the how reason names the deciding argument, not the bare command name', () => {
   const sedR = checkBashPaths("sed -i 's/a/b/' resources/x.md", B, ROOT);
   assert.equal(sedR.allowed, false);

@@ -80,10 +80,11 @@ export function checkPath(filePath, boundaries, mode, root = '') {
 
 /**
  * Which of a command's arguments it WRITES, decided by argument role rather than by
- * executable name alone (TASK 61). `'all'` keeps the old behavior for commands where
- * every non-flag argument is a target; `mv` stays `'all'` deliberately — a move writes
- * BOTH ends, and H-02 forbids "moves", not just writes. The narrower modes buy back the
- * real reads the old blanket rule denied, and close the `dd of=` bypass it missed.
+ * executable name alone (TASK 61). `'all'` checks every argument as a potential target —
+ * flag-shaped or not (TASK 86) — since every one of them is a target for these commands;
+ * `mv` stays `'all'` deliberately — a move writes BOTH ends, and H-02 forbids "moves", not
+ * just writes. The narrower modes buy back the real reads the old blanket rule denied, and
+ * close the `dd of=` bypass it missed.
  */
 const WRITES = {
   rm: 'all', rmdir: 'all', tee: 'all', truncate: 'all', shred: 'all',
@@ -171,20 +172,20 @@ export function checkBashPaths(command, boundaries, root = '') {
     const args = ctx.argv.slice(1);
 
     if (mode === 'all') {
-      for (const arg of args) {
-        if (arg.startsWith('-')) continue;
-        flag(arg, head);
-      }
+      // TASK 86: every argument is checked, flag-shaped or not. Deciding "this looks like
+      // a flag" from raw text BEFORE resolving it as a path is what let `-/../resources`
+      // — a flag-shaped argument that resolves through `..` straight into the boundary —
+      // through unseen. Checking it anyway is safe: a real flag (`-rf`, `-v`) never
+      // resolves to a path that equals or starts with a protected boundary, so it never
+      // matches and is never flagged.
+      for (const arg of args) flag(arg, head);
     } else if (mode === 'dest') {
       for (const d of destinationArgs(args)) flag(d, `${head} (destination)`);
     } else if (mode === 'of') {
       for (const d of ddTargets(args)) flag(d, 'dd of=');
     } else if (mode === 'inplace') {
       if (!inPlaceFlag(head, args)) continue;
-      for (const arg of args) {
-        if (arg.startsWith('-')) continue;
-        flag(arg, `${head} -i`);
-      }
+      for (const arg of args) flag(arg, `${head} -i`);
     }
   }
 
