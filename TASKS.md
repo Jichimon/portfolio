@@ -2047,6 +2047,8 @@ Detail: `progress/2026-08-29-05-task66-k2-substrate.md`.
 
 **Related, not duplicated (`P-06`).** `TASK 69` and `TASK 85` are the same *class* on the **e2e** tier and stay separate: different runner, different tier, and `TASK 85` has no captured repro at all while this one does. If the two turn out to share a root cause, that is a finding for whichever runs second.
 
+**Second data point, 2026-08-30, `TASK 67`'s gate run.** Identical signature: both suites failed at module evaluation with the same `TypeError: Cannot read properties of undefined (reading 'config')` at the same two `describe(...)` lines, `Tests  no tests`, immediately followed by Vite's own `Re-optimizing dependencies because vite config has changed`. This was the *second* `gate.mjs` invocation of that session — the first, run moments earlier over the same working tree, passed `component tests` cleanly. Consistent with the first candidate mechanism in the paragraph above (dependency pre-bundling cache invalidated during collection) rather than the Stryker-sandbox one: no mutation run intervened between the two `gate.mjs` invocations that session, only two ordinary guard runs and two file edits. Not retried past, per `T-06` — the session recorded it here and moved on.
+
 ## TASK 88 — A render template lives in the mutation-covered surface · `maintenance` · `TODO`
 
 **Opened 2026-08-29 by `TASK 66`, from its own mutation run rather than from a hypothesis.** `renderLedger` (`scripts/guards/lib/status-history.mjs`) builds the status-history document, and `D3` scoped mutation to *parsing, joining and validating* precisely because **mutating render templates produces equivalent mutants and noise**. The function is a render template that happens to live in `lib/`, so the config's own glob mutates it: 35 `StringLiteral` mutants emptying sentences of prose, plus ~40 surviving `CallExpression` mutants that delete a `push` of a prose or blank line.
@@ -2061,13 +2063,15 @@ Detail: `progress/2026-08-29-05-task66-k2-substrate.md`.
 - **A `!` glob entry naming this one file is a roster** (`P-13`). If the answer is an exclusion, it is a declared *property* — a naming convention that means "this is a render template" — not a filename.
 - The same question applies to any future `lib/` module that renders. Decide the shape once.
 
-## TASK 67 — `harness-evaluator`'s budget is conditional, and the role file does not say so · `documentation` · `TODO`
+## TASK 67 — `harness-evaluator`'s budget is conditional, and the role file does not say so · `documentation` · `DONE`
 
 **Opened 2026-08-27 by `EVAL-001`, closing `GAP-13` with a measurement.** The run consumed ~37 of 60 turns including two whole-file writes — but **only because both corpora were precomputed**. The role file records the 20 → 60 raise and not the condition, so the next brief that hands it raw corpora will read 60 as sufficient when the measurement says nothing of the kind.
 
 **Done:** `.claude/agents/harness-evaluator.md` states the observed cost (~37 turns, with both corpora precomputed) and that a brief handing over raw corpora is a different budget, citing `TASK 55`'s measurement — 0 of 3 slices cut when briefed with an extract, 1 of 1 cut at ~100k tokens when told to go read the sources.
 
 **Referenced, not duplicated (`P-06`).** Three of the evaluator's twelve are already tracked: the omitted-dimension check is `TASK 14`; the CI result is `GAP-12`, blocked on `TASK 30`; and `EC-013`'s case-folding residual is `TASK 11`.
+
+**Shipped 2026-08-30.** The role file now carries a paragraph immediately after the budget paragraph, stating the precomputed-corpora condition and generalizing it to "every corpus the brief names" — `TASK 66`, closed the session before, had already added a third bootstrap corpus (the status-history ledger) that the original "both" wording no longer covered. Gate **21/21, exit 0**; mutation 76.56% against the 76.0 floor. `progress/2026-08-30-01-task67-conditional-budget.md`.
 
 ## TASK 68 — `check-procedures` cannot tell a work log from generated tool output · `bugfix` · `RETIRED`
 
@@ -2202,9 +2206,9 @@ Both files carry a traceability body asserting where each value came from. The r
 | 5 | `TASK 63` — the paired-predicate assertion reaches every gate step | fix · `DONE` | — |
 | 6 | `TASK 61` — `path-boundary` denies reads the rules exist to permit | fix · `DONE` | — |
 | 7 | `TASK 64` — trace fidelity, second pass (absorbs `TASK 62`) | fix · `DONE` | — |
-| 7b | `TASK 83` — the `'all'`-mode loop's untested trailing-flag shape | fix | — |
+| 7b | `TASK 83` — the `'all'`-mode loop's untested trailing-flag shape | fix · `DONE` | `progress/2026-08-29-02-task83-all-mode-trailing-flag.md` |
 | 8 | `TASK 66` — a substrate for `K2` | fix · `DONE` | — |
-| 9 | `TASK 67` — `harness-evaluator`'s conditional budget | fix | — |
+| 9 | `TASK 67` — `harness-evaluator`'s conditional budget | fix · `DONE` | `progress/2026-08-30-01-task67-conditional-budget.md` |
 | 9a | `TASK 88` — a render template inside the mutation surface | fix · **`TASK 66`'s own residual** | — |
 | — | `TASK 89` — `component tests` collects zero tests and fails | **runner flake, not this milestone** — same class as `TASK 69`/`TASK 85`, one tier over | — |
 | 9b | `TASK 84` — `checkBashPaths` has no shell vector for `H-04`'s read boundary | fix | — |
