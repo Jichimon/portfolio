@@ -89,22 +89,41 @@ export function extractWorkItems(brief) {
 }
 
 /**
- * The register's own vocabulary, derived from the register (`P-13`).
+ * The register's own vocabularies, derived from the register (`P-13`).
  *
  * Both lists are published at the head of `TASKS.md` — a `Status values:` line and a table
  * whose first header cell is `type`. Reading them from there rather than hardcoding them
  * means a type added to the table is honoured without touching this guard, and a type that
  * exists only in a heading is a finding rather than a silent pass.
+ *
+ * **They are read separately, and TASK 66 is why.** One function demanded both and threw
+ * unless it had both, so a revision carrying statuses and no type table could not be read at
+ * all. That is not hypothetical: the register's first six committed revisions
+ * (2026-08-13 -> 2026-08-16) predate the type table and are shaped
+ * `## TASK 0 — Case studies · `DONE`` — statuses, no type span. Requiring the table to read a
+ * status blinded the K2 derivation over exactly the era `EVAL-000`'s baseline came from.
+ *
+ * Each keeps its own G-13 throw. A guard that cannot derive what it is asserting has asserted
+ * nothing, and the two failures send the human to two different lines of the same file.
  */
-function registerVocabulary(lines) {
+function registerStatuses(lines) {
   const statuses = new Set();
-  const types = new Set();
-  let inTypeTable = false;
-
   for (const line of lines) {
     const s = line.match(/^Status values:\s*(.+)$/);
     if (s) for (const m of s[1].matchAll(/`([^`]+)`/g)) statuses.add(m[1]);
+  }
+  if (statuses.size === 0) {
+    throw new Error(
+      'the work-item STATUS vocabulary could not be derived from the register: expected a "Status values:" line at its head. A guard that cannot classify an item must not clear it for delegation (G-13).',
+    );
+  }
+  return statuses;
+}
 
+function registerTypes(lines) {
+  const types = new Set();
+  let inTypeTable = false;
+  for (const line of lines) {
     if (/^\|\s*type\s*\|/i.test(line)) { inTypeTable = true; continue; }
     if (inTypeTable) {
       if (!line.startsWith('|')) { inTypeTable = false; continue; }
@@ -112,15 +131,12 @@ function registerVocabulary(lines) {
       for (const m of (line.split('|')[1] ?? '').matchAll(/`([a-z]+)`/g)) types.add(m[1]);
     }
   }
-
-  // G-13: a guard that cannot evaluate must deny. An empty vocabulary would make every item
-  // "not in the register" — which does deny — but with a reason pointing at the wrong file.
-  if (types.size === 0 || statuses.size === 0) {
+  if (types.size === 0) {
     throw new Error(
-      'the work-item vocabulary could not be derived from the register: expected a "Status values:" line and a table whose first column header is `type`. A guard that cannot classify an item must not clear it for delegation (G-13).',
+      'the work-item TYPE vocabulary could not be derived from the register: expected a table whose first column header is `type`. A guard that cannot classify an item must not clear it for delegation (G-13).',
     );
   }
-  return { statuses, types };
+  return types;
 }
 
 /**
@@ -138,26 +154,61 @@ function registerVocabulary(lines) {
  * down. Real headings also carry trailing annotations (`· **ran fifth**`), parenthetical
  * status text (`` `TODO` (needs TASK 30) ``) and post-status code spans, all of which this
  * tolerates because it anchors on the status rather than counting fields from either end.
+ *
+ * The scan needs the STATUS vocabulary only. `type` is whatever code span sits immediately
+ * before the status, or null when there is none — classifying it against the type table is
+ * `parseWorkItemTypes`'s job, one layer up (TASK 66). Anchoring on the status is what makes
+ * that split safe: the type is still read positionally, never by shape.
  */
+export const WORK_ITEM_HEADING = /^##\s+TASK\s+(\d+)\s+—\s*(.*)$/;
+
 function scanWorkItemHeadings(tasksMd) {
   const lines = String(tasksMd).split(/\r?\n/);
-  const { statuses, types } = registerVocabulary(lines);
+  const statuses = registerStatuses(lines);
   const out = [];
   for (const line of lines) {
-    const h = line.match(/^##\s+TASK\s+(\d+)\s+—\s*(.*)$/);
+    const h = WORK_ITEM_HEADING.exec(line);
     if (!h) continue;
     const spans = [...h[2].matchAll(/`([^`]+)`/g)].map((m) => m[1]);
     const statusAt = spans.findIndex((s) => statuses.has(s));
-    if (statusAt < 1) continue;               // no status, or nothing before it to be the type
-    const type = spans[statusAt - 1];
-    if (!types.has(type)) continue;           // unclassifiable — absent, and the caller denies
-    out.push({ id: `TASK-${h[1]}`, type, status: spans[statusAt] });
+    if (statusAt < 0) continue;               // no status — unclassifiable, and absent denies
+    out.push({
+      id: `TASK-${h[1]}`,
+      status: spans[statusAt],
+      type: statusAt > 0 ? spans[statusAt - 1] : null,
+    });
   }
   return out;
 }
 
+/**
+ * The register's own type per work item. An item whose type span is absent or outside the
+ * declared vocabulary is OMITTED rather than defaulted — `decideDelegation` already denies on
+ * a missing type, so unclassifiable fails closed (TASK 74).
+ */
 export function parseWorkItemTypes(tasksMd) {
-  return new Map(scanWorkItemHeadings(tasksMd).map((w) => [w.id, w.type]));
+  const types = registerTypes(String(tasksMd).split(/\r?\n/));
+  return new Map(
+    scanWorkItemHeadings(tasksMd)
+      .filter((w) => w.type !== null && types.has(w.type))
+      .map((w) => [w.id, w.type]),
+  );
+}
+
+/**
+ * Every work item the register carries a heading for, classified or not.
+ *
+ * Needs NO vocabulary — that is the point. It answers "is this entry still in the file?",
+ * which is a different question from "can its status be read?", and conflating the two made a
+ * change to the `Status values:` line read as forty entries being deleted (TASK 66, P-16).
+ */
+export function parseWorkItemIds(tasksMd) {
+  const out = new Set();
+  for (const line of String(tasksMd).split(/\r?\n/)) {
+    const h = WORK_ITEM_HEADING.exec(line);
+    if (h) out.add(`TASK-${h[1]}`);
+  }
+  return out;
 }
 
 /** The register's own status per work item — same heading scan as parseWorkItemTypes,

@@ -7,6 +7,14 @@ Update the status line when a task changes state, and log the session in `progre
 
 **`RETIRED` means the deliverable moved to another id, never that it was dropped.** Added 2026-08-27, when `EVAL-001`'s nine items were consolidated. A retired entry **stays in place** carrying a pointer to the id that absorbed it: ids are stable and never reused, `progress/` and the scorecards cite them, and deleting the section would break every citation while making the consolidation invisible. A retired entry is not a done one, and nothing may close against it. **Reconciled 2026-08-28 (`P-07`).** This paragraph used to say the status token was not parsed by any guard and that the type was *"the first backticked token after the em dash"*. `TASK 74` made both false: `parseWorkItemTypes` now reads the status against the `Status values:` line above, and takes the type from the code span **immediately before it**, validated against the type table below. So `RETIRED` had to be added to that line for a retired item to resolve at all — and it did, which is the property that matters for `H-05`.
 
+**A status change away from `DONE` carries a declaration line, and the gate checks it against git.** Added 2026-08-29 by `TASK 66`, because `K2` (done-reopens) had no substrate at all: this file records the current status only, so an evaluator can observe 0 reopens and cannot distinguish that from 0 *recorded*. The transitions themselves are now **derived** from `git log -- TASKS.md` — an artifact no agent can author, since `H-01` denies every git write at rung 1 — which needs no backfill and cannot be silently omitted. What git cannot say is why "done" meant two different things to the two parties, and that is the whole of `K2`. So a reopened entry carries, immediately under its heading:
+
+```markdown
+**Reopened <date>** — was `DONE` since <date>. <One sentence: what "done" meant to each party.>
+```
+
+`check-status-history` fails when a derived transition away from `DONE` has no such line, and when a line names a reopening the committed history does not show. Both directions are bounded by `statusHistory.reopenDeclarationsFrom` in `scripts/guards/guards.config.json`, the same dated-threshold mechanism the done-block conventions use. **A reopen made and reversed inside a single commit is invisible** — that is the boundary between the two metrics, and it is deliberate: `K1` counts implement→verify cycles inside a session, `K2` counts what survives into the committed register.
+
 **Work Item model.** Every entry is one deliverable with a checkable done and a `type`. Ids are stable and never reused — `progress/` cites them.
 
 | type | Produces a spec? | The artifact the human approves |
@@ -1897,6 +1905,8 @@ The asymmetry is the point and it is stated in the code. `check-terms` is a gate
 
 **The second half of this item's done was already discharged** by `TASK 12`'s reconcile pass: `docs/harness/evidence.md` states that redaction is only ever as good as the term list parsed at write time, and names this item.
 
+**The mutation ratchet turned, and it turned because it caught this item first.** The new module landed at **63.22%** and pulled the aggregate 76.07 → **75.89** — the silent fall the floor exists to make visible, arriving inside the item that added the code. Reading the survivors rather than averaging them (`T-03`) separated `D3`'s declared noise class (35 `StringLiteral` mutants emptying ledger prose, now suppressed at the mutant with a written reason) from 34 that mattered: every section guard in `renderLedger`, and **every string in the git argv** — a dropped `--reverse` inverts the direction of every transition the derivation reports, and nothing was asserting it. File 63.22 → **82.64%**; surface 75.89 → **76.55**, re-measured at 76.54. Floor raised **75.5 → 76.0**, which is the upkeep `TASK 63` named as `TASK 65`'s residual rather than a new obligation.
+
 **What is not claimed.** The original incident's artifact is gone and the specific malformation `parseTerms` throws on is covered — but this closes the *silent* failure modes, not every possible one. A term list that parses cleanly and is simply **wrong** — a term nobody added — is not detectable by any mechanism here, and never was. That is the residual risk, and it belongs to whoever maintains the list rather than to the code.
 
 Detail: `progress/2026-08-27-07-task59-write-time-scrubber.md`.
@@ -2007,11 +2017,49 @@ This is `INC-07`'s shape — a check that passes forever — inside the checker 
 
 **Closed 2026-08-28.** Both clauses shipped as two independent `implementer` slices (disjoint files, no shared object — `G-12`), each test-first. Clause 1: `parseWorkItemStatuses` added to `delegation-gate.mjs` (a shared heading scan behind it and `parseWorkItemTypes`, rather than a second hand-rolled regex — `TASK 74`'s lesson applied preemptively); `validateCases` takes an optional `workItemStatuses` map and flags a `proof: none` case whose `proof_reason` cites a `DONE` work item; `EC-014` now carries its real proof and `outcome: Caught`. Clause 2: `isGeneratedArtifact` and `missingDoneBlockFinding` added to `procedures.mjs`, requiring **both** the `` tool output (`D2`) `` disclosure and a `**Reproduce this file**` command together — proven in red that either alone is not enough (`P-14`). `progress/2026-08-27-13-eval001-workitem-extract.md` needed no edit: it already carried both signals, and the guard now reads them. `docs/harness/contracts.md` §5 and §6 gained one paragraph each. `node scripts/guards/gate/check-evals.mjs` and `check-procedures.mjs` both pass; `node --test "scripts/guards/**/*.test.mjs"` is green (124 new/changed-file tests re-verified directly, no regressions).
 
-## TASK 66 — Record work-item status transitions, so `K2` has a substrate · `harness` · `TODO`
+## TASK 66 — Record work-item status transitions, so `K2` has a substrate · `harness` · `DONE`
 
 **Opened 2026-08-27 by `EVAL-001`, which had to report `K2` as `unmeasurable` where the baseline reported 2.** Nothing in this repository records a status transition: `TASKS.md` carries current status only, and the trace carries tool calls, not register states. The evaluator observed 0 reopens and could not distinguish that from 0 recorded — and **declined to report 2 → 0 as an improvement**, which is the right call and also the reason the metric is now worth less than it was.
 
 **Done:** a status change in `TASKS.md` away from `DONE` leaves a dated, greppable line a scorecard can read without interpretation, and the next evaluation reports `K2` with substrate `observable` rather than `unmeasurable`.
+
+**Closed 2026-08-29.** The transitions are **derived from the register's own committed history** — one status map per revision of `TASKS.md`, diffed consecutively — rather than written by hand. That is what makes them `observable` by the scorecard's own definition (*read from an artifact the scored entity does not author*): `H-01` denies every agent a git write at rung 1. It also needed no backfill, and it cannot be silently omitted the way a convention can. What git cannot say is **why** "done" meant two different things, which is the whole of `K2`, so a transition away from `DONE` carries a hand-written `**Reopened <date>**` line and `check-status-history` — the gate's new step — fails when the derived history and the declarations disagree **in either direction**.
+
+**The real corpus, measured:** 31 committed revisions, **43 transitions**, **0 unparseable**, **0 vanished**, **`left_done` = 0**. No work item has ever left `DONE`, so `K2 = 0` is now a measurement over the project's whole recorded lifetime rather than an absence of data. `scripts/status-history.mjs` writes the ledger `harness-evaluator` reads — it holds no `Bash` and cannot derive it — generated at the moment of use rather than committed, because a committed ledger oscillates: the commit that records a status change is itself the event the file then lacks.
+
+**Three findings from validating against real state, none of them predicted by the entry.** `parseWorkItemStatuses` **could not read the register's first six revisions** — `registerVocabulary` demanded a `Status values:` line *and* a `type` table, and the table did not exist until 2026-08-19, so the derivation would have been blind over exactly the era `EVAL-000`'s baseline of 2 came from; the two vocabularies are now read separately, each keeping its own `G-13` throw. `P-16`'s question — *what breaks when the register's own vocabulary moves next month?* — turned out not to answer "nothing": dropping a token from `Status values:` unclassifies every entry using it at once, which folded together with deletion would have read as forty work items being **deleted**; `vanished` and `unclassified` are now separate, distinguished by whether the heading survives, which needs no vocabulary to read and so stays correct exactly when the vocabulary is what broke. And **the first neutering pass found a hole in this item's own tests** — deleting the missing-declaration branch left the battery green, because both branches name the item and the word `Reopened` and the assertions matched only those (`P-14` earning its place).
+
+**What is not claimed.** A **committed** reopen has no real-corpus red path: `H-01` denies an agent the `git commit` a planted fixture needs. The committed half is proven with an injected git runner in the unit battery, the uncommitted half against the real repository — a `DONE` → `TODO` flip with no declaration fails naming the item, passes once declared, and an orphaned declaration fails. And **the second half of this item's `Done` is discharged by `EVAL-002`, not here**: the substrate exists and has not yet been read by an evaluation.
+
+Detail: `progress/2026-08-29-05-task66-k2-substrate.md`.
+
+## TASK 89 — The `component tests` step fails at module evaluation, with zero tests collected · `bugfix` · `TODO`
+
+**Opened 2026-08-29 by `TASK 66`'s wrap-up gate run, and unlike `TASK 85` this one has its output captured.** The fourth consecutive gate run of the session failed on `component tests`; the three before it passed, and the same command re-run alone immediately after passed **15/15 in 2.11 s**.
+
+**What was captured, exactly.** Both suites failed **at module evaluation**, not at an assertion — `TypeError: Cannot read properties of undefined (reading 'config')`, pointing at the `describe(...)` line in `site/src/behaviour/scroll-spy.component.test.ts:39` and `theme.component.test.ts:36`, with `Test Files 2 failed (2)` and **`Tests  no tests`**. The next line of the log is Vite's own: `[vite] Re-optimizing dependencies because vite config has changed`.
+
+**It is not this item's doing, and that was checked rather than assumed:** `TASK 66` changed no file under `site/` — the working tree at the time held `.claude/`, `docs/`, `progress/`, `scripts/`, `CLAUDE.md`, `TASKS.md` and `stryker.config.mjs`, and nothing else.
+
+**Two candidate mechanisms, and the item exists to distinguish them rather than to pick one now.** Either Vitest's dependency pre-bundling cache is being invalidated *during* collection, which is what the re-optimizing line reports and what "zero tests collected" is consistent with; or Stryker's sandbox copies of the tree — created and destroyed repeatedly across four gate runs and two standalone mutation runs in the same hour — perturb the config `getViteConfig()` resolves. `T-06` is explicit that intermittent means a real race, a real timing assumption or a real ordering bug, and **zero tests collected is the more alarming half**: a runner that collects nothing and a runner that passes look identical to any check reading only an exit code — except that `TASK 39`'s zero-tests-ran mechanism exists precisely for this, and it is what turned this into a `FAIL` rather than a silent green.
+
+**Done:** the mechanism is named, with the evidence that distinguishes the two candidates; the fix addresses that mechanism rather than adding a retry; and the gate's `component tests` step passes twice consecutively from a cold dependency cache with a mutation run in between. **Adding a retry, or clearing the cache as a build step, is not this item's done** — `T-06` forbids the first, and the second hides the ordering bug rather than fixing it.
+
+**Related, not duplicated (`P-06`).** `TASK 69` and `TASK 85` are the same *class* on the **e2e** tier and stay separate: different runner, different tier, and `TASK 85` has no captured repro at all while this one does. If the two turn out to share a root cause, that is a finding for whichever runs second.
+
+## TASK 88 — A render template lives in the mutation-covered surface · `maintenance` · `TODO`
+
+**Opened 2026-08-29 by `TASK 66`, from its own mutation run rather than from a hypothesis.** `renderLedger` (`scripts/guards/lib/status-history.mjs`) builds the status-history document, and `D3` scoped mutation to *parsing, joining and validating* precisely because **mutating render templates produces equivalent mutants and noise**. The function is a render template that happens to live in `lib/`, so the config's own glob mutates it: 35 `StringLiteral` mutants emptying sentences of prose, plus ~40 surviving `CallExpression` mutants that delete a `push` of a prose or blank line.
+
+**Half of it is already handled and the residual is the interesting half.** `StringLiteral` is suppressed at the mutant with a written reason. `CallExpression` is **not**, deliberately: suppressing it across the function would also stop mutating the *data* rows — `` L.push(`- ${t.date} · ${t.id} · ${t.from} → ${t.to}`) `` — which the tests do kill and which are the whole point of the artifact. So a mutator-level suppression buys quiet by giving up real coverage, and a per-line one is forty directives.
+
+**Done:** the rendering half is outside the mutation-covered surface **or** explicitly inside it with a reason, decided rather than defaulted; whichever way it goes, `scripts/guards/lib/status-history.mjs` carries no surviving mutant that a reader would have to re-triage, and the surface's aggregate does not fall.
+
+**Constraints**
+
+- **Do not solve this by lowering the threshold.** `stryker.config.mjs` says an equivalent mutant is excluded at the mutant with a written reason, never by moving the number, and `checkStrykerSuppressions` enforces the reason half.
+- **A `!` glob entry naming this one file is a roster** (`P-13`). If the answer is an exclusion, it is a declared *property* — a naming convention that means "this is a render template" — not a filename.
+- The same question applies to any future `lib/` module that renders. Decide the shape once.
 
 ## TASK 67 — `harness-evaluator`'s budget is conditional, and the role file does not say so · `documentation` · `TODO`
 
@@ -2155,8 +2203,10 @@ Both files carry a traceability body asserting where each value came from. The r
 | 6 | `TASK 61` — `path-boundary` denies reads the rules exist to permit | fix · `DONE` | — |
 | 7 | `TASK 64` — trace fidelity, second pass (absorbs `TASK 62`) | fix · `DONE` | — |
 | 7b | `TASK 83` — the `'all'`-mode loop's untested trailing-flag shape | fix | — |
-| 8 | `TASK 66` — a substrate for `K2` | fix | — |
+| 8 | `TASK 66` — a substrate for `K2` | fix · `DONE` | — |
 | 9 | `TASK 67` — `harness-evaluator`'s conditional budget | fix | — |
+| 9a | `TASK 88` — a render template inside the mutation surface | fix · **`TASK 66`'s own residual** | — |
+| — | `TASK 89` — `component tests` collects zero tests and fails | **runner flake, not this milestone** — same class as `TASK 69`/`TASK 85`, one tier over | — |
 | 9b | `TASK 84` — `checkBashPaths` has no shell vector for `H-04`'s read boundary | fix | — |
 | 10 | `TASK 75` — `C-09` claims rung 2 and `check-content` sees only structure | fix | — |
 | — | `TASK 69` — the load-sensitive `/about` e2e | **site suite, not this milestone** | — |

@@ -15,6 +15,14 @@ Decide and write down, first:
 
 - **Which runs are in scope** — by run id, from `evidence/runs/`.
 - **The posture each ran under** — `permission_mode` and `enforcement_environment` from every run header. A run under `bypassPermissions`, or on a machine with an OS sandbox, is **not comparable** to one here, and merging them silently corrupts the trend. Exclude it and say you did.
+- **The status-history ledger**, generated before anything is delegated. `harness-evaluator` holds no shell and cannot derive it, and `K2` has no other substrate — skipping this step is how `EVAL-001` ended up reporting the metric as `unmeasurable`. It is generated at the moment of use rather than kept committed and fresh, the same as the other precomputed corpora (`ADR-009`):
+
+  ```
+  node scripts/status-history.mjs > progress/status-history.md
+  ```
+
+  Hand the path to the evaluator in the brief. A brief that names a corpus for the agent to go and derive is the unbounded read `P-09` measures at 1 of 1 slices cut.
+
 - **Whether this is a baseline or an evaluation.** A first pass over historical incidents is a baseline: it establishes what the harness would have caught, and it is not evidence that the harness works.
 
 ## 2 · Score the cases

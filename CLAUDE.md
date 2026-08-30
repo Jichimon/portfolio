@@ -31,7 +31,7 @@ progress/              one log per work item · evaluations/ holds scorecards
 evaluation-cases/                 executable eval cases
 evidence/              runtime trace — hooks only, gitignored
 resources/             FROZEN — published content, read-only input
-scripts/               gate.mjs and the guards
+scripts/               gate.mjs, the guards, and status-history.mjs (K2's corpus)
 private/               NEVER COMMITTED
 ```
 

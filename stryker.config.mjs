@@ -115,7 +115,19 @@ export default {
   // against 74.74 rather than at it: timeouts count as killed and the timeout count is
   // timing-dependent (this run: 72; prior runs on this surface: 21, 45, 66), so a floor set at
   // the exact measurement fails on a slower machine with no code change. 0.57 points of slack.
-  thresholds: { high: 100, low: 100, break: 75.5 },
+  //
+  // RAISED 2026-08-29, TASK 66: 75.5 -> 76.0, against a re-measured 76.55%. The item's own new
+  // module is the whole of the movement, and it moved twice. It first landed at 63.22% - 69
+  // survivors, 20 uncovered - and dragged the aggregate DOWN to 75.89, which is the silent fall
+  // this ratchet exists to make visible and did. Reading the survivors instead of averaging
+  // them separated two causes: 35 StringLiteral mutants emptying ledger prose, which is exactly
+  // what D3 scoped mutation away from and is now suppressed AT THE MUTANT with a written
+  // reason; and 34 structural ones that mattered, including every section guard in renderLedger
+  // and every string in the git argv - a dropped --reverse inverts the direction of every
+  // transition it derives, and nothing was asserting it. 63.22 -> 82.64 for the file, 75.89 ->
+  // 76.55 for the surface. Set to 76.0, not 76.55, for the same timeout-drift reason every
+  // floor before it was set below its measurement: 0.55 points of slack.
+  thresholds: { high: 100, low: 100, break: 76.0 },
 
 
   // The sandbox is a COPY of the working tree, and it is not limited to what git tracks —

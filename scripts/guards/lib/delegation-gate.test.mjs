@@ -378,3 +378,63 @@ test('RED (TASK 74): the fix is load-bearing end to end — a feature with a bac
   );
   assert.equal(v.allowed, false, 'H-05 must still require an approved spec for a feature');
 });
+
+// --- TASK 66: status extraction does not need the type table ----------------
+// `registerVocabulary` demanded BOTH a `Status values:` line and a `type` table, and threw
+// unless it had both. Reading a status needs neither the table nor a type span: the register's
+// first six committed revisions (2026-08-13 -> 2026-08-16) carry `Status values:` and headings
+// shaped `## TASK 0 — Case studies · `DONE`` with no type at all, and every one of them threw.
+// That blinded the K2 derivation over exactly the era EVAL-000's baseline of 2 came from.
+//
+// The two vocabularies are now separate: statuses gate the scan, types gate parseWorkItemTypes.
+// Both keep their own G-13 throw — a guard that cannot derive what it is asserting has
+// asserted nothing.
+
+const STATUS_ONLY_HEAD = 'Status values: `TODO` · `IN PROGRESS` · `BLOCKED` · `DONE`\n';
+
+test('RED (TASK 66): a register with no type table still yields statuses', () => {
+  const md = `${STATUS_ONLY_HEAD}
+## TASK 0 — Case studies · \`DONE\`
+
+text
+
+## TASK 5 — Website · \`BLOCKED\` (by tasks 1–4)
+`;
+  const m = parseWorkItemStatuses(md);
+  assert.equal(m.get('TASK-0'), 'DONE', 'a heading with no type span must still report its status');
+  assert.equal(m.get('TASK-5'), 'BLOCKED', 'a parenthetical after the status must not break the read');
+});
+
+test('RED (TASK 66): a title code span before the status does not displace it', () => {
+  // The mirror of TASK 74 one column over. `[NEEDS INPUT]` is the real early-register case.
+  const m = parseWorkItemStatuses(`${STATUS_ONLY_HEAD}
+## TASK 3 — Resolve \`[NEEDS INPUT]\` · \`BLOCKED\` (needs author)
+`);
+  assert.equal(m.get('TASK-3'), 'BLOCKED');
+});
+
+test('RED (TASK 66): a status outside the register\'s declared vocabulary is omitted', () => {
+  // The same fail-closed direction TASK 74 chose for types: unclassifiable is absent, never
+  // silently accepted, or the derivation invents a transition nobody made.
+  const m = parseWorkItemStatuses(`${STATUS_ONLY_HEAD}
+## TASK 9 — A typo · \`content\` · \`DONEE\`
+`);
+  assert.equal(m.get('TASK-9'), undefined);
+});
+
+test('RED (TASK 66): parseWorkItemStatuses still throws when no status vocabulary exists (G-13)', () => {
+  assert.throws(() => parseWorkItemStatuses('## TASK 1 — No header here · `content` · `TODO`\n'),
+    /vocabulary/i);
+});
+
+test('RED (TASK 66): parseWorkItemTypes still throws when the type table is missing (G-13)', () => {
+  // Loosening the status side must not loosen this one. A missing type table has to keep
+  // denying every delegation loudly — H-05 is rung 1 and this is the half that carries it.
+  assert.throws(() => parseWorkItemTypes(`${STATUS_ONLY_HEAD}## TASK 1 — Thing · \`content\` · \`TODO\`\n`),
+    /vocabulary/i);
+});
+
+test('RED (TASK 66): a heading with no type span is absent from parseWorkItemTypes, not defaulted', () => {
+  const m = parseWorkItemTypes(withHead('## TASK 0 — Case studies · `DONE`'));
+  assert.equal(m.get('TASK-0'), undefined, 'no type span means no type — never the status read as one');
+});

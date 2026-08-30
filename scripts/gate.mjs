@@ -265,6 +265,12 @@ export const STEPS = [
     redProof: { file: 'scripts/guards/lib/evals.test.mjs', test: 'RED: a field added to the template becomes required without touching the config' },
     cmd: ['node', 'scripts/guards/gate/check-evals.mjs'],
   },
+  {
+    name: 'status history',
+    protects: 'K2 has a substrate: a work item leaving `DONE` carries the reason it did, checked against a history no agent can author (TASK 66, H-01)',
+    redProof: { file: 'scripts/guards/lib/status-history.test.mjs', test: 'RED: a derived reopen with no declaration is a finding' },
+    cmd: ['node', 'scripts/guards/gate/check-status-history.mjs'],
+  },
 ];
 
 // The run loop lives in guards/lib/gate.mjs so it can be tested without spawning

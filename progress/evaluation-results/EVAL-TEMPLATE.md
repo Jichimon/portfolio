@@ -44,6 +44,8 @@ for. Both must be answered, including "no" with a reason.>
 
 **`K1b` is read from each log's `iteration_split`** — `bucket=count` pairs summing to `iterations`, added by `TASK 72` after `EVAL-001` reported a bare count of ~7 against a target of ≤2 and could attribute it to nothing. Aggregate the buckets across items and report which one carries the mass; that is the number a slice-seam proposal has to move. An item whose logs predate `iterationSplitRequiredFrom` contributes to `K1` and **not** to `K1b`, and the split is stated rather than the two totals being silently mismatched.
 
+**`K2` is read from the status-history ledger** (`TASK 66`), not from prose. Generate it first — the command is in `evaluate-harness` step 1 — and read its `left_done` row: the count of transitions away from `DONE` in the committed register, derived from git, which no agent can author (`H-01`). `DONE` → `RETIRED` is listed under its own destination and is a consolidation, not a reopening. **Report the window with the number**, because a reopen made and reversed inside one commit is invisible to it; that is the boundary between `K1` and `K2`, not a defect in either.
+
 **Substrate values:** `observable` (read from an artifact the scored entity does not author) · `self-reported` (read from its prose) · `unmeasurable` (the signal does not exist — report the raw count, never a ratio that claims precision it does not have).
 
 ## Verdict
