@@ -117,7 +117,10 @@ function inPlaceFlag(head, args) {
 /**
  * The destination argument(s) of a `cp`/`ln`/`install` invocation: the value of
  * `-t VALUE` / `--target-directory=VALUE` / `--target-directory VALUE` when present,
- * otherwise the last non-flag argument.
+ * otherwise the last argument that isn't recognizably a flag — starts with `-` AND contains
+ * no `/` or `\` (TASK 87). An argument that starts with `-` but contains a separator is kept
+ * as a positional candidate rather than excluded, because a real flag never needs one and a
+ * `..`-climb into a boundary cannot resolve without one.
  *
  * The `-t` branch matters on its own: `cp -t resources/ /tmp/x.md` must flag `resources/`
  * (the `-t` value), not `/tmp/x.md` — the last positional there is the SOURCE, and a naive
@@ -132,7 +135,18 @@ function destinationArgs(args) {
     const m = a.match(/^--target-directory=(.*)$/);
     if (m) return [m[1]];
   }
-  const positional = args.filter((a) => !a.startsWith('-'));
+  // TASK 87: "looks like a flag" cannot be decided from `startsWith('-')` alone — a
+  // destination reachable only through `..` (`-/../resources/y.md`, or the backslash form
+  // `-..\resources\y.md` — `tokenize()` in shell.mjs does not treat an unquoted `\` as an
+  // escape at all, so it survives into the argument intact) starts with '-' too, and
+  // excluding it left only the SOURCE as a positional candidate, silently substituted as the
+  // presumed destination. TASK 86's fix ("stop filtering, check everything") does not
+  // transplant here: destinationArgs must still pick exactly ONE argument, and an existing
+  // anti-regression case (a real trailing flag like `-v` must not become "the destination")
+  // depends on excluding something. A real cp/ln/install flag never contains `/` or `\` in
+  // its own syntax, while a `..`-climb cannot resolve to anything without a separator — so
+  // requiring the absence of both is what tells the two apart.
+  const positional = args.filter((a) => !(a.startsWith('-') && !/[/\\]/.test(a)));
   return positional.length ? [positional[positional.length - 1]] : [];
 }
 

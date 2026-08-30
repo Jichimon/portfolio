@@ -244,6 +244,40 @@ test('RED: a flag AFTER the destination does not defeat the positional fallback'
   bDenied('cp /tmp/x.md resources/y.md -v');
 });
 
+// TASK 87. `destinationArgs` filters `args.filter((a) => !a.startsWith('-'))` and takes the
+// LAST survivor as "the destination" — the identical raw-text-before-resolution mistake
+// TASK 86 fixed in the 'all'/'inplace' loops, but worse: when the real destination is itself
+// flag-shaped and reachable only through `..`, the filter drops it, leaving only the SOURCE
+// as the sole positional candidate — so the check runs, and passes, against the wrong
+// argument entirely. TASK 86's fix ("stop filtering, check everything") does not transplant:
+// destinationArgs must still pick exactly ONE argument, and the anti-regression test just
+// above (a real trailing flag like `-v` must NOT become "the destination") depends on the
+// filter excluding SOMETHING. What distinguishes a real flag from a destination merely
+// disguised as one is `/`: no real cp/ln/install flag contains it, and a `..`-climb cannot
+// resolve to anything without one.
+test('RED: a flag-shaped destination that resolves through .. into a boundary is still denied', () => {
+  bDenied('cp /tmp/x.md -/../resources/y.md');
+  bDenied('ln -s /tmp/x.md -/../resources/y.md');
+});
+
+// The identical bypass with a backslash-separated destination. `tokenize()` (shell.mjs) does
+// not treat an unquoted `\` as an escape character at all — an unquoted char is appended
+// as-is regardless — so the backslash survives into the argument intact and this is a live
+// bypass through the same entry point, not a hypothetical one; verified directly before
+// writing this test rather than assumed.
+test('RED: the same trick with a backslash-separated destination', () => {
+  bDenied('cp /tmp/x.md -\\..\\resources\\y.md');
+});
+
+// Anti-regression, restated for this fix specifically: an ordinary trailing flag with no
+// separator still stays a flag, never the presumed destination, and a flag-shaped argument
+// that does NOT resolve into a boundary stays harmless.
+test('anti-regression: an ordinary flag never becomes the presumed destination', () => {
+  bDenied('cp /tmp/x.md resources/y.md -v');
+  bAllowed('cp /tmp/x.md /tmp/y.md -v');
+  bAllowed('cp /tmp/x.md -v');
+});
+
 test("RED: a flag AFTER an 'all'-mode target does not defeat the loop", () => {
   bDenied('rm -rf resources/ -v');
   bDenied('mv resources/a.md /tmp/a.md -v');
