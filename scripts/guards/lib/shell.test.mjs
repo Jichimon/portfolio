@@ -375,3 +375,225 @@ test('commandContexts: a git subcommand hidden behind a chained wrapper is still
     .some((c) => c.argv[0] === 'git' && c.argv[1] === 'push');
   assert.equal(found, true);
 });
+
+// -----------------------------------------------------------------------------
+// TASK 92 — a heredoc marker inside a comment (or a quote) is not real shell syntax,
+// and heredocSpans must not treat it as one. Found by an adversarial-auditor pass on
+// TASK 84, independently re-verified before being recorded (P-11).
+// -----------------------------------------------------------------------------
+
+test('commandContexts: a `<<EOF` inside a comment is not a real heredoc opener', () => {
+  // Bash treats line 1 as an ordinary comment and executes line 2 for real — the
+  // guard must see the same thing, not swallow line 2 as a fake heredoc body.
+  const cmd = ['# <<EOF', 'cat private/glossary.md', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'cat');
+  assert.equal(found, true);
+});
+
+test('commandContexts: a comment-hidden heredoc marker does not swallow a git command either', () => {
+  // The same shape, proven against a second, unrelated rule (H-01) — the fix lives
+  // in the shared decomposition, not in a boundary-specific patch.
+  const cmd = ['# <<EOF', 'git commit -m x', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, true);
+});
+
+test('commandContexts: a mid-word `#` inside the heredoc BODY does not itself become a command', () => {
+  const cmd = ['cat <<EOF', 'x#not a comment', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.raw.includes('x#not a comment'));
+  assert.equal(found, false, 'the heredoc body must still be dropped as data');
+});
+
+test('commandContexts: a `#` that is not a comment start (mid-word, on the OPENER line) does not disable a real heredoc', () => {
+  // `x#y` — the `#` is glued to `x`, not preceded by whitespace or line start, so bash
+  // does NOT treat it as a comment start. The real `<<EOF` right after it still counts.
+  const cmd = ['cat x#y <<EOF', 'git push', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, false, 'the # is mid-word, not a comment, so this is still a real heredoc');
+});
+
+test('commandContexts: a real comment with no space before the heredoc marker is still a comment', () => {
+  // The look-back must inspect the character BEFORE the `#` (whitespace = a real
+  // comment start), not the one after it — `x #<<EOF` has no space between them.
+  const cmd = ['x #<<EOF', 'cat private/glossary.md', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'cat');
+  assert.equal(found, true, 'a real bash comment — the fake heredoc must not swallow line 2');
+});
+
+test('commandContexts: a `<<EOF`-shaped string sitting inside a quote is not a real heredoc opener', () => {
+  // `echo "<<EOF"` just prints the literal text; there is no real heredoc here, so
+  // nothing after it should be swallowed as a heredoc body.
+  const cmd = ['echo "<<EOF"', 'cat private/glossary.md', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'cat');
+  assert.equal(found, true);
+});
+
+test('commandContexts: a real heredoc opener preceded by a quoted `#` still works', () => {
+  // The `#` is data inside single quotes, not a comment start — the heredoc that
+  // follows on the same line is real and its body must still be dropped.
+  const cmd = ["echo '#' <<EOF", 'git push', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, false, 'a real heredoc body is still documentation, not a command');
+});
+
+test('commandContexts: a multi-character quoted word closes properly right before a real heredoc', () => {
+  // No space between the closing quote and `<<` — a real shell still recognizes the
+  // operator. Mutant-killing for the quote-close tracking's off-by-one and comparisons.
+  const cmd = ["echo 'ab'<<EOF", 'git push', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, false, 'the quote closes correctly, so this is still a real heredoc');
+});
+
+test('commandContexts: a backslash-escaped quote inside a double-quoted span does not close it early', () => {
+  // `"a\"b"` is ONE token — the escaped quote at position 3 must not be read as the
+  // closing quote, or the real closing quote three characters later gets misread as a
+  // fresh opening and the heredoc that follows is wrongly rejected.
+  const cmd = ['echo "a\\"b" <<EOF', 'cat private/glossary.md', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'cat');
+  assert.equal(found, false, 'the quote closes correctly, so this is still a real heredoc');
+});
+
+test('commandContexts: a `#` inside a single-quoted string never starts a comment', () => {
+  const cmd = ["echo ' # x' <<EOF", 'git push', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, false, 'the # is inside quotes, so this is still a real heredoc');
+});
+
+test('commandContexts: a `#` inside a double-quoted string never starts a comment either', () => {
+  const cmd = ['echo " # x" <<EOF', 'git push', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, false, 'the # is inside quotes, so this is still a real heredoc');
+});
+
+// -----------------------------------------------------------------------------
+// TASK 93 — `eval "COMMAND STRING"` hides a whole command the way `sh -c "..."`
+// does, but `eval` was in neither wrapper set, so commandContexts never descended
+// into it. Same audit as TASK 92, independently re-verified.
+// -----------------------------------------------------------------------------
+
+test('commandContexts: eval "..." hides a whole command exactly as sh -c does', () => {
+  const found = commandContexts('eval "cat private/glossary.md"');
+  const inner = found.find((c) => c.argv[0] === 'cat');
+  assert.ok(inner, 'the wrapped command must be found');
+  assert.deepEqual(inner.argv, ['cat', 'private/glossary.md']);
+  assert.deepEqual(inner.via, ['eval']);
+});
+
+test('commandContexts: eval reaches a git write hidden in its argument', () => {
+  const found = commandContexts('eval "git commit -m x"')
+    .some((c) => c.argv[0] === 'git' && c.argv[1] === 'commit');
+  assert.equal(found, true);
+});
+
+test('commandContexts: eval joins unquoted arguments with a space before re-parsing them', () => {
+  // `eval cat private/glossary.md` (no quotes) is exactly as real in bash as the
+  // quoted form — eval concatenates all of its arguments before evaluating them.
+  const found = commandContexts('eval cat private/glossary.md')
+    .some((c) => c.argv[0] === 'cat' && c.argv[1] === 'private/glossary.md');
+  assert.equal(found, true);
+});
+
+test('commandContexts: eval re-parses shell metacharacters in its joined string', () => {
+  // The joined string is a real command line, not one opaque argv — a `;` inside it
+  // must still split into two separate commands, the same as top-level input would.
+  const found = commandContexts('eval "cat private/glossary.md; rm -rf resources"');
+  assert.ok(found.some((c) => c.argv[0] === 'cat'));
+  assert.ok(found.some((c) => c.argv[0] === 'rm'));
+});
+
+test('commandContexts: eval with no argument at all finds nothing extra', () => {
+  const found = commandContexts('eval');
+  assert.deepEqual(found.map((c) => c.argv), [['eval']]);
+});
+
+test('commandContexts: the eval-wrapper recursion only fires for eval itself, not any two-argument command', () => {
+  // Gated on EVAL_WRAPPERS.has(head) — a plain command with two arguments must never
+  // have its second argument reinterpreted as a brand-new command.
+  const found = commandContexts('cat private/glossary.md');
+  assert.deepEqual(found.map((c) => c.argv), [['cat', 'private/glossary.md']]);
+});
+
+test('commandContexts: eval increments the nesting depth counter like every other wrapper', () => {
+  const shallow = commandContexts('eval "git push"', [], 5).some((c) => c.argv[0] === 'git');
+  assert.equal(shallow, true, 'depth 5 -> 6 is inside the cap, the wrapped command must be found');
+  const deep = commandContexts('eval "git push"', [], 6).some((c) => c.argv[0] === 'git');
+  assert.equal(deep, false, 'depth 6 -> 7 exceeds the cap, matching every other wrapper');
+});
+
+// -----------------------------------------------------------------------------
+// adversarial-auditor findings on TASK 92/93's own fix — F1-F4, each independently
+// re-verified against real bash before being recorded (P-11). The first version of
+// both fixes was too narrow: comment detection only recognized whitespace/line-start
+// as a word boundary, quote state reset on every physical line, an unquoted
+// backslash before `<<` was never considered, and eval's leading `--` was joined
+// into the command string instead of being consumed the way bash's eval consumes it.
+// -----------------------------------------------------------------------------
+
+test('F1: a comment starting right after `;`, `&`, `)` or `|` is still a real comment', () => {
+  for (const opener of [
+    ['echo a ;# <<EOF', 'git commit -m x', 'EOF'],
+    ['true;#<<EOF', 'git push', 'EOF'],
+    ['echo a &# <<EOF', 'git commit -m x', 'EOF'],
+    ['(echo a)# <<EOF', 'git commit -m x', 'EOF'],
+    ['echo a |# <<EOF', 'git commit -m x', 'EOF'],
+  ]) {
+    const found = commandContexts(opener.join(NL)).some((c) => c.argv[0] === 'git');
+    assert.equal(found, true, `expected a real command to survive: ${opener[0]}`);
+  }
+});
+
+test('F2: a quoted string that genuinely spans more than one physical line carries its quote state across lines', () => {
+  const cmd = ['echo "', '<<EOF', '"', 'git commit -m x', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, true, 'the << sits inside an open quote that only closes two lines later');
+});
+
+test('F2b: the same cross-line quote tracking applies to single quotes and a read boundary', () => {
+  const cmd = ["echo '", '<<EOF', "'", 'cat private/glossary.md', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'cat');
+  assert.equal(found, true);
+});
+
+test('F3: an unquoted backslash right before `<<` makes it a literal `<` plus a single real redirect, not a heredoc', () => {
+  const cmd = ['echo \\<<EOF', 'git commit -m x', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, true, 'bash reads \\< as literal and the lone < as a failing redirect, not a heredoc opener');
+});
+
+test('the comment look-back inspects the character BEFORE the `#`, not after it', () => {
+  const cmd = ['x #z<<EOF', 'git push', 'EOF'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, true, 'a real bash comment — the fake heredoc must not swallow line 2');
+});
+
+test('a herestring (`<<<word`) is never misread as a heredoc opener with a delimiter later in the text', () => {
+  // Without the run-length guard, scanning finds a `<<` at the SECOND `<` of the
+  // triple and treats "word" as a delimiter to search for — silently swallowing
+  // everything up to the next line that happens to read exactly "word".
+  const cmd = ['cat <<<word', 'git push', 'word'].join(NL);
+  const found = commandContexts(cmd).some((c) => c.argv[0] === 'git');
+  assert.equal(found, true, 'a herestring has no body to swallow; line 2 is a real, live command');
+});
+
+test('F4: eval -- consumed as end-of-options, exactly like bash\'s own no_options()', () => {
+  const found = commandContexts('eval -- "git commit -m x"')
+    .some((c) => c.argv[0] === 'git' && c.argv[1] === 'commit');
+  assert.equal(found, true);
+});
+
+test('F4b: eval -- also reaches a read-boundary command', () => {
+  const found = commandContexts('eval -- "cat private/glossary.md"').some((c) => c.argv[0] === 'cat');
+  assert.equal(found, true);
+});
+
+test('F4c: only a LEADING eval -- is consumed — a lone dash is not, and a second -- is not', () => {
+  // Matches bash exactly: `eval - "x"` tries to run a command literally named `-`;
+  // `eval -- -- "x"` consumes only the first `--`, and `--` becomes the command name.
+  const dash = commandContexts('eval - "git commit -m x"');
+  assert.equal(dash.some((c) => c.argv[0] === 'git'), false);
+  assert.ok(dash.some((c) => c.argv[0] === '-'));
+
+  const doubleDash = commandContexts('eval -- -- "git commit -m x"');
+  assert.equal(doubleDash.some((c) => c.argv[0] === 'git'), false);
+  assert.ok(doubleDash.some((c) => c.argv[0] === '--'));
+});

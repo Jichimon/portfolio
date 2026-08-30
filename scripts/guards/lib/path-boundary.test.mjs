@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isInside, checkPath, checkBashPaths, normalize } from './path-boundary.mjs';
+import { isInside, checkPath, checkBashPaths, normalize, readArgsForPattern } from './path-boundary.mjs';
 
 const B = { write: ['resources', 'evidence', '.git'], read: ['private'] };
 const ROOT = 'c:/dev/projects/portfolio';
@@ -327,6 +327,209 @@ test('an ordinary flag stays harmless once every argument is checked', () => {
 // looks like a flag, which is a production change outside this item's declared scope
 // (test-only, per the TASK 83 hand-off). Tracked as its own item — TASK 86 — rather than
 // silently patched in here (P-06) or claimed killed when it was not (P-11).
+
+// --- TASK 84: the shell READ vector for H-04 -------------------------------
+// checkBashPaths consulted boundaries.write only; boundaries.read was never checked at all,
+// so `cat private/glossary.md` (and every other reader) returned allowed:true. Verified
+// directly against the unmodified code before writing this battery (progress/handoff/
+// 2026-08-30-task84.md, and progress/2026-08-30-03-task84-read-vector.md).
+
+test('RED: the minimum reproduction from the Done line', () => {
+  bDenied('cat private/glossary.md');
+  bDenied('grep -r x private/');
+  bDenied("sed -n '1p' private/glossary.md");
+});
+
+test('RED: the rest of the reader roster reads private/** just as easily', () => {
+  ['head private/glossary.md', 'tail private/glossary.md', 'less private/glossary.md',
+   'more private/glossary.md', 'tac private/glossary.md', 'od private/glossary.md',
+   'xxd private/glossary.md', 'strings private/glossary.md', 'wc private/glossary.md',
+   'base64 private/glossary.md', 'diff private/glossary.md /tmp/x',
+   'cmp private/glossary.md /tmp/x', "awk '{print}' private/glossary.md",
+   'perl -ne print private/glossary.md'].forEach(bDenied);
+});
+
+test('RED: cp/ln/install read their SOURCE — the exfiltration shape', () => {
+  bDenied('cp private/glossary.md /tmp/out.md');
+  bDenied('ln -s private/glossary.md /tmp/l');
+  bDenied('install private/glossary.md /tmp/');
+});
+
+test('RED: the flag-shaped ..-climb bypass reaches the read boundary too', () => {
+  // The identical TASK 86 evasion class, on the read vector instead of the write one: an
+  // argument crafted to start with '-' but resolve through '..' into the boundary must not
+  // be the one argument the pattern-skip logic exempts, and must not be skipped by an 'all'
+  // mode reader either.
+  bDenied('cat -/../private/glossary.md');
+  bDenied("grep x -/../private/glossary.md");
+});
+
+test('RED: an in-place edit of a private file is denied via the READ finding', () => {
+  // private is absent from boundaries.write, so the existing 'inplace' WRITES check alone
+  // does not catch this — resolved here because sed always reads its target, in-place or not.
+  bDenied("sed -i 's/a/b/' private/glossary.md");
+});
+
+test('anti-regression: a legitimate search for the word "private" is not mistaken for a read', () => {
+  // The documentation trap this fix must not recreate on the read side: the PATTERN argument
+  // names "private", but no FILE argument resolves inside the boundary.
+  bAllowed('grep -r "private" resources/');
+  bAllowed('grep -r "private/glossary.md" docs/');
+  bAllowed("sed -n '1p' " + "'the word private is not a path'");
+});
+
+test('anti-regression: the new reader commands stay allowed outside private/', () => {
+  ['head resources/x.md', 'tail evidence/runs/t.jsonl', 'diff resources/a.md resources/b.md',
+   'cp resources/x.md /tmp/y.md', 'ln -s resources/x.md /tmp/l'].forEach(bAllowed);
+});
+
+test('RED: egrep/fgrep are pattern-mode readers exactly like grep', () => {
+  bDenied('egrep x private/glossary.md');
+  bDenied('fgrep x private/glossary.md');
+});
+
+// --- adversarial-auditor findings, 2026-08-30: the position-only pattern-skip was wrong -----
+// The first version of this fix exempted "the first non-flag-shaped argument" as if it were
+// always the pattern. An independent audit found that breaks the instant the pattern is GLUED
+// to its flag: the FILE becomes the first non-flag token once the pattern no longer is one.
+// Confirmed directly against the real function before the rewrite, not assumed.
+
+test('RED: a pattern glued to its flag no longer exempts the file that follows it', () => {
+  bDenied('grep -e. private/glossary.md');
+  bDenied('grep --regexp=. private/glossary.md');
+  bDenied('sed --expression=p private/glossary.md');
+  bDenied('perl -pe1 private/glossary.md');
+  bDenied('awk --source={print} private/glossary.md');
+});
+
+test('RED: grep/sed -f reads a PATTERN FILE — the flag exempts nothing, the value is a read', () => {
+  bDenied('grep -f private/glossary.md /etc/hosts');
+  bDenied('grep --file=private/glossary.md /etc/hosts');
+  bDenied('sed -f private/glossary.md /etc/hosts');
+});
+
+test('readArgsForPattern exempts the pattern by FLAG, not by raw position, when a flag names it', () => {
+  // Kills the same class of ArrayDeclaration/StringLiteral mutant the position-only version
+  // needed direct unit coverage for, and documents the flag-aware contract precisely.
+  assert.deepEqual(readArgsForPattern('grep', ['-r', 'thesis', 'resources/']), ['-r', 'resources/']);
+  assert.deepEqual(readArgsForPattern('grep', ['thesis', 'resources/']), ['resources/']);
+  assert.deepEqual(readArgsForPattern('grep', ['-n', '-v']), ['-n', '-v']);
+  assert.deepEqual(readArgsForPattern('grep', ['-e.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('grep', ['-f', 'private/x', '/etc/hosts']), ['private/x', '/etc/hosts']);
+  assert.deepEqual(readArgsForPattern('perl', ['-pe1', 'private/x']), ['private/x']);
+});
+
+// --- direct coverage per tool and per form, so every TEXT_FLAG_*/FILE_FLAG_* entry and every
+// split/glued branch has a test that would notice it changing or disappearing -----------------
+
+test('readArgsForPattern: every tool recognizes its OWN text-flag letter, glued', () => {
+  assert.deepEqual(readArgsForPattern('grep', ['-e.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('egrep', ['-e.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('fgrep', ['-e.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('sed', ['-e.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('perl', ['-e.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('awk', ['x', 'private/x']), ['private/x']); // awk has no -e
+});
+
+test('readArgsForPattern: the text-flag letter, SPLIT form, and a dangling flag with no value', () => {
+  assert.deepEqual(readArgsForPattern('grep', ['-e', 'x', 'private/y']), ['private/y']);
+  assert.deepEqual(readArgsForPattern('grep', ['-e']), []); // nothing follows — nothing to consume
+});
+
+test('readArgsForPattern: every tool recognizes its OWN long text-flag form, split and glued', () => {
+  assert.deepEqual(readArgsForPattern('grep', ['--regexp=.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('egrep', ['--regexp=.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('fgrep', ['--regexp=.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('sed', ['--expression=.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('awk', ['--source=.', 'private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('grep', ['--regexp', '.', 'private/x']), ['private/x']);
+});
+
+test('readArgsForPattern: every tool recognizes its OWN file-flag letter, glued and split', () => {
+  assert.deepEqual(readArgsForPattern('grep', ['-fprivate/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('egrep', ['-fprivate/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('fgrep', ['-fprivate/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('sed', ['-fprivate/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('awk', ['-fprivate/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('grep', ['-f', 'private/x']), ['private/x']);
+});
+
+test('readArgsForPattern: every tool recognizes its OWN long file-flag form, split and glued', () => {
+  assert.deepEqual(readArgsForPattern('grep', ['--file=private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('egrep', ['--file=private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('fgrep', ['--file=private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('sed', ['--file=private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('awk', ['--file=private/x']), ['private/x']);
+  assert.deepEqual(readArgsForPattern('grep', ['--file', 'private/x']), ['private/x']);
+});
+
+test('readArgsForPattern: a file-flag anywhere suppresses the bare-positional exemption too', () => {
+  // grep -f PATFILE FILE has no positional pattern at all — FILE must stay checked, not
+  // wrongly exempted as if it were an implicit bare pattern (the second real audit finding).
+  assert.deepEqual(readArgsForPattern('grep', ['-f', 'private/x', '/etc/hosts']), ['private/x', '/etc/hosts']);
+});
+
+test('RED: cp -t glued to its value (no space) still resolves the real destination', () => {
+  // destinationArgs' glued short-`-t` gap: `-t/tmp` fell through to the positional fallback
+  // unrecognized, and — since it contains '/' — TASK 87's own rule kept it as a candidate,
+  // leaving the real SOURCE to be picked as the presumed destination and excluded from reads.
+  bDenied('cp -t/tmp private/glossary.md');
+});
+
+test('RED: ln with a single positional and no explicit target links the SOURCE, not a destination', () => {
+  // destinationArgs' fallback was built for cp/install, which need two positionals to do
+  // anything. `ln SOURCE` alone is valid and links SOURCE into the cwd — the one argument IS
+  // the source being read, and treating it as an implicit destination excluded the only thing
+  // there was to check.
+  bDenied('ln private/glossary.md');
+  bDenied('ln -sf private/glossary.md');
+});
+
+test('anti-regression: cp/ln keep excluding an explicit destination correctly', () => {
+  bAllowed('cp resources/x.md /tmp/y.md');
+  bAllowed('ln -s resources/x.md /tmp/l');
+  bAllowed('cp -t /tmp resources/x.md');
+  bDenied('cp -t /tmp private/glossary.md');
+  bDenied('cp -t/tmp private/glossary.md');
+  bDenied('cp -tprivate private/glossary.md'); // glued -t with no separator still hits the short branch
+});
+
+test('hasExplicitTargetFlag finds -t among several arguments — not only when every argument is it', () => {
+  // Kills the .some -> .every mutant. `ln -t private/x` has an explicit target (`-t`
+  // consuming the ONE remaining argument as the directory, not a source), so nothing is left
+  // to check — real code stays allowed. Under `.every`, '-t' present alongside a non-matching
+  // argument makes hasExplicitTargetFlag WRONGLY false, the ln single-positional special case
+  // fires instead, and the very same argument gets checked and denied.
+  bAllowed('ln -t private/x');
+});
+
+test('a cp/ln/install DESTINATION inside private/ is not itself flagged as a source read', () => {
+  // sourceArgs must exclude the resolved destination, not just filter it coincidentally.
+  // Writing INTO private/ is a real, separate, and already-tracked gap (private/ carries no
+  // write boundary at all) — H-04 governs reading, and this command reads only /tmp/x.md.
+  bAllowed('cp /tmp/x.md private/out.md');
+});
+
+test('the ln single-positional special case is scoped to ln — not cp/install too', () => {
+  // A single positional means something different for each: cp/install need TWO positionals
+  // to do anything real, so a lone one is invalid usage that reads nothing either way; only
+  // ln's single-argument form is valid AND actually reads that one argument.
+  bAllowed('install private/glossary.md');
+});
+
+test('hasExplicitTargetFlag: every -t spelling is recognized on its own, not only in combination', () => {
+  bDenied('ln --target-directory /tmp private/glossary.md');
+  bAllowed('ln --target-directory private/x'); // consumed as -t's OWN value, nothing left to read
+  bDenied('ln -t. private/glossary.md');       // glued short -t with a single-char value
+});
+
+test('mv is not a READS-roster command — moving a private/** path is a tracked, separate gap', () => {
+  // Documents the boundary deliberately, per the approved plan: mv writes both ends (WRITES
+  // 'all'), but private/ carries no write boundary either, so this stays allowed today. Also
+  // kills the ConditionalExpression mutant that would fold every unlisted head into the
+  // 'source' branch once rmode fails to match 'all'/'pattern' first.
+  bAllowed('mv private/glossary.md /tmp/dest');
+});
 
 test('the how reason names the deciding argument, not the bare command name', () => {
   const sedR = checkBashPaths("sed -i 's/a/b/' resources/x.md", B, ROOT);

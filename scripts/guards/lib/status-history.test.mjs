@@ -22,6 +22,7 @@ import {
   UNCOMMITTED,
 } from './status-history.mjs';
 import { isGeneratedArtifact } from './procedures.mjs';
+import { markdownShapeFindings } from './markdown-shape.mjs';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
 
@@ -433,6 +434,32 @@ test('RED: the reproduce command is the one that was run, verbatim', () => {
   assert.match(text, /```\nnode scripts\/status-history\.mjs --since 2026-08-01\n```/);
 });
 
+// --- the ledger's SHAPE, which is the half nothing was asserting -------------
+// TASK 88. The assertions above match content with `[\s\S]*` and never ask whether the
+// artifact is well-formed, so 27 mutants deleting a `push` of a blank line or a prose sentence
+// survived — reading as equivalent mutants when none of them is one. A blank line in Markdown
+// is not prose, it is SYNTAX: drop the one between a paragraph and a table and the table stops
+// rendering, and the ledger's reader is `harness-evaluator`, which reads it as a Markdown
+// document.
+//
+// This is the shape half of the decision `TASK 88` exists to make: a render template's
+// SENTENCES are noise, suppressed at the mutant with a written reason; its SHAPE is structure,
+// asserted here. No assertion below quotes a sentence, so the ledger's prose stays free to
+// change without touching a test.
+
+test('RED: the ledger is a well-formed Markdown document, in both its branches', () => {
+  // Both fixtures, because the three exception sections are section GUARDS: a shape checked
+  // only on the branch that emits them says nothing about the branch that does not.
+  assert.deepEqual(markdownShapeFindings(renderLedger(LEDGER_FULL)), [],
+    'every section present — headings, the summary table, four lists and the fenced command');
+  assert.deepEqual(markdownShapeFindings(renderLedger(LEDGER)), [],
+    'no exception sections — the branch where three `if` blocks emit nothing at all');
+});
+
+test('RED: and on the empty-window branch, where the transition list is a sentence', () => {
+  assert.deepEqual(markdownShapeFindings(renderLedger({ ...LEDGER, transitions: [] })), []);
+});
+
 // --- the git call itself, which nothing was asserting ------------------------
 // Found by the mutation run, not by reading: every string in the argv array survived. A
 // dropped `--reverse` silently reverses the direction of every transition, and a changed
@@ -494,4 +521,110 @@ test('RED: the declaration line needs a real ISO date, not any date-shaped text'
 **Reopened 2026-8-9** — was \`DONE\`. Also no.
 `;
   assert.equal(parseReopenDeclarations(md).get('TASK-1'), undefined);
+});
+
+// --- TASK 88 · the survivors outside renderLedger ---------------------------
+// Fourteen mutants the first run left alive in this file's real logic, each killed below by
+// the case that distinguishes it. They were not in TASK 88's entry — the entry named only the
+// render template — but its `Done` says the file carries no surviving mutant a reader would
+// have to re-triage, and these are exactly that. Found by reading the mutation report rather
+// than the entry (P-04).
+
+test('RED: `**Reopened <date>**` counts only at the start of a line', () => {
+  // The mutant drops the regex's `^` anchor. A sentence that MENTIONS a reopening then
+  // registers as a declaration of one, and an item could discharge its obligation by talking
+  // about it — which is the opposite of what the convention asks for.
+  const md = `${HEAD}## TASK 1 — Thing · \`harness\` · \`TODO\`
+
+See **Reopened 2026-08-29** in the log above for context.
+`;
+  assert.equal(parseReopenDeclarations(md).get('TASK-1'), undefined);
+});
+
+test('RED: two declarations under one item accumulate — the second does not replace the first', () => {
+  // The mutant turns `if (!out.has(current))` into an unconditional reset, so an item that
+  // reopened twice reads as having declared once. `validateReopenDeclarations` COUNTS, so a
+  // silently truncated list is a false finding against an item that did the right thing.
+  const md = `${HEAD}## TASK 1 — Thing · \`harness\` · \`TODO\`
+
+${REOPENED('2026-08-29')}
+
+${REOPENED('2026-08-30')}
+`;
+  assert.deepEqual(parseReopenDeclarations(md).get('TASK-1'), ['2026-08-29', '2026-08-30']);
+});
+
+test('RED: the window includes its own boundary date, on both sides', () => {
+  // The mutant relaxes `>= since` to `> since`. A reopen made ON the day the threshold names
+  // would fall out of the window in silence, and a threshold whose first day is not covered is
+  // a threshold nobody can reason about.
+  const onTheDay = [{ date: SINCE, label: 'x', id: 'TASK-1', from: 'DONE', to: 'TODO' }];
+  assert.equal(validateReopenDeclarations(onTheDay, new Map(), SINCE).length, 1,
+    'a derived reopen dated exactly `since` is in window and needs its declaration');
+  assert.equal(validateReopenDeclarations([], new Map([['TASK-1', [SINCE]]]), SINCE).length, 1,
+    'and a declaration dated exactly `since` is judged too — one side only would make the threshold itself a source of false findings');
+});
+
+test('RED: findings come back in a stable id order, so two runs of one corpus read the same', () => {
+  // The mutant drops `.sort()`. Map iteration order would then follow whichever id happened to
+  // be seen first, and a diff of two ledger runs would show movement that is not there.
+  const list = [
+    { date: SINCE, label: 'x', id: 'TASK-9', from: 'DONE', to: 'TODO' },
+    { date: SINCE, label: 'y', id: 'TASK-2', from: 'DONE', to: 'TODO' },
+  ];
+  const ids = validateReopenDeclarations(list, new Map(), SINCE).map((f) => f.message.match(/TASK-\d+/)[0]);
+  assert.deepEqual(ids, ['TASK-2', 'TASK-9']);
+});
+
+// `readRevisions` splits git's output behind TWO defenses — `.trim()` and `.filter(Boolean)` —
+// and they need one test each. **Found by neutering, not by reading:** a single test with both
+// leading and trailing padding killed NEITHER mutant, because each defense fully compensates
+// for the other's absence on that input. So each test below carries the input that isolates
+// one of them, and a phantom revision is fatal either way: its sha is not a sha, and the very
+// next `git show <sha>:TASKS.md` throws G-13 on output git itself produced.
+
+const withLog = (stdout) => (args) => (args[0] === 'log' ? { status: 0, stdout } : fakeGit(R)(args));
+const LOG_LINES = R.map((r) => `${r.sha}\t${r.date}`);
+
+test('RED: trailing whitespace in git output is not an extra revision (`.trim()`)', () => {
+  // Whitespace-only, not empty — `.filter(Boolean)` keeps `'   '` because it is truthy, so
+  // this is the input on which `.trim()` is the only thing standing.
+  const { revisions, walked } = readRevisions({ git: withLog(`${LOG_LINES.join('\n')}\n   `), workingTree: R[2].text });
+  assert.equal(walked, 3);
+  assert.equal(revisions.length, 4, 'three commits plus the working tree — no phantom fourth');
+});
+
+test('RED: an empty line inside git output is not an extra revision (`.filter(Boolean)`)', () => {
+  // In the middle, where `.trim()` cannot reach it — the input on which `.filter(Boolean)` is
+  // the only thing standing.
+  const { revisions, walked } = readRevisions({ git: withLog(`${LOG_LINES[0]}\n\n${LOG_LINES.slice(1).join('\n')}\n`), workingTree: R[2].text });
+  assert.equal(walked, 3);
+  assert.equal(revisions.length, 4, 'three commits plus the working tree — no phantom fourth');
+});
+
+test('RED: the revision label is the seven-character short sha, not the whole one', () => {
+  // The mutant returns the full sha. The ledger prints the label on every line, so this is
+  // forty characters of noise per row in the corpus an evaluation reads.
+  const { revisions } = readRevisions({ git: fakeGit(R), workingTree: R[2].text });
+  assert.deepEqual(revisions.slice(0, 3).map((r) => r.label), ['aaaaaaa', 'bbbbbbb', 'ccccccc']);
+});
+
+test('RED: a `since` newer than every revision keeps exactly the last one', () => {
+  // The branch with NO coverage at all before this test, and three mutants live in it:
+  // `first < 0` -> false, `all.slice(-1)` -> `all`, and `-1` -> `+1`. Keeping the last
+  // revision is what lets an uncommitted change still be diffed against something; keeping
+  // all of them silently ignores `since`, and `slice(1)` drops the oldest instead of the
+  // newest, which is the wrong end.
+  const { revisions, scoped } = readRevisions({ git: fakeGit(R), workingTree: R[2].text, since: '2026-09-01' });
+  assert.equal(scoped, 1);
+  assert.deepEqual(revisions.map((r) => r.label), ['ccccccc', '(uncommitted)']);
+});
+
+test('RED: a `since` at or before the first revision keeps all of them', () => {
+  // The mutant relaxes `first < 0` to `first <= 0`: when the earliest revision is already in
+  // window, `first` is 0, and the mutant takes the newer-than-everything branch instead —
+  // reporting one revision where the whole history was asked for.
+  const { revisions, scoped } = readRevisions({ git: fakeGit(R), workingTree: R[2].text, since: '2026-08-01' });
+  assert.equal(scoped, 3);
+  assert.deepEqual(revisions.map((r) => r.label), ['aaaaaaa', 'bbbbbbb', 'ccccccc', '(uncommitted)']);
 });

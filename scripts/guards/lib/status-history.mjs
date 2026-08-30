@@ -184,6 +184,7 @@ export function validateReopenDeclarations(leftDoneList, declarations, since) {
   const declared = new Map();
   for (const [id, dates] of declarations) {
     const n = dates.filter(inWindow).length;
+    // Stryker disable next-line ConditionalExpression,EqualityOperator: equivalent, and proven so rather than assumed (TASK 88). The reader below takes `declared.get(id) ?? 0`, which makes a stored zero and an absent key the same value, and the union set it iterates changes only by an id whose two counts are then both 0 — which `d === c` continues past. Both mutants were run against the battery on 2026-08-30 and both survived, which is the evidence for this comment rather than the reason to delete the guard: the `if` is what keeps the map a record of declarations that exist.
     if (n > 0) declared.set(id, n);
   }
 
@@ -192,6 +193,9 @@ export function validateReopenDeclarations(leftDoneList, declarations, since) {
     const d = derived.get(id) ?? 0;
     const c = declared.get(id) ?? 0;
     if (d === c) continue;
+    // Stryker disable next-line EqualityOperator: equivalent, because the line above already
+    // continued on `d === c`, so `c < d` and `c <= d` cannot disagree here — the only input
+    // that separates them is unreachable. Verified by running the mutant, 2026-08-30 (TASK 88).
     if (c < d) {
       findings.push({ message: `TASKS.md: ${id} left \`DONE\` ${d} time(s) since ${since} and carries ${c} \`**Reopened <date>**\` declaration(s). The transition is derived from git and cannot be edited here; the reason for it can only be written by the person who reopened it, and K2 is a count of nothing without one (TASK 66)` });
     } else {
