@@ -183,7 +183,14 @@ const READS = {
 /** Every real read this map does NOT cover is a stated residual, not an oversight: `dd`,
  * `mv`, `rm`, interpreters (`node`, `python`) handed a protected path, and PowerShell-native
  * readers stay out — `private/` carries no write boundary at all today (`TASK 91`), and a
- * script the agent writes then executes is `architecture.md §L`'s residual, not this one's. */
+ * script the agent writes then executes is `architecture.md §L`'s residual, not this one's.
+ *
+ * This roster also decides more than it looks like it does, and TASK 94 measured it: input
+ * redirection (`cat < private/x`) and process substitution (`diff <(cat private/x) …`) are
+ * denied today ONLY because the head sits here in `'all'` mode and every argument is checked
+ * anyway — neither construct is understood. Off the roster (`node -e 1 < private/x`) the same
+ * form passes. So an entry removed from this map silently widens a residual §L records; that
+ * is a property of the roster, not of the mechanism (`P-13`). */
 
 /**
  * grep/egrep/fgrep/sed/perl/awk: the short and long flags that supply the pattern/script
@@ -317,9 +324,18 @@ function sourceArgs(head, args) {
  * Best-effort detection of a Bash command reading or writing inside a protected boundary.
  *
  * Honest scope: this catches redirects, the common mutators and readers, and in-place
- * editors. It does not and cannot catch a script the agent wrote and then executed, or an
- * interpreter (`node`, `python`) handed a protected path as an argument. That residual is
- * stated in architecture.md §L rather than papered over.
+ * editors, all decided on the command AS TEXT, before the shell expands it. Two different
+ * limits follow, and they are stated in architecture.md §L rather than papered over:
+ *
+ *   what the guard cannot SEE     a script the agent wrote and then executed, or an
+ *                                 interpreter (`node`, `python`) handed a protected path.
+ *   what does not EXIST yet       anything the shell resolves after this runs — glob,
+ *                                 variable, brace, alias, a path relative to a `cd`, or a
+ *                                 path arriving on stdin through a pipe. TASK 94.
+ *
+ * The second one reaches the command HEAD too, so it is H-01's concern as much as this
+ * function's. Neither is closed by matching harder; §L holds the single statement of both,
+ * and this comment is a pointer to it, never a second copy (G-10).
  */
 export function checkBashPaths(command, boundaries, root = '') {
   const findings = [];
