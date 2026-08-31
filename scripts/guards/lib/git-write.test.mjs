@@ -507,3 +507,111 @@ test('remote: the bare form (no arguments at all) lists', () => {
 test('remote: a mix where not every flag is -v/--verbose is still a write', () => {
   denied('git remote -v --unknown');
 });
+
+// ---------------------------------------------------------------------------
+// TASK 95: a DIRECT_WRAPPERS candidate is never itself unwrapped.
+//
+// `env git push` was already denied, because one of the argv suffixes env offers
+// literally starts with `git` and this guard matches it directly. `env sh -c "git
+// commit -m x"` was NOT: the offered suffix ['sh','-c','git commit -m x'] is a raw
+// argv nobody re-examined for being ITSELF a wrapper, and the payload stays sealed
+// inside one quoted argument. Verified live against this machine's real bash before
+// being recorded — `env sh -c`, `nohup sh -c`, `timeout N sh -c`, `nice sh -c` and
+// `xargs sh -c` all execute their payload (P-11).
+// ---------------------------------------------------------------------------
+
+test('RED: a flag wrapper reached THROUGH a direct wrapper is still a git write', () => {
+  ['env sh -c "git commit -m x"', 'nohup sh -c "git push"', 'nice bash -c \'git reset --hard\'',
+   'timeout 5 sh -c "git push --force"', 'xargs sh -c "git commit -m x"',
+   'sudo bash -c "git push"', 'stdbuf -o0 sh -c "git commit -m x"'].forEach(denied);
+});
+
+test('RED: chained direct wrappers reaching a flag wrapper do not escape either', () => {
+  // env's own suffix enumeration already offers ['sh','-c','git push'], so this is
+  // caught by the OUTER wrapper's suffixes — not by re-entering the direct branch.
+  denied('env timeout 5 sh -c "git push"');
+  denied('sudo env nice sh -c "git commit -m x"');
+});
+
+test('RED: eval reached through a direct wrapper is denied as hardening', () => {
+  // Deliberate over-report. Real bash CANNOT run this — `eval` is a shell builtin
+  // with no executable on PATH, so env/nice/sudo fail with "No such file or
+  // directory". Covering it costs nothing and over-reporting is the stated
+  // direction for these wrappers (INC-07); it closes no live hole and is not
+  // claimed to (C-02).
+  denied('env eval "git commit -m x"');
+  denied('nice eval "git push"');
+});
+
+test('the direct-wrapper path that already worked still works — no regression', () => {
+  ['env git commit -m x', 'timeout 5 git push', 'env timeout 5 git commit -m x',
+   'sudo git reset --hard'].forEach(denied);
+  ['env git status', 'timeout 5 git log --oneline', 'env ls -la'].forEach(allowed);
+});
+
+// ---------------------------------------------------------------------------
+// TASK 96: `env -S "…"` packs a whole command line into ONE argument that env
+// itself field-splits — FLAG_WRAPPERS' shape, reached through a head classified
+// only as DIRECT_WRAPPERS. The offered suffix is the single token
+// ['git commit -m x'], whose basename is the whole string, so it matched nothing.
+//
+// Every spelling below was confirmed to execute under GNU coreutils 8.32 before
+// being written (P-11).
+// ---------------------------------------------------------------------------
+
+test('RED: env -S packs a git write into one argument, in every spelling', () => {
+  ['env -S "git commit -m x"',            // separator form
+   'env -S"git push"',                    // glued form
+   'env --split-string="git commit -m x"',// long form, inline value
+   'env --split-string "git push"',       // long form, separate value
+   'env -vS "git commit -m x"',           // bundled behind a valueless short flag
+   'env -iS "git push --force"'].forEach(denied);
+});
+
+test('RED: env -S reached through another wrapper does not escape either', () => {
+  denied('sudo env -S "git commit -m x"');
+  denied('sh -c "env -S \'git push\'"');
+});
+
+test('env -uS is NOT a split-string — -u swallows the S as the variable name', () => {
+  // Verified against coreutils 8.32: `env -uS "echo X"` unsets a variable named S
+  // and then tries to exec a program literally named "echo X", which does not
+  // exist. Treating it as a split-string would over-deny a command real env
+  // cannot run, so the guard matches env's actual grammar here.
+  allowed('env -uS "git commit -m x"');
+});
+
+test('env without -S is untouched by the split-string handling', () => {
+  denied('env git push');
+  denied('env sh -c "git commit -m x"');
+  allowed('env git status');
+  allowed('env -u FOO git log --oneline');
+});
+
+test('RED: an ABBREVIATED --split-string is still a split-string', () => {
+  // GNU getopt_long accepts any unambiguous abbreviation, and `split-string` is
+  // env's only long option beginning with `s` — so every prefix from `--s` up is
+  // accepted. All spellings below were confirmed to execute under coreutils 8.32.
+  ['env --s "git commit -m x"', 'env --sp "git push"', 'env --spl="git commit -m x"',
+   'env --split-str="git push --force"', 'env --split-strin "git reset --hard"',
+   'sudo env --s "git commit -m x"'].forEach(denied);
+});
+
+test('a long option that is NOT a prefix of --split-string is left alone', () => {
+  allowed('env --unset=FOO git status');
+  allowed('env --ignore-environment git log');
+  allowed('env -- git status');
+});
+
+test('-C swallows a following S too, exactly like -u', () => {
+  // coreutils 8.32: `env -CS "echo X"` answers "cannot change directory to 'S'".
+  // Both value-taking short options must stop the cluster scan, not just -u.
+  allowed('env -CS "git commit -m x"');
+});
+
+test('a token that is not an option is never scanned for a bundled S', () => {
+  // `env aS "git push"` execs a program named `aS` — verified against coreutils 8.32.
+  // Scanning any token for an S would read this as a split-string and over-deny.
+  allowed('env aS "git push"');
+  allowed('env PASS=x true');
+});

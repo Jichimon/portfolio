@@ -544,3 +544,69 @@ test('the how reason names the deciding argument, not the bare command name', ()
   assert.equal(ddR.allowed, false);
   assert.equal(ddR.findings.find((f) => f.boundary === 'resources').how, 'dd of=');
 });
+
+// ---------------------------------------------------------------------------
+// TASK 95: the same DIRECT_WRAPPERS gap reaches all three of this guard's
+// boundaries, not only H-01. `commandContexts` offered every argv suffix of a
+// direct wrapper as a TERMINAL argv, so a flag wrapper reached through one kept
+// its payload sealed inside a quoted argument and matched no boundary at all.
+//
+// The fixtures are command STRINGS and checkBashPaths is pure over text — nothing
+// under private/** is ever opened, which is the boundary these cases exist to
+// enforce (H-04).
+// ---------------------------------------------------------------------------
+
+test('RED: a write boundary reached through a direct wrapper is denied (H-02, H-03)', () => {
+  bDenied('env sh -c "rm resources/a.md"');
+  bDenied('timeout 5 sh -c "rm -rf evidence/runs"');
+  bDenied('nohup bash -c \'echo x > resources/case-studies/x.md\'');
+  bDenied('nice sh -c "sed -i s/a/b/ evidence/runs/x.jsonl"');
+});
+
+test('RED: the read boundary is reached the same way (H-04)', () => {
+  bDenied('env sh -c "cat private/__probe_does_not_exist__"');
+  bDenied('sudo bash -c \'grep -r x private/\'');
+  bDenied('xargs sh -c "cat private/__probe_does_not_exist__"');
+});
+
+test('RED: chained direct wrappers reaching a flag wrapper do not escape a boundary', () => {
+  bDenied('env timeout 5 sh -c "cat private/__probe_does_not_exist__"');
+  bDenied('sudo env sh -c "rm -rf evidence/runs"');
+});
+
+test('a direct wrapper around an innocent command is still allowed — the fix does not over-deny', () => {
+  bAllowed('env sh -c "cat docs/harness/architecture.md"');
+  bAllowed('timeout 5 sh -c "node scripts/gate.mjs"');
+  bAllowed('env git status');
+});
+
+// ---------------------------------------------------------------------------
+// TASK 96: env -S reaches this guard's three boundaries the same way it reaches
+// H-01. env -S does NOT spawn a shell, so a redirect inside the string is passed
+// literally to the program rather than performed — the vector is direct binary
+// execution, which is exactly what these boundaries exist to stop.
+// ---------------------------------------------------------------------------
+
+test('RED: env -S carries a write-boundary mutator past the guard (H-02, H-03)', () => {
+  bDenied('env -S "rm -rf resources/home.en.md"');
+  bDenied('env -S "rm -rf evidence/trace.jsonl"');
+  bDenied('env --split-string="tee evidence/runs/x.jsonl"');
+  bDenied('env -vS "sed -i s/a/b/ resources/x.md"');
+});
+
+test('RED: env -S carries a reader past the read boundary (H-04)', () => {
+  bDenied('env -S "cat private/__probe_does_not_exist__"');
+  bDenied('env -S"grep -r x private/"');
+  bDenied('sudo env -S "cat private/__probe_does_not_exist__"');
+});
+
+test('env -S around an innocent command is still allowed — no over-deny', () => {
+  bAllowed('env -S "cat docs/harness/architecture.md"');
+  bAllowed('env -S "node scripts/gate.mjs"');
+});
+
+test('RED: an abbreviated --split-string reaches the boundaries too', () => {
+  bDenied('env --s "cat private/__probe_does_not_exist__"');
+  bDenied('env --sp "rm -rf evidence/trace.jsonl"');
+  bDenied('env --split-str="rm resources/home.en.md"');
+});

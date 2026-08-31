@@ -2229,7 +2229,14 @@ Both files carry a traceability body asserting where each value came from. The r
 | 9c | `TASK 92` — a comment-only heredoc marker defeats `commandContexts` entirely | fix · `DONE` | `progress/2026-08-30-04-task92-heredoc-comment-bypass.md` |
 | 9d | `TASK 93` — `eval` is recognized as neither a flag-wrapper nor a direct-argument wrapper | fix · `DONE` | `progress/2026-08-30-05-task93-eval-wrapper.md` |
 | — | `TASK 94` — shell-level expansion is an unexamined residual, not yet a stated one | **not placed** — a loose end from `TASK 84`'s audit, `documentation` type | — |
-| — | `TASK 95` — a `DIRECT_WRAPPERS` candidate is never itself unwrapped (`env sh -c "..."`, `env eval "..."`) | **not placed** — a loose end found while closing `TASK 93`, pre-existing and unrelated to that item's diff | — |
+| 9e | `TASK 95` — a `DIRECT_WRAPPERS` candidate is never itself unwrapped | fix · `DONE` | `progress/2026-08-30-06-task95-direct-wrapper-recursion.md` |
+| 9f | `TASK 96` — `env -S`/`--split-string` packs a whole command into one argument | fix · `DONE` | `progress/2026-08-30-07-task96-env-split-string.md` |
+| — | `TASK 97` — `sudo -s`/`-i` pass their arguments to a shell, the `env -S` shape elsewhere | **not placed** — a loose end from `TASK 96`'s closing audit · **unproven in execution**, no POSIX sudo on this machine | — |
+| — | `TASK 98` — `powershell -EncodedCommand` carries a base64 command past `EVAL_FLAGS` | **not placed** — a loose end from `TASK 96`'s closing audit, confirmed executing | — |
+| — | `TASK 99` — goal-alignment triage, and the rule that prevents the drift | triage · `DONE` | `progress/2026-08-30-08-task99-goal-alignment-triage.md` |
+| — | `TASK 100` — drive the harness on a real, non-harness workload | **goal 2** · unblocks `TASK 9` | — |
+| — | `TASK 101` — the repository as the portfolio's public exhibit | **goal 1** · after `TASK 30` | `TASK 30` |
+| — | `TASK 102` — every open item declares the goal it serves | **deferred, with a trigger** — `P-19` is one day old | — |
 | 10 | `TASK 75` — `C-09` claims rung 2 and `check-content` sees only structure | fix | — |
 | — | `TASK 69` — the load-sensitive `/about` e2e | **site suite, not this milestone** | — |
 | — | `TASK 76` — the English half of the Spanish rewrite | **site suite** · blocks `TASK 30` | — |
@@ -2562,13 +2569,112 @@ Verified directly against the real functions, before and after: `eval -- "cat pr
 
 **Done:** `architecture.md §L` (or the nearest equivalent) names shell-level expansion and runtime data flow (glob, variable, `cd`, pipe-to-dynamic-command) as a stated, bounded residual — matching the standard `P-15`/`G-07` already hold every other honestly-scoped limit to — with the input-redirection and process-substitution sub-cases split out as their own `bugfix` `TODO` entries once named here, rather than silently folded into a "someday" note.
 
-## TASK 95 — a `DIRECT_WRAPPERS` candidate is never itself unwrapped, so a chained `env sh -c "..."`/`env eval "..."` escapes every hard rule · `bugfix` · `TODO`
+## TASK 95 — a `DIRECT_WRAPPERS` candidate is never itself unwrapped, so a chained `env sh -c "..."`/`env eval "..."` escapes every hard rule · `bugfix` · `DONE`
 
 **Opened 2026-08-30, found while closing `TASK 93` and independently verified against the real functions before being recorded (`P-04`).** `DIRECT_WRAPPERS` (`env`, `nohup`, `xargs`, `time`, `timeout`, `sudo`, `doas`, `stdbuf`, `nice`, `ionice`) handles `env git push` by offering every argv suffix as its own candidate context, pushed directly: `found.push({ argv: argv.slice(i), ... })` (`scripts/guards/lib/shell.mjs`, the `DIRECT_WRAPPERS` branch of `commandContexts`). That candidate is never itself passed back through `commandContexts` — it is a terminal `argv` array, checked only by each boundary function's own head/args logic. That works for `env git push` (one of the offered suffixes literally starts with `git`, which `checkGitWrite` matches directly) and even for `env timeout 5 git push` (chained `DIRECT_WRAPPERS`-on-`DIRECT_WRAPPERS` still works, because *some* suffix is still a bare `git ...` argv). It does **not** work when the wrapped command needs actual unwrapping rather than a bare positional match — a `FLAG_WRAPPERS` command (`sh -c "..."`) or an `EVAL_WRAPPERS` command (`eval "..."`) hides its payload inside one quoted **string** argument, and a raw, non-recursed suffix like `['sh', '-c', 'cat private/glossary.md']` is never unwrapped into the command it names.
 
 Verified directly against the real functions: `env sh -c "cat private/glossary.md"` (`H-04`), `env eval "cat private/glossary.md"` (`H-04`), and `env sh -c "git commit -m x"` (`H-01`) all return `{"allowed":true}` — confirmed pre-existing (not introduced by `TASK 92`/`93`'s diff: reproduced against `git show HEAD` unchanged, and the mechanism is `DIRECT_WRAPPERS`, which neither of those items touched). Contrasted directly against `env timeout 5 git commit -m x`, which **is** caught (`{"allowed":false, ...}`) — proving the gap is specifically "a wrapper reached *through* `DIRECT_WRAPPERS` that itself needs recursion to unwrap," not a general `DIRECT_WRAPPERS` failure.
 
 **Done:** every `DIRECT_WRAPPERS` candidate is also recursed back through `commandContexts` (not just offered as a raw suffix), so a `FLAG_WRAPPERS`/`EVAL_WRAPPERS` command reached through `env`/`timeout`/`sudo`/etc. is unwrapped the same way it would be at the top level. Red battery: the three reproductions above, each proven denied after the fix via a before/after run against the real function (`P-11`), plus confirmation that the existing `env`/`timeout`-suffix tests still pass (no regression in the case that already worked by brute-force offering).
+
+**Closed 2026-08-30.** The fix extracts the two string-carrying wrapper families into a module-private `wrapperContexts(argv, via, depth)` and passes every offered `DIRECT_WRAPPERS` suffix through it at `depth + 1`; the raw suffix push is unchanged, so the brute-force path that already worked is untouched.
+
+**The obvious fix was measured and rejected, and this is the part worth keeping.** Re-joining the suffix and recursing on the string — `commandContexts(suffix.join(' '), …)`, the shape the hand-off implied — turns `['env','sh','-c','git commit -m x']` into `sh -c git commit -m x`, where `-c`'s argument has collapsed to the single word `git` and `commit` is a separate token. `checkGitWrite` on that returns `{"allowed":true}`: the re-join looks like a fix, passes a naive test, and leaves `H-01` open. The helper therefore takes an argv and never re-serializes, and a test pins the joined form's genuine weakness so nobody re-derives it.
+
+**A nested `DIRECT_WRAPPERS` suffix is deliberately not re-entered**, on a completeness argument rather than a shortcut: the loop already offers every suffix of the whole argv, and a nested wrapper's suffixes are `argv.slice(i).slice(j) === argv.slice(i + j)` — a strict subset. Re-entering would add only duplicates, and on an adversarial `env env env …` line, exponentially many under the depth cap. `env timeout 5 sh -c "git push"` is caught through `env`'s own suffix list, and a test asserts `via === ['env','sh']` — pinning the mechanism, not just the outcome (`P-16`).
+
+**Two corrections to this entry's own opening claims, found by validating rather than restating (`P-04`).** First, `env eval "..."` is **not** a live bypass: `eval` is a shell builtin with no executable on `PATH`, so `env`/`nice`/`sudo` answer `env: 'eval': No such file or directory`. The guard catches the form anyway — over-reporting is the stated direction for these wrappers (`INC-07`) — but it is hardening, and closes no live hole (`C-02`). Second, the gap was **wider** than recorded here: it reaches all four boundaries, `H-01`, `H-02`, `H-03` and `H-04`, through any of the ten heads. Verified live against real bash: `env sh -c`, `nohup sh -c`, `timeout 5 sh -c`, `nice sh -c`, `xargs sh -c` and chained `env timeout 5 sh -c` all execute their payload.
+
+**Evidence.** 13 tests red before the fix, green after — split by kind (`T-08`): 7 decomposition tests in `shell.test.mjs`, 4 for `H-01` in `git-write.test.mjs`, 4 for `H-02`/`H-03`/`H-04` in `path-boundary.test.mjs`. Guard suite 1022 pass / 0 fail. **Gate 21/21, exit 0**; mutation **78.36%** against the 77.0 floor, with **zero survivors on the three lines this change introduces** (the 9 survivors in that window all sit on lines that existed verbatim before it). The floor was not moved — a `bugfix`-type improvement, matching `TASK 84` and `TASK 92`/`93`.
+
+**The scoped `adversarial-auditor` pass found a live bypass this fix does not close, and it is filed as `TASK 96` rather than folded in (`P-01`).** `env -S "git commit -m x"` — `env`'s own string-splitting option — packs a whole command into one argument `env` itself field-splits. That is `FLAG_WRAPPERS` shape reached through a head classified only as `DIRECT_WRAPPERS`, a different mechanism from this item's, and this item's `Done` does not cover it. Independently re-verified before being recorded: all four spellings execute under GNU coreutils 8.32, and all four boundaries return `allowed:true`. The audit also confirmed both claims this fix rests on, finding no counterexample to either.
+
+## TASK 96 — `env -S` / `--split-string` packs a whole command into one argument, so `env` is a flag-wrapper nobody classified as one · `bugfix` · `DONE`
+
+**Opened 2026-08-30 by `TASK 95`'s closing `adversarial-auditor` pass, and independently re-verified against the real functions and real bash before being recorded (`P-04`, `P-11`).** `env` sits in `DIRECT_WRAPPERS`, whose model is "every remaining token is its own command word." `env -S "git commit -m x"` breaks that model: `-S` takes **one** string argument that `env` itself splits into a command line — exactly `FLAG_WRAPPERS`' shape (`sh -c "…"`), except `env` is in neither `FLAG_WRAPPERS` nor `EVAL_WRAPPERS`, so nothing ever re-tokenizes it. The suffix `['git commit -m x']` reaches the checkers as a single token whose `basename` is the whole string `"git commit -m x"` — not `git`, and not any `WRITES`/`READS` head — so it matches no boundary at all.
+
+Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -m x"` (`H-01`), the glued `env -S"git commit -m x"`, the bundled `env -vS "git commit -m x"`, `env -S "rm -rf resources/home.en.md"` (`H-02`), `env -S "rm -rf evidence/trace.jsonl"` (`H-03`) and `env -S "cat private/__probe_does_not_exist__"` (`H-04`) all return `{"allowed":true}` from both `checkGitWrite` and `checkBashPaths`. All four spellings **execute** under GNU coreutils 8.32 on this machine. Pre-existing and unrelated to `TASK 95`'s diff — `env`'s classification was untouched by it.
+
+**Scope note.** `env -S` does not spawn a shell, so a redirection inside the string is passed literally to the program rather than performed — the escape vector is direct binary execution (`git`, the `rm`/`mv`/`cp`/`tee` mutators, the `cat`/`grep` readers), which is precisely what the four boundaries exist to stop.
+
+**Done:** `env`'s string-splitting option is decomposed like the flag-wrapper it is, so the packed command is re-tokenized and reaches the boundary checkers as a real argv. Every spelling above proven denied after the fix via a before/after run against the real functions (`P-11`), the separator (`-S x`), glued (`-Sx`), long (`--split-string=x`) and bundled (`-vS x`) forms each covered, plus confirmation that `env`'s existing `DIRECT_WRAPPERS` behaviour (`env git push`, `env sh -c "…"`, `env timeout 5 git push`) is unchanged.
+
+**Closed 2026-08-30, same sitting as `TASK 95`, whose closing audit opened it.** `splitStringArgs(argv)` collects every string a split-string option hands to the wrapper; `wrapperContexts` recurses `commandContexts` on each at `depth + 1`. Placed in `wrapperContexts` rather than in the `DIRECT_WRAPPERS` branch on purpose, so it also fires when `env` arrives as another wrapper's suffix — `sudo env -S "…"` is denied, and a test asserts it.
+
+**The first fix was wrong, and a second scoped audit caught it — the third consecutive item in this surface where that happened** (`TASK 92`, `TASK 93`, now this one). It matched the long option by exact spelling. GNU `getopt_long` accepts any unambiguous abbreviation, and `split-string` is env's **only** long option beginning with `s`, so `env --s "git commit -m x"` walked through all four boundaries while `env -S "…"` was correctly denied. Verified independently before being accepted: `--s`, `--sp`, `--spl`, `--split-str` and `--split-strin` all execute under coreutils 8.32, in both the `=value` and separate-value forms. `longSplitStringValue` now matches by prefix, with `--` end-of-options and non-prefix long options (`--unset`, `--u`, `--ignore-environment`) tested to stay out.
+
+**One deliberate non-denial, tested so it is not later "fixed" into an over-deny.** `env -uS "git commit -m x"` stays **allowed**, because `-u` consumes the `S` as the name of the variable to unset and env then tries to exec a program literally named `git commit -m x`. Confirmed under coreutils 8.32, alongside `-CS` (`cannot change directory to 'S'`) and `-0uS`. `ENV_VALUE_OPTS` therefore stops the cluster scan at `u` and `C`, which `env --help` confirms are the only value-taking short options besides `S` itself. A missing entry would make the scan over-report, which is the safe direction (`INC-07`).
+
+**Evidence.** 12 tests red before their fix, green after, split by kind (`T-08`) across `shell.test.mjs`, `git-write.test.mjs` and `path-boundary.test.mjs`, covering the separator, glued, long, abbreviated, bundled and repeated forms plus the `-uS` grammar case. Every spelling proven denied by a before/after run against the real functions (`P-11`); `env git push`, `env sh -c "…"` and `env timeout 5 git push` unchanged.
+
+**Two further findings, filed rather than folded in (`P-01`, `P-06`):** `TASK 97` (`sudo -s`/`-i`, the same shape in another program — recorded as unproven in execution, since no POSIX sudo exists on this machine) and `TASK 98` (`powershell -EncodedCommand`, confirmed executing, but a base64/UTF-16LE decode step rather than a set membership).
+
+## TASK 97 — `sudo -s` / `-i` pass their remaining arguments to a shell, the `env -S` shape in a different program · `bugfix` · `TODO`
+
+**Opened 2026-08-30 by `TASK 96`'s closing `adversarial-auditor` pass.** `sudo` and `doas` sit in `DIRECT_WRAPPERS`. POSIX `sudo -s` and `sudo -i` pass their remaining arguments to `$SHELL -c` — the same "one argument holds a command line" shape as `env -S`, in a program the guard classifies as direct-argument only. `sudo -s "git commit -m x"`, `sudo -i "git commit -m x"`, `sudo -s "cat private/__probe_does_not_exist__"` and `doas -s "git commit -m x"` all return `{"allowed":true}` from both checkers — confirmed against the real functions.
+
+**Recorded as unproven-in-execution, deliberately (`C-01`).** Unlike `TASK 96`, this was **not** confirmed against a real shell: the only `sudo` on this machine is Windows `C:/WINDOWS/system32/sudo`, which has a different option set and triggers elevation, and `doas` is absent. The finding rests on reading the guard plus documented POSIX sudo semantics. That is enough to open an item and not enough to call it a demonstrated live bypass — the distinction `TASK 95` had to make about `env eval`, one item earlier.
+
+**Done:** the `-s`/`-i` command-passing forms of `sudo`/`doas` are decomposed like the flag wrappers they are, with the POSIX semantics confirmed against a real POSIX sudo first — or, if that cannot be arranged, the item closes as `documentation` naming the form as a stated residual rather than guessing at a grammar nobody here can run.
+
+## TASK 98 — `powershell -EncodedCommand` carries a base64 command past `EVAL_FLAGS` · `bugfix` · `TODO`
+
+**Opened 2026-08-30 by `TASK 96`'s closing `adversarial-auditor` pass.** `FLAG_WRAPPERS` covers `powershell`/`pwsh`, and `EVAL_FLAGS` covers `-c`, `-command`, `/c` and `-e` — but not `-EncodedCommand` / `-ec`, which take the same command as **base64-encoded UTF-16LE**. `powershell -EncodedCommand <base64>` and `pwsh -ec <base64>` return `{"allowed":true}` from both checkers, and the form **executes on this machine** — confirmed by running a harmless encoded `echo`.
+
+**Why this is its own item rather than an `EVAL_FLAGS` row.** Every other entry in that set names an argument that already *is* the command; this one names an argument that must be base64-decoded from UTF-16LE before it is a command. That is a decode step in the decomposition path, with its own failure modes (invalid base64, the `-e`/`-ec`/`-enc` prefix family, encodings that are not UTF-16LE), not a one-line addition to a set.
+
+**Done:** the encoded-command forms are decoded and re-decomposed, or the form is denied outright as undecodable — either is a defensible answer and the choice is made explicitly, with a red battery covering the prefix family and a malformed payload.
+
+## Goal alignment — the triage of 2026-08-30
+
+**The two goals this project exists for**, stated by the author and binding on the register:
+
+1. **A clean portfolio, published, plus the repository itself as a public exhibit** — the harness included, as evidence of how the work was done.
+2. **A harness good enough to export to the author's other projects**, improving their **efficiency**. Not their security: the author is currently the only operator, and hardening against an adversary who does not exist is work that serves nobody. Security returns to scope when a second person does.
+
+**Why this section exists.** `INC-17`: eight of the twelve items closed between 2026-08-29 and 2026-08-30 were command-decomposition bypasses in one file. Each was real. None advanced either goal, and the series was divergent by construction — every audit of that surface opened one to three more items in it. `P-19` is the rule that came out of it. This table is that rule applied once, to the whole open register, so the next session inherits a sorted board instead of a flat list.
+
+| Serves | Items | Note |
+|---|---|---|
+| **Goal 1 — publish** | `TASK 30` · `TASK 32` · `TASK 28` · `TASK 29` | **71 items are closed and nobody can see any of it.** Goal 1 has no delivered value until this ships |
+| **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 27` | The pages a reader actually judges |
+| **Goal 1 — credibility** | `TASK 94` · `TASK 101` | `TASK 94` **retires the bypass series** by stating the residual instead of chasing it — the cheapest high-leverage item on the board |
+| **Goal 2 — the deliverable** | `TASK 9` (blocked) · `TASK 100` (the unblocker) | `TASK 9`'s own trigger is *the first `EVAL` with a real, non-harness workload*, and nothing was advancing it. `TASK 100` is that workload |
+| **Goal 2 — efficiency & trust** | `TASK 89` · `TASK 78` · `TASK 81` · `TASK 73` · `TASK 102` | `TASK 89` first: a gate step that collects **zero tests** can report PASS while proving nothing |
+| **Stated residuals — not tasks** | `TASK 91` · `TASK 97` · `TASK 98` | Obfuscated-command bypasses. Real, verified, and **nobody on this project would notice them**: an adversary writes `env --s`, a mistaken agent writes `git commit -m x`. After `TASK 94` names the residual, these are documented limits. They return to scope with a second operator (`P-19`, `G-07`) |
+| **Deferred — no goal served today** | `TASK 38` · `TASK 11` · `TASK 14` · `TASK 75` · `TASK 90` · `TASK 85` · `TASK 69` | Ratchet upkeep, small guard bugs and two flakes. Real, none of them visible to a reader or to the author's throughput |
+
+**Recommended order:** `TASK 94` → `TASK 89` → `TASK 30`/`TASK 32` → `TASK 100` → `TASK 9`.
+
+## TASK 99 — Goal-alignment triage, and the rule that prevents the drift · `planning` · `DONE`
+
+**Opened and closed 2026-08-30**, after the author asked the question the register could not answer: *does any of this serve the two goals?* It did not, and the honest answer produced `INC-17`, `P-19`, the triage table above, and `TASK 100`–`TASK 102`.
+
+**Done:** `INC-17` transcribed in `docs/harness/architecture.md` §C; `P-19` in `.claude/rules/10-process.md` with that origin and a rung that does not overclaim; every open item sorted against the two goals, including the ones this triage demotes to residuals; the items that serve the goals and did not exist yet, opened.
+
+## TASK 100 — Drive the harness on a real, non-harness workload · `harness` · `TODO`
+
+**Opened 2026-08-30 by `TASK 99`.** `TASK 9` (Harness export v2) is the deliverable of goal 2, and it is blocked on its own stated trigger: *the first `EVAL` with a real, non-harness workload*. That trigger has never fired. Every evaluation to date has scored the harness against work on the harness — which is precisely the closed loop `INC-17` describes, and the reason the efficiency problems the export is supposed to carry are still invisible.
+
+**Why this is the unblocker and not a nice-to-have.** An export written now would carry what was *designed*, not what *worked* — the failure `TASK 9`'s own entry warns about, and the same shape as `C-02` one level up. The harness has never been measured against a codebase it did not build.
+
+**Done:** the harness is installed on one of the author's other projects and drives at least one real work item there end to end, with a scorecard produced from that run. The findings — what transferred, what did not, what needed rewriting for a project with different conventions — land in `progress/` as the input `TASK 9` is waiting for. **Scope discipline:** the point is the measurement, not perfecting the harness mid-flight; defects found there are recorded, not fixed in the same pass (`P-06`).
+
+## TASK 101 — The repository as the portfolio's public exhibit · `content` · `TODO`
+
+**Opened 2026-08-30 by `TASK 99`.** Goal 1 names the repository itself — harness included — as something a reader should be able to look at. Nothing in the register carries that: `TASK 30` publishes the repository, but publishing is not exhibiting, and a visitor who lands on it today finds no entry point explaining what they are looking at.
+
+**The concern, stated once (`P-17`), because it is a real one.** `C-15` requires every page to reinforce one thesis: *connecting legacy critical systems to modern services in regulated environments.* A case study about agent tooling does not reinforce that, and bolting one onto the site would dilute the differentiator the whole portfolio is built to protect — the single framing mistake `CLAUDE.md` says costs the most. **The resolution is the framing, not the omission:** what this exhibit shows is *the same engineering discipline the case studies claim, applied where the reader can audit it themselves* — spec-first, boundaries that are enforced rather than asserted, honest scoping of what a control does not cover. That is evidence for the thesis rather than a second thesis.
+
+**Done:** a decision on where the exhibit lives — repository `README.md` only, or a site page — made explicitly and recorded; if a site page, it passes `C-15` on the framing above rather than on an exception. Both locales if it becomes a page (`C-09`).
+
+## TASK 102 — Every open item declares the goal it serves · `harness` · `TODO` · **deferred, with a trigger**
+
+**Opened 2026-08-30 by `TASK 99`.** `P-19` sits at rung 4 — judgment — and `G-11` says a rule's rung moves when its mechanism does. The mechanization is available: `status-history.mjs` already parses every `TASK` heading in this file, so a guard could assert that each `TODO` carries a goal marker and fail on one that does not.
+
+**Deliberately not built yet, and the reason is `P-19` itself.** Building it now means editing 26 existing entries to add a marker, to enforce a rule that has existed for one day and has been applied exactly once — ceremony bought before the judgment has been shown to fail. **Trigger:** a second drift of the shape `INC-17` describes, or the register passing ~40 open items, whichever comes first.
+
+**Done:** when triggered — a goal marker in the heading grammar, `check-status-history` asserting it as a property rather than a roster (`P-13`), and `P-19`'s rung updated to 2 with the claim made honest (`G-11`).
 
 ## Deliberately out of scope
 

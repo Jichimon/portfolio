@@ -597,3 +597,137 @@ test('F4c: only a LEADING eval -- is consumed — a lone dash is not, and a seco
   assert.equal(doubleDash.some((c) => c.argv[0] === 'git'), false);
   assert.ok(doubleDash.some((c) => c.argv[0] === '--'));
 });
+
+// -----------------------------------------------------------------------------
+// TASK 95 — a DIRECT_WRAPPERS candidate is never itself unwrapped.
+//
+// The boundary-outcome half of this battery lives beside each checker
+// (git-write.test.mjs for H-01, path-boundary.test.mjs for H-02/H-03/H-04), per
+// T-08. What belongs here is the decomposition property those outcomes rest on:
+// a suffix offered by a direct wrapper must be unwrapped exactly as the same argv
+// would be at the top of a segment.
+// -----------------------------------------------------------------------------
+
+test('commandContexts: a flag wrapper reached through a direct wrapper is unwrapped', () => {
+  const found = commandContexts('env sh -c "git commit -m x"');
+  const inner = found.find((c) => c.argv[0] === 'git' && c.argv[1] === 'commit');
+  assert.ok(inner, 'the payload of sh -c must be found, not left sealed in one quoted argument');
+  assert.deepEqual(inner.via, ['env', 'sh']);
+});
+
+test('commandContexts: the unwrapping is argv-level — re-joining the suffix would lose the quoting', () => {
+  // The measured reason the helper takes an argv rather than a re-joined string:
+  // ['env','sh','-c','git commit -m x'].slice(1).join(' ') is 'sh -c git commit -m x',
+  // where -c's argument is now just 'git' and `commit` has become a separate word.
+  // Recursing on that string finds a bare ['git'] and no write subcommand at all.
+  const viaJoin = commandContexts('sh -c git commit -m x');
+  assert.equal(viaJoin.some((c) => c.argv[0] === 'git' && c.argv[1] === 'commit'), false,
+    'the joined form genuinely does NOT carry the write — which is why the fix must not join');
+
+  const viaArgv = commandContexts('env sh -c "git commit -m x"');
+  assert.ok(viaArgv.some((c) => c.argv[0] === 'git' && c.argv[1] === 'commit'));
+});
+
+test('commandContexts: eval reached through a direct wrapper is unwrapped too', () => {
+  const found = commandContexts('env eval "git commit -m x"');
+  const inner = found.find((c) => c.argv[0] === 'git' && c.argv[1] === 'commit');
+  assert.ok(inner);
+  assert.deepEqual(inner.via, ['env', 'eval']);
+});
+
+test('commandContexts: chained direct wrappers reach a flag wrapper through the OUTER suffix list', () => {
+  // env offers every suffix of its own argv, and a nested direct wrapper's suffixes
+  // are argv.slice(i).slice(j) === argv.slice(i+j) — already among them. So this is
+  // caught without the direct branch ever being re-entered.
+  const found = commandContexts('env timeout 5 sh -c "git push"');
+  const inner = found.find((c) => c.argv[0] === 'git' && c.argv[1] === 'push');
+  assert.ok(inner);
+  assert.deepEqual(inner.via, ['env', 'sh'], 'reached as a suffix of env, not by recursing into timeout');
+});
+
+test('commandContexts: the direct-wrapper hop increments depth, so a two-wrapper chain costs two levels', () => {
+  // Exactly the assertion shape TASK 93 used for eval. A missing increment is the
+  // easy-to-miss bug class here, and it is only observable at the cap.
+  const inside = commandContexts('env sh -c "git push"', [], 4).some((c) => c.argv[0] === 'git');
+  assert.equal(inside, true, 'depth 4 -> 5 -> 6 is inside the cap');
+  const outside = commandContexts('env sh -c "git push"', [], 5).some((c) => c.argv[0] === 'git');
+  assert.equal(outside, false, 'depth 5 -> 6 -> 7 exceeds the cap; both hops must count');
+});
+
+test('commandContexts: a long chain of direct wrappers does not blow up combinatorially', () => {
+  // P-16: re-entering the direct branch on every offered suffix would be exponential
+  // under a depth cap of 6. Staying linear is a property of the fix, not a hope.
+  const cmd = 'env '.repeat(8) + 'sh -c "git push"';
+  const found = commandContexts(cmd);
+  assert.ok(found.some((c) => c.argv[0] === 'git' && c.argv[1] === 'push'),
+    'the payload is still found at the end of a long wrapper chain');
+  assert.ok(found.length < 100, `context count must stay linear, got ${found.length}`);
+});
+
+test('commandContexts: an innocent command under a direct wrapper gains no spurious context', () => {
+  const found = commandContexts('env sh -c "echo hello"');
+  assert.ok(found.some((c) => c.argv[0] === 'echo'));
+  assert.equal(found.some((c) => c.argv[0] === 'git'), false);
+});
+
+// -----------------------------------------------------------------------------
+// TASK 96 — env -S / --split-string. The decomposition half; the boundary
+// outcomes live beside their checkers (T-08).
+// -----------------------------------------------------------------------------
+
+test('commandContexts: env -S re-tokenizes the packed string into a real command', () => {
+  const found = commandContexts('env -S "git commit -m x"');
+  const inner = found.find((c) => c.argv[0] === 'git' && c.argv[1] === 'commit');
+  assert.ok(inner, 'the packed argument must be split, not left as one opaque token');
+  assert.deepEqual(inner.via, ['env']);
+});
+
+test('commandContexts: every spelling of the split-string option is decomposed', () => {
+  const hasGit = (cmd) => commandContexts(cmd).some((c) => c.argv[0] === 'git' && c.argv[1] === 'push');
+  for (const cmd of ['env -S "git push"', 'env -S"git push"', 'env --split-string="git push"',
+                     'env --split-string "git push"', 'env -vS "git push"', 'env -iS "git push"']) {
+    assert.equal(hasGit(cmd), true, `must decompose: ${cmd}`);
+  }
+});
+
+test('commandContexts: -u swallows a following S, exactly as coreutils does', () => {
+  // `env -uS "git commit -m x"` unsets a variable named S and execs a program
+  // literally named "git commit -m x". There is no split, so there is no command
+  // to find — asserting the guard tracks the real grammar rather than guessing.
+  const found = commandContexts('env -uS "git commit -m x"');
+  assert.equal(found.some((c) => c.argv[0] === 'git'), false);
+});
+
+test('commandContexts: the split-string payload is itself unwrapped recursively', () => {
+  const found = commandContexts('env -S "sh -c \'git push\'"');
+  assert.ok(found.some((c) => c.argv[0] === 'git' && c.argv[1] === 'push'));
+});
+
+test('commandContexts: every unambiguous abbreviation of --split-string is decomposed', () => {
+  const hasGit = (cmd) => commandContexts(cmd).some((c) => c.argv[0] === 'git' && c.argv[1] === 'push');
+  for (const flag of ['--s', '--sp', '--spl', '--split', '--split-str', '--split-string']) {
+    assert.equal(hasGit(`env ${flag} "git push"`), true, `separate value: ${flag}`);
+    assert.equal(hasGit(`env ${flag}="git push"`), true, `inline value: ${flag}`);
+  }
+});
+
+test('commandContexts: a long option that is not a prefix of --split-string is not one', () => {
+  // --unset, --ignore-environment and a bare -- must not be read as split-string.
+  for (const cmd of ['env --unset=S "git push"', 'env --ignore-environment "git push"',
+                     'env --u "git push"', 'env -- "git push"']) {
+    assert.equal(commandContexts(cmd).some((c) => c.argv[0] === 'git' && c.argv[1] === 'push'), false, cmd);
+  }
+});
+
+test('commandContexts: an env command with no split-string option invents no context', () => {
+  // Guards the split-string collector against pushing a value it does not have:
+  // an absent option value, or a token that is not an option at all. Anything
+  // invented shows up as a context head that does not appear in the command.
+  for (const cmd of ['env git push', 'env --unset=FOO git status', 'env -u FOO git status',
+                     'env --s', 'env -S', 'env aS git status']) {
+    const heads = commandContexts(cmd).map((c) => c.argv[0]);
+    for (const h of heads) {
+      assert.ok(cmd.includes(h), `invented context head "${h}" in: ${cmd}`);
+    }
+  }
+});

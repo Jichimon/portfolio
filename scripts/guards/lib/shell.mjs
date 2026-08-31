@@ -276,10 +276,152 @@ const DIRECT_WRAPPERS = new Set(['env', 'nohup', 'xargs', 'time', 'timeout',
  */
 const EVAL_WRAPPERS = new Set(['eval']);
 
+/**
+ * Wrappers with an option that packs a WHOLE command line into one argument the
+ * wrapper splits itself: `env -S "git commit -m x"`. That is FLAG_WRAPPERS' shape
+ * arriving through a head DIRECT_WRAPPERS already claimed, and the two models
+ * contradict each other — DIRECT_WRAPPERS offers `['git commit -m x']` as a suffix,
+ * whose basename is the entire string and therefore matches no boundary at all.
+ * TASK 96: every hard rule was escapable this way.
+ */
+const SPLIT_STRING_WRAPPERS = new Set(['env']);
+
+/**
+ * env's short options that consume a value, so an `S` after one of them is that
+ * value rather than the split-string flag. Verified against GNU coreutils 8.32:
+ * `env -uS "echo X"` unsets a variable named `S` and then execs a program literally
+ * named `echo X`, which does not exist. Reading that as a split-string would deny a
+ * command real env cannot run, so the scan stops at the first value-taking flag.
+ */
+const ENV_VALUE_OPTS = new Set(['u', 'C']);
+
+/**
+ * The split-string value carried by one `--` token, or `undefined` when the token is
+ * not that option at all. `null` means the option is there but its value is the NEXT
+ * token (`--spl cmd` rather than `--spl=cmd`).
+ *
+ * **Matched by prefix, not by exact spelling, and that is the whole point.** GNU
+ * `getopt_long` accepts any unambiguous abbreviation, and `split-string` is env's only
+ * long option beginning with `s` — the rest are ignore-environment, null, unset, chdir,
+ * block-signal, default-signal, ignore-signal, list-signal-handling, debug, help and
+ * version. So `--s`, `--sp`, `--spl` … all execute, verified under coreutils 8.32. An
+ * exact-match test closed `-S` while leaving `env --s "git commit -m x"` walking through
+ * all four hard boundaries; a scoped audit caught it, and this is the corrected form.
+ */
+function longSplitStringValue(tok) {
+  const eq = tok.indexOf('=');
+  const name = eq === -1 ? tok : tok.slice(0, eq);
+  // '--s' is the shortest unambiguous prefix; a bare '--' is end-of-options, not this.
+  if (name.length < 3 || !'--split-string'.startsWith(name)) return undefined;
+  return eq === -1 ? null : tok.slice(eq + 1);
+}
+
+/**
+ * Every argument of `argv` that a split-string option hands to the wrapper as a
+ * packed command line. All four spellings are real and were each confirmed to
+ * execute before being handled: `-S x`, `-Sx`, `--split-string=x`, `--split-string x`,
+ * and `S` bundled behind valueless short flags (`-vS x`, `-iS x`).
+ */
+function splitStringArgs(argv) {
+  const out = [];
+  for (let i = 1; i < argv.length; i++) {
+    const tok = argv[i];
+    if (tok.startsWith('--')) {
+      const inline = longSplitStringValue(tok);
+      if (inline === undefined) continue;                     // not this option
+      if (inline !== null) out.push(inline);                  // --spl=cmd
+      else if (argv[i + 1] !== undefined) out.push(argv[i + 1]); // --spl cmd
+      continue;
+    }
+    // Stryker disable next-line ConditionalExpression: dropping the length test only
+    // changes tokens that are shorter than 2 AND start with '-', which is the single
+    // token '-'. The cluster loop below starts at j=1, so scanning '-' iterates zero
+    // times and collects nothing — the outcome is identical either way.
+    if (tok.length < 2 || !tok.startsWith('-')) continue;
+    // A short-option cluster is scanned left to right rather than searched for an
+    // 'S', because a value-taking flag earlier in the cluster swallows everything
+    // after it — see ENV_VALUE_OPTS.
+    // Stryker disable next-line EqualityOperator: running one index past the end reads
+    // tok[tok.length], which is undefined for a string — neither in ENV_VALUE_OPTS nor
+    // equal to 'S' — so the extra iteration falls through and the loop exits anyway.
+    for (let j = 1; j < tok.length; j++) {
+      if (ENV_VALUE_OPTS.has(tok[j])) break;
+      if (tok[j] !== 'S') continue;
+      const glued = tok.slice(j + 1);
+      if (glued) out.push(glued);
+      else if (argv[i + 1] !== undefined) out.push(argv[i + 1]);
+      break;
+    }
+  }
+  return out;
+}
+
 /** Strip a path and any extension: /usr/bin/git.exe -> git */
 export function basename(token) {
   const noPath = token.split(/[/\\]/).pop() ?? '';
   return noPath.replace(/\.(exe|cmd|bat|ps1)$/i, '').toLowerCase();
+}
+
+/**
+ * The two wrapper families that carry their payload inside a quoted STRING argument,
+ * unwrapped from an already-tokenized argv: `sh -c "..."` and `eval "..."`.
+ *
+ * Split out of commandContexts by TASK 95 so a DIRECT_WRAPPERS suffix can be unwrapped
+ * by exactly the same code that unwraps the head of a segment. **Taking an argv rather
+ * than a re-joined string is the whole point**, and it was measured rather than assumed:
+ * ['env','sh','-c','git commit -m x'].slice(1).join(' ') is `sh -c git commit -m x`,
+ * where -c's argument has become the single word `git` and `commit` is a separate token.
+ * Recursing on that string finds a bare `git` and no write subcommand — so the obvious
+ * re-join fix leaves H-01 open while appearing to close it.
+ *
+ * Callers guarantee argv.length >= 1; there is deliberately no defensive check for an
+ * empty argv, because an unreachable branch is a mutant no test can kill (T-03).
+ */
+function wrapperContexts(argv, via, depth) {
+  const found = [];
+  const head = basename(argv[0]);
+
+  // sh -c "..." hides a whole command in a flag's argument.
+  if (FLAG_WRAPPERS.has(head)) {
+    for (let i = 1; i < argv.length; i++) {
+      if (EVAL_FLAGS.has(argv[i].toLowerCase()) && argv[i + 1] !== undefined) {
+        found.push(...commandContexts(argv[i + 1], [...via, head], depth + 1));
+        i++;
+      }
+    }
+  }
+
+  // eval's arguments are re-parsed as a whole new command line, so the recursion
+  // gets the joined string back through commandContexts — not a raw argv slice —
+  // exactly like a FLAG_WRAPPERS string argument. Bash's `eval` builtin (like every
+  // builtin that calls its own no_options()) silently consumes a single leading
+  // `--` as an end-of-options marker before joining the rest — `eval` has no real
+  // options, so this is pure noise bash swallows, but the guard has to swallow it
+  // the same way or the joined string starts with a stray `--` that matches
+  // neither the git allowlist nor any WRITES/READS head. An adversarial-auditor
+  // pass on the first version of this branch confirmed `eval -- "git commit -m x"`
+  // escaped every hard rule this way, verified directly against real bash.
+  // `env -S "git commit -m x"` — one argument holding a whole command line, split by
+  // env itself. Handled here rather than in the DIRECT_WRAPPERS branch so it reaches
+  // an `env` arriving as another wrapper's suffix too (`sudo env -S "…"`).
+  if (SPLIT_STRING_WRAPPERS.has(head)) {
+    for (const packed of splitStringArgs(argv)) {
+      found.push(...commandContexts(packed, [...via, head], depth + 1));
+    }
+  }
+
+  if (EVAL_WRAPPERS.has(head)) {
+    const rest = argv[1] === '--' ? argv.slice(2) : argv.slice(1);
+    // Stryker disable next-line ConditionalExpression,EqualityOperator: when rest
+    // is empty, rest.join(' ') is '' regardless, and commandContexts('') is
+    // proven elsewhere to find nothing — running the branch anyway changes
+    // nothing observable.
+    if (rest.length > 0) {
+      found.push(...commandContexts(rest.join(' '), [...via, head], depth + 1));
+    }
+  }
+
+  return found;
 }
 
 /**
@@ -309,43 +451,31 @@ export function commandContexts(cmd, via = [], depth = 0) {
 
     const head = basename(argv[0]);
 
-    // sh -c "..." hides a whole command in a flag's argument.
-    if (FLAG_WRAPPERS.has(head)) {
-      for (let i = 1; i < argv.length; i++) {
-        if (EVAL_FLAGS.has(argv[i].toLowerCase()) && argv[i + 1] !== undefined) {
-          found.push(...commandContexts(argv[i + 1], [...via, head], depth + 1));
-          i++;
-        }
-      }
-    }
+    found.push(...wrapperContexts(argv, via, depth));
 
     // `env git push` puts the command in the argument list itself. Their own option
     // grammars differ (`timeout 5 git push` has a positional), so every suffix is
     // offered as a candidate rather than guessing where the command starts.
     if (DIRECT_WRAPPERS.has(head)) {
       for (let i = 1; i < argv.length; i++) {
-        found.push({ argv: argv.slice(i), raw: seg, via: [...via, head], env: [] });
-      }
-    }
+        const suffix = argv.slice(i);
+        found.push({ argv: suffix, raw: seg, via: [...via, head], env: [] });
 
-    // eval's arguments are re-parsed as a whole new command line, so the recursion
-    // gets the joined string back through commandContexts — not a raw argv slice —
-    // exactly like a FLAG_WRAPPERS string argument. Bash's `eval` builtin (like every
-    // builtin that calls its own no_options()) silently consumes a single leading
-    // `--` as an end-of-options marker before joining the rest — `eval` has no real
-    // options, so this is pure noise bash swallows, but the guard has to swallow it
-    // the same way or the joined string starts with a stray `--` that matches
-    // neither the git allowlist nor any WRITES/READS head. An adversarial-auditor
-    // pass on the first version of this branch confirmed `eval -- "git commit -m x"`
-    // escaped every hard rule this way, verified directly against real bash.
-    if (EVAL_WRAPPERS.has(head)) {
-      const rest = argv[1] === '--' ? argv.slice(2) : argv.slice(1);
-      // Stryker disable next-line ConditionalExpression,EqualityOperator: when rest
-      // is empty, rest.join(' ') is '' regardless, and commandContexts('') is
-      // proven elsewhere to find nothing — running the branch anyway changes
-      // nothing observable.
-      if (rest.length > 0) {
-        found.push(...commandContexts(rest.join(' '), [...via, head], depth + 1));
+        // TASK 95: that raw suffix used to be TERMINAL — nobody re-examined it for
+        // being itself a wrapper. `env git push` worked anyway, because one suffix
+        // literally starts with `git`; `env sh -c "git commit -m x"` did not, because
+        // its payload stays sealed inside one quoted argument until something unwraps
+        // it. All four hard boundaries fell to that one shape.
+        //
+        // Only the STRING-carrying wrappers are re-entered, never DIRECT_WRAPPERS
+        // itself, and that is a completeness argument rather than a shortcut: this
+        // loop already offers every suffix of the whole argv, and a nested direct
+        // wrapper's suffixes are argv.slice(i).slice(j) === argv.slice(i + j) — a
+        // strict subset of what is already on offer. Re-entering would add only
+        // duplicates, and on an adversarial `env env env …` line it would add
+        // exponentially many of them under the depth cap. `env timeout 5 sh -c "…"`
+        // is caught through env's own suffix list, and a test asserts exactly that.
+        found.push(...wrapperContexts(suffix, [...via, head], depth + 1));
       }
     }
   }

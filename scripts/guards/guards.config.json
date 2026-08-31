@@ -308,6 +308,10 @@
       {
         "incident": "INC-16",
         "reason": "INC-16: a completed notification read as a finished report, and the orchestrator writing into a run that was still alive. Its control is P-18, at rung 3 — the orchestrator reads the run's run.footer before treating the run as done. There is nothing to remove and re-run: G-06 already records that reading the footer's ABSENCE is rung 4 and that nothing checks it, so no guard can be neutered to make this case go red, and a case that passes because the orchestrator behaved well measures the model rather than the harness (A16). Returns the moment footer-absence has a reader: a case can then plant a footerless run directory and assert it is reported as not having terminated normally."
+      },
+      {
+        "incident": "INC-17",
+        "reason": "INC-17: the harness generated its own workload — eight of twelve items closed in three days were command-decomposition bypasses in one file, each real, none advancing either project goal, while goal 2's own deliverable sat blocked on a trigger nobody was advancing. Its control is P-19, at rung 4: a work item names the goal it serves, and one that serves none is recorded as a stated residual instead. There is nothing to remove and re-run. The judgment is made by the author and the orchestrator when an item is OPENED, and no artifact records the items that were correctly not opened — so no guard can be neutered to make this case go red, and a case that passes because nobody chased the next bypass measures the model rather than the harness (A16). Returns with TASK 102, which mechanizes P-19: once every open item declares the goal it serves, a case can plant an item declaring none and assert check-status-history reports it."
       }
     ],
     "_excludedRationale": "An incident with no case is normally a hole in the regression net. These are the ones where the hole is a recorded decision instead - each names why no executable form exists and what brings it back. A reasonless entry fails the check, and an entry whose incident no longer exists is reported as stale, the same rule the docs ignore-list follows."

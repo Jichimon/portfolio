@@ -4,7 +4,9 @@ Adapter. Project identity, layout, commands and pointers. **No rule bodies live 
 
 ## What this is
 
-The content source of truth for a Senior Software Engineer portfolio, plus the harness that will build the site from it. Everything publishable is Markdown, bilingual (English + Spanish), sanitized.
+The content source of truth for a Senior Software Engineer portfolio, plus the harness that builds the site from it. Everything publishable is Markdown, bilingual (English + Spanish), sanitized.
+
+**The site exists and builds.** `site/` is an Astro project the gate type-checks and smoke-tests on every run. What remains is publication, not construction — `TASK 30`, `TASK 32`.
 
 **Author:** Luis Octavio Antelo Mansilla — backend engineer / solution architect, ~5 years, most recently Senior Software Engineer at NICE (through June 2026). Cochabamba, Bolivia (GMT-4, full overlap with US business hours). Open to remote, or hybrid/relocation depending on the role.
 

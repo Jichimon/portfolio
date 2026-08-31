@@ -35,7 +35,7 @@ done:
   scope:       { status: passed, evidence: ["only scripts/guards/lib/shell.mjs and its test file changed; TASK 92's heredoc fix landed in the same files in the same sitting, kept as a separate work item and a separate closing narrative per P-01"] }
   security:    { status: passed, evidence: ["adversarial-auditor pass run on the first fix per its own \"always on a guard or a boundary\" instruction; the one confirmed finding independently re-verified against real bash and the real guard functions, fixed, and re-verified again"] }
   iterations:      { status: passed, evidence: ["9"] }
-  iteration_split: { status: passed, evidence: ["verify=9"] }
+  iteration_split: { status: passed, evidence: ["slice=1", "verify=8"] }
 ```
 
 ## Open questions
