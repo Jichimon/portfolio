@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const FINGERPRINT_LENGTH = 8;
@@ -52,4 +52,45 @@ export function staleCacheDirs(names, { prefixes, keep }) {
   return names.filter((name) =>
     prefixes.some((prefix) => name.startsWith(prefix) && name.slice(prefix.length) !== keep),
   );
+}
+
+const removeRecursively = {
+  readdir: (dir) => readdirSync(dir),
+  remove: (path) => rmSync(path, { recursive: true, force: true }),
+};
+
+/**
+ * Run the collection `staleCacheDirs` decides.
+ *
+ * Separated from the config that used to do this inline, and that separation is the whole
+ * point. A config's module body runs in EVERY process that loads it: `astro
+ * build`, but equally `astro check`, `astro preview`, `vitest run` through
+ * `getViteConfig()`, and anything inside a Stryker sandbox, whose `site/node_modules` is a
+ * symlink to the real one. Measured rather than reasoned: two directories planted in the
+ * real `site/node_modules` were both deleted by a plain `vitest run`. Here the CALLER
+ * chooses the moment, and the only caller is a build — the one consumer that populates
+ * these directories in the first place.
+ *
+ * Best-effort in both directions, because collection is garbage collection and never
+ * invalidation: an unreadable directory collects nothing, and one directory another
+ * process is holding open does not stop the rest. A key whose directory is missing builds
+ * slow once, never wrong — so failing loudly here would trade a real build for a tidy one.
+ */
+export function sweepStaleCacheDirs(modulesDir, { prefixes, keep }, io = removeRecursively) {
+  let names;
+  try {
+    names = io.readdir(modulesDir);
+  } catch {
+    return [];
+  }
+  const removed = [];
+  for (const stale of staleCacheDirs(names, { prefixes, keep })) {
+    try {
+      io.remove(`${modulesDir}/${stale}`);
+      removed.push(stale);
+    } catch {
+      // held open by another process; the next build tries again
+    }
+  }
+  return removed;
 }

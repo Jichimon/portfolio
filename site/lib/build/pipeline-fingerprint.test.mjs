@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { fingerprintOf, collectInputs, staleCacheDirs } from './pipeline-fingerprint.mjs';
+import { fingerprintOf, collectInputs, staleCacheDirs, sweepStaleCacheDirs } from './pipeline-fingerprint.mjs';
 
 const entry = (path, content) => ({ path, content });
 
@@ -128,4 +128,77 @@ test('RED: Astro\'s own default cache directories are never pruned', () => {
   // them would be invalidation by deletion, which is the option this design rejected.
   const stale = staleCacheDirs(['.astro', '.vite'], { prefixes: ['.astro-', '.vite-'], keep: 'aaaaaaaa' });
   assert.deepEqual(stale, []);
+});
+
+// ── running the collection, as opposed to deciding it ────────────────────────
+
+test('sweepStaleCacheDirs removes every stale directory and reports what it removed', () => {
+  const removedPaths = [];
+  const io = {
+    readdir: () => ['.vite-old', '.vite-keep', '.astro-old', 'astro', 'other'],
+    remove: (path) => removedPaths.push(path),
+  };
+  const removed = sweepStaleCacheDirs('/nm', { prefixes: ['.astro-', '.vite-'], keep: 'keep' }, io);
+  assert.deepEqual(removed.sort(), ['.astro-old', '.vite-old']);
+  assert.deepEqual(removedPaths.sort(), ['/nm/.astro-old', '/nm/.vite-old']);
+});
+
+test('RED: the directory belonging to the current fingerprint is never removed', () => {
+  // The one directory the caller is about to write into. Removing it would turn
+  // garbage collection into invalidation, which is the distinction this module exists on.
+  const removedPaths = [];
+  const io = { readdir: () => ['.vite-keep', '.astro-keep'], remove: (p) => removedPaths.push(p) };
+  assert.deepEqual(sweepStaleCacheDirs('/nm', { prefixes: ['.astro-', '.vite-'], keep: 'keep' }, io), []);
+  assert.deepEqual(removedPaths, []);
+});
+
+test('RED: an unreadable modules directory collects nothing rather than throwing', () => {
+  // Collection is best-effort by contract: a failure here must never fail a build,
+  // because a key whose directory is missing builds slow once and never wrong.
+  const io = {
+    readdir: () => { throw new Error('EACCES'); },
+    remove: () => { throw new Error('should not be reached'); },
+  };
+  assert.deepEqual(sweepStaleCacheDirs('/nm', { prefixes: ['.vite-'], keep: 'keep' }, io), []);
+});
+
+test('RED: one directory held open by another process does not stop the rest', () => {
+  const removedPaths = [];
+  const io = {
+    readdir: () => ['.vite-locked', '.vite-free'],
+    remove: (path) => {
+      if (path.endsWith('.vite-locked')) throw new Error('EBUSY');
+      removedPaths.push(path);
+    },
+  };
+  const removed = sweepStaleCacheDirs('/nm', { prefixes: ['.vite-'], keep: 'keep' }, io);
+  assert.deepEqual(removed, ['.vite-free']);
+  assert.deepEqual(removedPaths, ['/nm/.vite-free']);
+});
+
+test('RED: a directory that failed to be removed is not reported as removed', () => {
+  const io = { readdir: () => ['.vite-locked'], remove: () => { throw new Error('EBUSY'); } };
+  assert.deepEqual(sweepStaleCacheDirs('/nm', { prefixes: ['.vite-'], keep: 'keep' }, io), []);
+});
+
+test('the default io really reads and really removes — the injected one proves nothing about production', () => {
+  // Every test above hands sweepStaleCacheDirs its own io, so none of them touches the
+  // default the build actually runs with. A collector whose only proven path is the test
+  // double is a collector nobody has run.
+  const dir = mkdtempSync(join(tmpdir(), 'sweep-'));
+  try {
+    mkdirSync(join(dir, '.vite-stale', 'nested'), { recursive: true });
+    writeFileSync(join(dir, '.vite-stale', 'nested', 'deep.js'), 'x');
+    mkdirSync(join(dir, '.vite-keep'));
+    mkdirSync(join(dir, 'node-something'));
+    const removed = sweepStaleCacheDirs(dir, { prefixes: ['.vite-'], keep: 'keep' });
+    assert.deepEqual(removed, ['.vite-stale']);
+    assert.deepEqual(readdirSync(dir).sort(), ['.vite-keep', 'node-something']);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('RED: the default io survives a modules directory that is not there', () => {
+  assert.deepEqual(sweepStaleCacheDirs(join(tmpdir(), 'sweep-absent-'.concat(String(Date.now()))), { prefixes: ['.vite-'], keep: 'k' }), []);
 });

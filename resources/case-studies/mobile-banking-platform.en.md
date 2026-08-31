@@ -7,7 +7,7 @@ subtitle: "Replacing a vendor banking app with a cloud-native platform bridging 
 role: "Backend Engineer → Solution Architect"
 context: "Regulated bank · Latin America"
 period: "2023–2025"
-scale: "+100,000s"
+scale: "+1M"
 scale_caption: "active users"
 stack: [".NET", "AWS", "SNS/SQS", "MassTransit", "Polly", "SQL Server", "BIAN"]
 skills: [distributed-systems, legacy-integration, api-design, async-messaging, regulated-environments]
@@ -23,7 +23,7 @@ product. The bank decided to bring the channel in-house: full control over the
 roadmap, no vendor lock-in, and the ability to ship features at its own pace.
 
 I joined the platform team as a backend engineer and ended up owning the design of
-several of its core services. The platform now serves hundreds of thousands of
+several of its core services. The platform now serves more than a million of
 active users.
 
 This page is the umbrella. Three specific problems within it are documented in

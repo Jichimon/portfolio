@@ -3,14 +3,14 @@ slug: mobile-banking-platform
 lang: es
 type: platform
 title: "Reconstruir la plataforma móvil de un banco in-house"
-subtitle: "Reemplazar la app bancaria de un proveedor por una plataforma cloud-native conectada a un core legacy on-premise"
+subtitle: "Reemplazar la app bancaria de un proveedor externo por una plataforma in-house cloud-native conectada a un core legacy on-premise aplicando BIAN"
 role: "Backend Engineer → Solution Architect"
 context: "Banco regulado · Latinoamérica"
 period: "2023–2025"
-scale: "+100.000s"
+scale: "+1M"
 scale_caption: "usuarios activos"
-stack: [".NET", "AWS", "SNS/SQS", "MassTransit", "Polly", "SQL Server", "BIAN"]
-skills: [sistemas-distribuidos, integracion-legacy, diseño-de-apis, mensajeria-asincrona, entornos-regulados]
+stack: [".NET",  "Flutter", "Android", "iOS", "AWS", "SNS/SQS", "Postgres", "SQL Server", "RabbitMq", "BIAN", "Firebase"]
+skills: [sistemas-distribuidos, integracion-legacy, diseño-de-apis, mensajeria-asincrona, entornos-regulados, micro-servicios, clean-architecture, DDD]
 featured: true
 order: 1
 confidentiality: sanitized
@@ -18,27 +18,18 @@ confidentiality: sanitized
 
 ## Contexto
 
-Un banco regulado de Latinoamérica operaba su banca móvil sobre el producto de un
-proveedor externo. El banco decidió llevar el canal in-house: control total del
-roadmap, sin lock-in, y capacidad de entregar features a su propio ritmo.
+Un banco regulado de Latinoamérica operaba su banca móvil sobre el producto de un proveedor externo. El banco decidió que sea in-house: Tener control total del roadmap, sin lock-in, y capacidad de entregar features a su propio ritmo.
 
-Entré al equipo de plataforma como backend engineer y terminé siendo responsable
-del diseño de varios de sus servicios centrales. Hoy la plataforma atiende a
-cientos de miles de usuarios activos.
+Entré al equipo de plataforma como backend-frontend engineer y terminé siendo responsable del diseño de varios de sus servicios centrales. Hoy la plataforma atiende a más de un millón de usuarios activos.
 
 Esta página es el paraguas. Tres problemas concretos dentro de ella están
 documentados en profundidad como case studies separados.
 
 ## La restricción central
 
-Todo en esta plataforma está condicionado por un hecho: **la fuente de verdad es un
-core bancario legacy que corre on-premise y no se puede mover.** Normativa de
-residencia de datos, décadas de lógica de negocio acumulada, y un modelo
-transaccional anterior al concepto mismo de canal móvil.
+Todo en esta plataforma está condicionado por un hecho: **la fuente de verdad es un core bancario legacy que corre on-premise y no se puede mover.** Normativa de residencia de datos, décadas de lógica de negocio acumulada, y un modelo transaccional anterior al concepto mismo de canal móvil.
 
-Por eso la plataforma no es "una aplicación en la nube". Es una capa de traducción
-entre una malla de servicios cloud-native y un core on-premise, donde cada salto
-cruza una frontera de confianza, una de latencia y una de cumplimiento normativo.
+Por eso la plataforma no es solamente "una aplicación en la nube". Es una capa de traducción entre una malla de servicios cloud-native y un core on-premise, donde cada salto cruza una frontera de confianza, una de latencia y una de cumplimiento normativo.
 
 :::diagram{id="platform-c4-context" type="c4-context"}
 Contexto de sistema: clientes móviles → BFF → microservicios de dominio → core on-premise.
@@ -49,42 +40,22 @@ Sin nombres internos de servicios.
 
 ## Arquitectura
 
-**Backend for Frontend.** Todas las operaciones móviles entran por un único canal
-BFF, dueño de la orquestación, del shaping de respuestas y del fan-out hacia los
-servicios de dominio. Así el cliente móvil nunca habla directo con un servicio de
-dominio, y los servicios de dominio no cargan con preocupaciones específicas del
-canal.
+**Backend for Frontend.** Todas las operaciones de la aplicación móvil entran por un único canal BFF, dueño de la orquestación, del shaping de respuestas y del fan-out hacia los servicios de dominio. Así el cliente móvil nunca habla directo con un servicio de dominio, y los servicios de dominio no cargan con preocupaciones específicas del canal.
 
-**Fronteras de servicio alineadas a BIAN.** El estándar de arquitectura del banco
-mapea servicios a capacidades de negocio, no a capas técnicas. Es una restricción
-real, no una formalidad: es la razón por la que la *gestión* de credenciales y la
-*verificación* de credenciales viven en servicios distintos (ver abajo), y abarató
-enormemente la negociación de contratos de integración entre equipos frente a lo
-que habrían costado con fronteras improvisadas.
+**Fronteras de servicio alineadas a BIAN.** El estándar de arquitectura del banco mapea servicios a capacidades de negocio, no a capas técnicas. Es una restricción real, no una formalidad: es la razón por la que la *gestión* de credenciales y la *verificación* de credenciales viven en servicios distintos (ver abajo), y abarató enormemente la negociación de contratos de integración entre equipos frente a lo que habrían costado con fronteras improvisadas.
 
-**Confirmación asincrónica.** Los flujos transaccionales publican en un tópico y
-consumen de colas en lugar de bloquearse contra el core. El cliente móvil recibe un
-acuse inmediato; la confirmación de liquidación llega después. Eso es lo que bajó el
-tiempo de transacción end-to-end de 5–7 segundos a 1–3 segundos.
+**Confirmación asincrónica.** Las confirmaciones de las entradas y salidas de transacciones se publican en topics de SNS y se encolan en SQS de cada canal. El cliente móvil recibe la notificación de transacción entrante o saliente al toque. Eso es lo que bajó la percepción de cada transacción end-to-end de 5-7 segundos a 1–3 segundos.
 
-**Servicio on-premise para datos restringidos.** Un servicio dedicado guarda los
-datos de usuario que la normativa no permite alojar en la nube. Los servicios cloud
-guardan referencias, no el dato.
+**Servicio on-premise para datos restringidos.** Un servicio dedicado guarda los datos de usuario que la normativa no permite alojar en la nube. Los servicios cloud guardan referencias, no el dato. Todo el sistema legacy del banco también se encuentra on-premise.
 
 ## Servicios que diseñé y mantuve
 
-- **BFF del canal móvil** — orquestación, publicación de eventos y consumo de colas
-  mediante una abstracción de bus de mensajes.
-- **Gateway de identidad** — abstrae a un proveedor comercial de identidad de los
-  contratos de usuario del banco; hashea y encripta credenciales antes de que salgan
-  del perímetro; sirve a todos los canales digitales.
-- **Servicio de credenciales** — creación, reset y ciclo de vida de credenciales,
-  invocable desde agencia, web y móvil.
-- **Servicio de instrucciones de pago** — orquesta las llamadas al gateway de pagos,
-  con políticas de reintento y manejo explícito del estado transaccional.
-- **Servicio de correspondencia** — comunicación saliente unificada: push, correo y
-  mensajería, más la entrega de códigos de un solo uso.
-- **Servicio de datos on-premise** — almacenamiento con residencia regulada.
+- **BFF del canal móvil**: orquestación de todos los flujos de la aplicación (auth, transacciones, pago de servicios, historial, etc.) y sus conexiones con los servicios respectivos, publicación de eventos y consumo de colas mediante una abstracción de bus de mensajes.
+- **Gateway de identidad**: abstrae a un proveedor comercial de identidad de los contratos de usuario del banco; hashea y encripta credenciales antes de que salgan del perímetro; sirve a todos los canales digitales.
+- **Servicio de credenciales**: creación, reset, ciclo de vida de credenciales y envío a través del servicio de correspondencia. Invocable desde agencia, web y móvil.
+- **Servicio de instrucciones de pago**: orquesta las llamadas al gateway de pagos para todos los canales digitales, con políticas de reintento y manejo explícito del estado transaccional.
+- **Servicio de correspondencia**: comunicación saliente unificada: push, correo y mensajería, más la entrega de códigos de un solo uso.
+- **Servicio de datos on-premise**: almacenamiento con residencia regulada.
 
 ## Una decisión que vale la pena explicar: dos servicios, no uno
 
@@ -110,7 +81,7 @@ Mostrar los tres canales consumidores.
 
 ## Resultados
 
-- Tiempo de transacción end-to-end reducido de 5–7 s a 1–3 s.
+- Tiempo de transacción end-to-end reducido de 5-7s a 1-3s.
 - Dependencia del proveedor externo eliminada para el canal móvil.
 - Mejora medible en los indicadores de satisfacción del cliente tras la migración.
 - Arquitectura capaz de escalar horizontalmente por capacidad y no como un monolito.
@@ -123,6 +94,8 @@ asumí, y el árbol de herencia quedó con la forma equivocada: un mapa de
 configuración dentro de una única implementación base habría absorbido la variación
 sin un tipo nuevo por canal. Hoy trato "una subclase por integración externa" como
 un smell hasta demostrar que la variación es de comportamiento y no estructural.
+
+**Design Pattern como over-engineering.** Implementé el patrón de diseño state, para algo que realmente no lo necesitaba. En BFF dupliqué la lógica de transacciones, cuando esa distinción ya existía en service payment. Un simple switch hubiera simplificado muchas cosas.
 
 **Documentación para audiencias no técnicas.** Mis documentos de diseño estaban
 escritos para ingenieros. Cuando tuve que defender decisiones ante gerencia, me pasé

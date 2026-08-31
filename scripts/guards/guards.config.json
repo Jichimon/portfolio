@@ -388,7 +388,10 @@
       "site/src/content.config.ts"
     ],
     "_gatewayNote": "The sole caller of getCollection (S-02). Everything downstream receives props, so a locale-join defect has one place to live. Declared as a SET because the gateway is not one folder by nature: Astro requires the collection definition at src/content.config.ts and requires it to import astro:content, so that file is part of the content-access layer by construction. Naming the set declares where the boundary runs; it is not a roster of components.",
-    "tokenStylesheet": "site/src/styles/tokens.css",
+    "configFileMarker": ".config.",
+  "readOnlyFsApis": ["readFileSync", "readdirSync", "existsSync", "statSync", "lstatSync", "realpathSync", "readlinkSync", "accessSync", "opendirSync"],
+  "_configFilesDeclareRatherThanActRationale": "TASK 89. A config file is loaded by EVERY consumer of it — a build, `astro check`, `astro preview`, `vitest run` through getViteConfig(), and anything inside a Stryker sandbox, whose site/node_modules is a symlink to the real one. So anything the config's module body can do, all of them do. site/astro.config.mjs swept stale cache directories there, and a plain `vitest run` was measured deleting two directories planted in the real site/node_modules. The marker is a property of the FILENAME, not a roster of config files. The API list is INVERTED — it names the read-only calls, so an fs API nobody thought of is a finding by default rather than a silent pass (P-13).",
+  "tokenStylesheet": "site/src/styles/tokens.css",
   "_tokenStylesheetRationale": "S-05. THE declaration site for every colour, breakpoint and type step. The guard reads this file to learn which --* names exist and then requires every other stylesheet and component to name one instead of writing a literal - so a twelfth token costs no edit here and none in the guard (P-13). Declared as a PATH rather than derived, because 'the one stylesheet' is a decision somebody made, not a property of the tree: two files full of custom properties are indistinguishable from disk, and picking the larger one would be a heuristic that silently relocates the boundary. The canvas repeats its token block in all eleven .dc.html artboards, which is correct for independent mockups and is precisely what this stops from being carried across.",
 
   "humanReadableAttributes": [

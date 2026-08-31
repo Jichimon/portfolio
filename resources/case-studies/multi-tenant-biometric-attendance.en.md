@@ -3,7 +3,7 @@ slug: multi-tenant-biometric-attendance
 lang: en
 type: case-study
 title: "A multi-tenant attendance platform across industrial plants"
-subtitle: "Bridging biometric hardware, a third-party HR system and a mobile app — as a modular monolith, on purpose"
+subtitle: "Bridging biometric hardware, a third-party HR system and a mobile app as a modular monolith, on purpose"
 role: "Systems Analyst & Lead Developer"
 context: "Agro-industrial holding · multiple plants nationwide"
 period: "2022–2023"

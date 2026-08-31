@@ -2033,7 +2033,68 @@ This is `INC-07`'s shape — a check that passes forever — inside the checker 
 
 Detail: `progress/2026-08-29-05-task66-k2-substrate.md`.
 
+## TASK 103 — A config file garbage-collects a build cache in every process that loads it · `bugfix` · `DONE`
+
+**Opened and closed 2026-08-31, from `TASK 89`'s investigation rather than from a hypothesis.** `site/astro.config.mjs` swept stale `.astro-*` / `.vite-*` cache directories from its **module body**. A config's module body runs in every process that loads the config — `astro build`, but equally `astro check`, `astro preview`, `vitest run` through `getViteConfig()`, and anything inside a Stryker sandbox, whose `site/node_modules` is a **symlink to the real one**. So a test runner was recursively deleting a build cache.
+
+**Demonstrated, not argued.** Two directories planted in the real `site/node_modules`, then a plain `vitest run`:
+
+```text
+before the fix:  .vite-fakekey + .astro-fakekey  →  vitest run   →  BOTH DELETED
+after the fix:   .vite-fakekey + .astro-fakekey  →  vitest run   →  both survive
+                 .vite-fakekey + .astro-fakekey  →  astro build  →  both collected
+```
+
+The third line is as load-bearing as the first: the collector is **scoped, not removed**.
+
+**This is NOT claimed to be `TASK 89`'s mechanism, and that distinction is the point** (`C-02`). It is a real ordering hazard found while investigating one, fixed on its own evidence. `TASK 89` stays open.
+
+**Done:** the sweep moved out of the module body into an `astro:build:start` integration hook, which `getViteConfig()` provably never fires — it runs `runHookConfigSetup` and `runHookConfigDone` and nothing else; the action lives beside its decision in `site/lib/build/pipeline-fingerprint.mjs` as `sweepStaleCacheDirs`, with `readdir`/`remove` injected, best-effort in both directions (an unreadable directory collects nothing; one directory another process holds open does not stop the rest); and `check-site` gains `checkConfigsDeclareRatherThanAct`, so the defect cannot be restored silently.
+
+**The guard's property is about the FILE, not the line** — a config may not reach a mutating filesystem API at all. That needs no brace counting and cannot be walked around with a top-level IIFE. The API list is **inverted**: it names the read-only calls, so an API nobody thought of is a finding by default (`P-13`), and a namespace or default import is a finding on `G-13`'s logic, because nobody can see statically what `fs.*` reaches for. **Proven in red four ways** (`P-14`): the check reporting nothing, the allowlist read as a denylist, a namespace import waved through, and no file treated as a config — 4, 4, 1 and 4 failures respectively, 105 → 107 passing once restored.
+
+**Two coverage gaps in the new code were found by its own mutation run and closed rather than suppressed:** the default `io` — the one production actually uses — was never exercised, because every test injected a double; and an `as`-aliased import was untested, so the finding could have named the alias instead of the real API. Both now have tests.
+
+**`S-08` earned its place on the way through:** the first draft cited this work item's id in comments **inside `site/`**, and `check-site` failed on all three. The citation runs the other way — this entry points at the code.
+
+Detail: `progress/2026-08-31-02-task89-component-tier-cache.md`.
+
 ## TASK 89 — The `component tests` step fails at module evaluation, with zero tests collected · `bugfix` · `TODO`
+
+**Worked 2026-08-31 and NOT closed — both candidate mechanisms are refuted, the flake is still unreproduced, and one real defect found on the way was fixed.** Reported `partial` rather than `done`, because this item's `Done` asks for a named mechanism and there is not one.
+
+**Candidate 1, as written, is false on this tree — killed empirically rather than argued.** A bogus `configHash` (`deadbeef`) planted in `site/node_modules/.vite-<key>/deps/_metadata.json` was left **untouched** by a `vitest run`, which passed 15/15; had Vitest read that directory it would have logged the re-optimization and recursively deleted it (`vite/dist/node/chunks/node.js:32164-32175`). A sweep of the whole tree finds exactly two dependency-optimizer caches, both Astro-shaped: **Vitest has none anywhere in this repository.** `resolveOptimizerConfig` disables the optimizer by default and `VitestOptimizer` re-points `cacheDir` to `<cacheDir>/vitest/<sha1(label)>`, which holds no `deps` directory at all.
+
+**Candidate 2 is refuted a second time, independently of the third data point:** a Stryker sandbox symlinks the real `site/node_modules` and carries the current `astro.config.mjs` over a mutated `site/lib`, so it *could* do damage — but nothing inside one loads that config (`grep -rln 'astro/config' site/lib/` is empty, and the tap runner only drives `node --test`).
+
+**The log line was probably never Vitest's, and that is the finding this item most needed.** `scripts/gate.mjs:298` runs every step with `stdio: ['inherit', 'pipe', 'inherit']` — stderr streams live, stdout is captured and flushed only *after* the step ends. So the line following Vitest's summary block is the **first line of the next step**. Verified against a passing run: the Vitest block is followed with no separator by `type check`'s `[content] Syncing content` / `[types] Generated`. That is exactly the slot `[vite] Re-optimizing dependencies…` occupies in both captured reproductions, and `astro check` (mode `development`) shares one `deps` directory with `astro build` (mode `production`) while `process.env.NODE_ENV || config.mode` is one of the four inputs to `getConfigHash`. **The register read an adjacency as a causality** (`P-04`).
+
+**The symptom itself is now named precisely, which the entry never did.** `@vitest/runner` holds a module-scoped `runner` binding assigned by `clearCollectorContext` immediately before each test file is imported, and `describe()` dereferences `runner.config` (`chunk-artifact.js:1643`, `:1734`). Both suites fail on their **first** `describe`. So the mechanism is **two live instances of `@vitest/runner`** — the copy the test file imports is not the copy the collector context was set on — a torn or duplicated module graph, not a cache invalidation.
+
+**Forensic evidence that a re-optimization really did happen on a day the flake fired.** `.vite-<key>/vitest/da39a3ee…` is dated 2026-08-27 while its sibling `deps/` is dated 2026-08-30 — reproduction #2's day — so `deps` alone was removed and rebuilt inside a parent that never was, which is Vite's own `fsp.rm(depsCacheDir)` and not our sweep. The rebuild is **byte-identical in all four hashes** to the 2026-08-27 copy, so the config did not change: it **oscillated away and back**.
+
+**IT REPRODUCED, on the fifth full gate run of 2026-08-31, and that run settles the entry's central claim — against it.** Same signature, both suites, first `describe` of each, `Tests no tests`. Nothing in the tier had changed since the four clean runs before it; the only edits in between were to `TASKS.md` and `progress/`.
+
+```text
+   Start at  12:05:20
+   Duration  2.16s (transform 554ms, setup 0ms, import 0ms, tests 0ms, environment 3.00s)
+
+12:05:27 [vite] Re-optimizing dependencies because vite config has changed
+12:05:28 [content] Syncing content
+12:05:28 [types] Generated 1.63s
+12:05:28 [check] Getting diagnostics for Astro files in ...
+```
+
+**Read the clock.** Vitest started at 12:05:20 and ran 2.16 s, so it was gone by ~12:05:22. The `Re-optimizing` line is stamped **12:05:27** — five seconds later — and the three lines under it are `astro check`'s. **The line belongs to the `type check` step, not to Vitest.** Corroborated on disk: `site/node_modules/.vite-f96b5135/deps` carries mtime **12:05:27** to the second, rewritten with a new `configHash` by that process — the Astro-consumer ping-pong that follows from `getConfigHash` folding in `process.env.NODE_ENV || config.mode`, `astro build` resolving at `production` and `astro check` at `development`.
+
+**So the cache invalidation happens after the failure, in a different process.** The entry's candidate 1 was an adjacency in a log, and the adjacency is now measured at five seconds and one process boundary (`P-04`).
+
+**What the reproduction adds:** `import 0ms` and `tests 0ms` against `transform 554ms` — the modules were transformed and then never really imported, so collection produced nothing at all. Vitest still owned **no** dependency cache at that moment (`.vite-f96b5135/vitest/da39a3ee…/` held `results.json` and nothing else). And re-run alone immediately afterwards it passed **15/15 — in 20.86 s** against a normal 1.5–2 s, everything transformed cold, which is the register's own "passes alone" observation reproduced.
+
+**Six consecutive clean `component tests` runs on 2026-08-31**, including `node scripts/gate.mjs` twice back to back with the second starting seconds after the first exited — repro #2's exact shape. Zero re-optimization lines, zero `TypeError`s. Per `TASK 85`'s own precedent that is **not** a close. And no consumer re-optimizes on this tree at all: `astro build`, `astro check`, `vitest run` and `astro preview` each leave `deps` untouched and print nothing, so the condition cannot currently be recreated by any invocation shape.
+
+**What is left of this item — one question, not two candidates.** *What produces two `@vitest/runner` instances?* The cache story is dead, Stryker is out, and the symptom is named. Roughly one full gate run in seven, on this machine, on a tree whose component tier is not being touched. Detail: `progress/2026-08-31-02-task89-component-tier-cache.md`.
+
 
 **Opened 2026-08-29 by `TASK 66`'s wrap-up gate run, and unlike `TASK 85` this one has its output captured.** The fourth consecutive gate run of the session failed on `component tests`; the three before it passed, and the same command re-run alone immediately after passed **15/15 in 2.11 s**.
 
@@ -2160,6 +2221,23 @@ Four distinct subjects, currently collapsed into one number in three files. Each
 | `experience.en.md` | `h1` · `intro` · **all four `stack:` lists** — ES adds elasticSearch/AWS/Jenkins/RAG/LLMs/Snowflake (NICE), Flutter (bank, and drops Polly), PL/SQL/Android/Angular/.NET/low-code/javascript (Mamaya), Angular/.NET/SQL Server/PL/SQL/PLCs (Avícola) · the bank's two body paragraphs collapsed into one that names the QR module, TOTP and RabbitMQ · the Mamaya and Avícola bodies rewritten · one job title: `Analista de Sistemas` → `Trainee → Analista de Sistemas` |
 | `ui.en.md` | `home.employers_heading` · `work_heading` · `stack_heading` · `contact_invite` (one question in EN, four in ES) · `contact_note` · `standalone_label` |
 
+**A live `C-01` finding, observed in the working tree at 2026-08-31 12:2x while this item was still open.** The author is editing `mobile-banking-platform.{en,es}.md` and both bodies now read *"more than a million **active** users"* / *"más de un millón de usuarios **activos**"* — while **both frontmatters still carry `scale: "+100.000s"` with `scale_caption: "active users"`**. Three things follow, and none of them is a translation problem:
+
+- **The page contradicts itself, in both locales**, between its frontmatter and its body. Whichever is right, one of them is now wrong on a rendered page.
+- **The figure matches neither recorded subject.** This item's own table has **≥2 million = total users** and **hundreds of thousands = active users**, both from the author directly (`C-04`). *"More than a million active"* is a third number, and the table above names this exact file as **the model to copy** precisely because it was the one place where the active figure was correctly qualified.
+- The English also reads *"more than a million **of** active users"*.
+
+**Left untouched: `resources/**` is denied to every agent at rung 1 (`H-02`), and this is the author's own in-flight work.** Recorded here so it is not lost, and because settling the four figures *before* authoring any English is already this item's first instruction.
+
+**The object list above is incomplete as of 2026-08-31, and the gap was found rather than predicted.** The working tree carries **two further Spanish-only edits**, uncommitted, in files this item never enumerated:
+
+| File | What diverged | English counterpart |
+|---|---|---|
+| `resources/case-studies/mobile-banking-platform.es.md` | `subtitle` rewritten (adds *in-house*, *aplicando BIAN*) · `stack` gains Flutter, Android, iOS, Postgres, RabbitMq and drops MassTransit/Polly · `skills` gains `micro-servicios`, `clean-architecture`, `DDD` · body prose reflowed | unchanged — still the old stack, old subtitle |
+| `resources/case-studies/legacy-payment-data-migration.es.md` | ~81 lines changed, largely prose | unchanged |
+
+So the rewrite reached the **case studies** as well as `about`/`experience`/`ui`, and this item's slice is larger than its table says. **`check-content` passes on all of it** — verified 2026-08-31, `20 content file(s) · 9 locale pair(s)`, exit 0 — because the parity assertion covers the pair's existence and its universal keys, not `stack`, `skills`, `subtitle` or prose. That is `TASK 75`'s gap, observed on a second, independent instance.
+
 **Two findings inside the divergence that are not "translate this":**
 
 - **`experience.es.md` dropped the thesis anchor.** The English Avícola entry ends *"That gap is the one I have been working in ever since"* — the sentence that ties the first job to the professional thesis (`C-15`). The Spanish replaced it with a different statement and the anchor is gone. Restoring it in Spanish is part of this item, not a separate one.
@@ -2224,7 +2302,8 @@ Both files carry a traceability body asserting where each value came from. The r
 | 8 | `TASK 66` — a substrate for `K2` | fix · `DONE` | — |
 | 9 | `TASK 67` — `harness-evaluator`'s conditional budget | fix · `DONE` | `progress/2026-08-30-01-task67-conditional-budget.md` |
 | 9a | `TASK 88` — a render template inside the mutation surface | fix · `DONE` | `progress/2026-08-30-02-task88-mutation-surface-shape.md` |
-| — | `TASK 89` — `component tests` collects zero tests and fails | **runner flake, not this milestone** — same class as `TASK 69`/`TASK 85`, one tier over | — |
+| — | `TASK 89` — `component tests` collects zero tests and fails | **runner flake, not this milestone** — same class as `TASK 69`/`TASK 85`, one tier over. **Worked 2026-08-31 and left open**: both candidates refuted, flake unreproduced | — |
+| 9h | `TASK 103` — a config garbage-collects a build cache in every process that loads it | fix · `DONE` | `progress/2026-08-31-02-task89-component-tier-cache.md` |
 | — | `TASK 90` — `isTemplate` matches any filename mentioning templates | **not placed** — a false positive that blocks a green gate, opened by `TASK 88`'s own run. Cheap and self-contained; it earns its slot the next time anyone's log slug would trip it, and `TASK 88`'s rename is recorded as the workaround it is | — |
 | 9b | `TASK 84` — `checkBashPaths` has no shell vector for `H-04`'s read boundary | fix · `DONE` | `progress/2026-08-30-03-task84-read-vector.md` |
 | — | `TASK 91` — `private/` carries no write boundary at all, on either vector | **not placed** — a loose end from `TASK 84`, opened by it rather than folded in or silently dropped | — |
@@ -2660,11 +2739,13 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 | **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 27` | The pages a reader actually judges |
 | **Goal 1 — credibility** | ~~`TASK 94`~~ **`DONE` 2026-08-31** · `TASK 101` | `TASK 94` **retired the bypass series** by stating the residual instead of chasing it — the cheapest high-leverage item on the board, and it closed without opening a single item in the surface it documents |
 | **Goal 2 — the deliverable** | `TASK 9` (blocked) · `TASK 100` (the unblocker) | `TASK 9`'s own trigger is *the first `EVAL` with a real, non-harness workload*, and nothing was advancing it. `TASK 100` is that workload |
-| **Goal 2 — efficiency & trust** | `TASK 89` · `TASK 78` · `TASK 81` · `TASK 73` · `TASK 102` | `TASK 89` first: a gate step that collects **zero tests** can report PASS while proving nothing |
+| **Goal 2 — efficiency & trust** | `TASK 89` · `TASK 78` · `TASK 81` · `TASK 73` · `TASK 102` | **This note was wrong and is corrected 2026-08-31.** `TASK 39` already closed the silent-pass class: the step **FAILS**, loudly, and nothing is quietly unverified. What it costs is a gate that intermittently cannot be trusted to have run — `T-06` shaped, one tier over from `TASK 69`/`TASK 85`. `TASK 89`'s own hand-off had already retracted this premise, and it survived here for a day (`P-07`) |
 | **Stated residuals — not tasks** | `TASK 91` · ~~`TASK 97`~~ · ~~`TASK 98`~~ | Obfuscated-command bypasses. Real, verified, and **nobody on this project would notice them**: an adversary writes `env --s`, a mistaken agent writes `git commit -m x`. `TASK 94` named the residual on 2026-08-31, so **`97` and `98` are now `RETIRED` into it** and live in `architecture.md` §L as documented limits. `TASK 91` stays open — it is a write-boundary configuration gap, not an expansion one, and §L does not cover it. All three return to scope with a second operator (`P-19`, `G-07`) |
 | **Deferred — no goal served today** | `TASK 38` · `TASK 11` · `TASK 14` · `TASK 75` · `TASK 90` · `TASK 85` · `TASK 69` | Ratchet upkeep, small guard bugs and two flakes. Real, none of them visible to a reader or to the author's throughput |
 
-**Recommended order:** ~~`TASK 94`~~ (`DONE` 2026-08-31) → `TASK 89` → `TASK 30`/`TASK 32` → `TASK 100` → `TASK 9`.
+**Recommended order:** ~~`TASK 94`~~ (`DONE` 2026-08-31) → ~~`TASK 89`~~ (**worked 2026-08-31, left open** — both candidates refuted, flake unreproduced across six controlled runs; `TASK 103` shipped out of it) → `TASK 30`/`TASK 32` → `TASK 100` → `TASK 9`.
+
+**`TASK 89`'s placement is now the author's call, not the register's default.** Its slot rested on the note corrected above, and the honest reading after 2026-08-31 is that it belongs beside `TASK 85` and `TASK 69` under *Deferred — no goal served today* unless the flake fires again: six controlled runs, a tier of 15 tests, a step that fails loudly rather than passing silently, and no invocation shape on this machine that can recreate the condition. Left in place rather than moved, because demoting an item on the strength of not reproducing it is exactly the judgement `P-19` says belongs to a person.
 
 ## TASK 99 — Goal-alignment triage, and the rule that prevents the drift · `planning` · `DONE`
 

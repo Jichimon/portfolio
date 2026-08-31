@@ -3,12 +3,12 @@ slug: multi-tenant-biometric-attendance
 lang: es
 type: case-study
 title: "Una plataforma de asistencia multi-tenant sobre plantas industriales"
-subtitle: "Conectar hardware biométrico, un sistema de RRHH de terceros y una app móvil — como monolito modular, a propósito"
+subtitle: "Conectar hardware biométrico, un sistema de RRHH de terceros y una app móvil como monolito modular, a propósito"
 role: "Analista de Sistemas & Lead Developer"
 context: "Holding agroindustrial · múltiples plantas a nivel nacional"
 period: "2022–2023"
 outcome: "En producción en varias empresas, miles de empleados"
-stack: [".NET", "Entity Framework", "Angular", "terminales biométricas", "modelo C4"]
+stack: [".NET", "Entity Framework", "Angular", "Android", "Java", "Kotlin", "terminales biométricas", "modelo C4"]
 skills: [multi-tenancy, integracion-de-sistemas, documentacion-de-arquitectura, monolito-modular]
 featured: false
 order: 5
@@ -17,37 +17,26 @@ confidentiality: sanitized
 
 ## Contexto
 
-Un holding agroindustrial que opera varias empresas y plantas industriales en el país
-necesitaba que sus empleados pudieran marcar asistencia y consultar información de
-RRHH desde el celular. Hasta entonces, marcar asistencia significaba una terminal
-biométrica en la puerta de planta, y cualquier consulta de RRHH significaba ir hasta
-una oficina.
+Un holding agroindustrial que opera varias empresas y plantas industriales en el país necesitaba que sus empleados pudieran marcar asistencia y consultar información de RRHH desde el celular. Hasta entonces, marcar asistencia significaba una terminal biométrica en la puerta de planta, y revisar si realmente se marcó o algo era directamente con el reporte mensual de RRHH.
 
-Diseñé y lideré la implementación de la plataforma que conecta esos tres mundos:
-hardware biométrico en planta, un sistema de RRHH de terceros y una app móvil en la
-mano del empleado.
+Diseñé y lideré la implementación de la plataforma que conecta esos tres mundos: hardware biométrico en planta, un sistema de RRHH de terceros y una app móvil en la mano del empleado.
 
 ## Problema
 
 Construir una plataforma de asistencia y autogestión de RRHH que:
 
-- sirva a múltiples empresas cliente dentro del holding, con aislamiento estricto de
-  datos entre ellas;
+- sirva a múltiples empresas cliente dentro del holding, con aislamiento estricto de datos entre ellas;
 - se integre con las terminales biométricas ya instaladas en las plantas;
-- se integre con el sistema de RRHH de terceros, que es el sistema de registro de los
-  datos de empleado;
+- se integre con el sistema de RRHH de terceros, que es el sistema de registro de los datos de empleado;
 - sincronice entre clientes móviles y backend en tiempo casi real;
-- esté arquitecturada para poder venderse eventualmente como SaaS a empresas fuera
-  del holding.
+- esté arquitecturada para poder venderse eventualmente como SaaS a empresas fuera del holding.
 
 ## Restricciones
 
-- Las terminales biométricas ya estaban desplegadas y no se podían reemplazar.
+- Las terminales biométricas ya estaban desplegadas y no se podían reemplazar. Dichos modelos solo contaban con integración para .NET Framework 4.7.2.
 - El sistema de RRHH era de terceros y no se podía modificar, solo integrar.
-- El aislamiento entre tenants era un requisito contractual del cliente, no una
-  preferencia técnica.
-- Equipo chico, capacidad de operación única. Lo que construyéramos, lo teníamos que
-  operar nosotros.
+- El aislamiento entre tenants era un requisito contractual del cliente, no una preferencia técnica.
+- Equipo de 4 personas, capacidad de operación única. Lo que construyéramos, lo teníamos que mantener nosotros.
 
 :::diagram{id="attendance-c4-context" type="c4-context"}
 Contexto de sistema: empleados y administradores de RRHH, la app móvil, la plataforma,
@@ -63,27 +52,17 @@ La respuesta obvia en 2022 eran microservicios. Elegí un monolito modular, y
 documenté las fronteras entre módulos con diagramas C4 como si fueran servicios, de
 modo que extraerlos después fuera un cambio de despliegue y no un rediseño.
 
-Razonamiento: equipo chico, un solo target de despliegue, y una cantidad de tenants
-del orden de decenas y no de miles. Los microservicios habrían comprado escalado
-independiente que no necesitábamos, al costo de una complejidad operativa que no
-podíamos cubrir con la gente que teníamos. Lo valioso eran las fronteras;
-distribuirlas no lo era.
+Razonamiento: equipo chico, un solo target de despliegue, y menos de 15 tenants para el primer lanzamiento. Los microservicios nos hubieran dado más problemas que beneficios. Por citar un simple ejemplo: escalado independiente que no necesitábamos, al costo de una complejidad operativa que no podíamos cubrir con la gente que teníamos. Lo valioso eran las fronteras entre módulos, no distribuirlas.
 
-Los módulos: datos organizacionales, identidad y accesos, asistencia y comunicaciones
-internas — cada uno con su dominio, su acceso a persistencia y un contrato explícito
-hacia los demás.
+Los módulos: datos organizacionales, identidad y accesos, asistencia y comunicaciones internas. Cada uno con su dominio, su acceso a persistencia y un contrato explícito hacia los demás. un enfoque vertical ambicioso en una tecnología que te seduce con slices horizontales.
 
 :::diagram{id="attendance-c4-container" type="c4-container"}
-Vista de contenedores de la plataforma: app móvil, panel de administración, módulos de
-API y la base de datos compartida entre tenants.
-Spec: diagrama C4 de contenedores existente. Enfatizar las fronteras de módulo como las
-futuras costuras de servicio, y etiquetar la base de datos de tenants como compartida,
-no por-tenant.
+Vista de contenedores de la plataforma: app móvil, panel de administración, módulos de API y la base de datos compartida entre tenants.
+Spec: diagrama C4 de contenedores existente. Enfatizar las fronteras de módulo como las futuras costuras de servicio, y etiquetar la base de datos de tenants como compartida, no por-tenant.
 :::
 
 :::diagram{id="attendance-c4-component" type="c4-component"}
-Vista de componentes del módulo de asistencia, incluyendo el camino de integración con
-las terminales.
+Vista de componentes del módulo de asistencia, incluyendo el camino de integración con las terminales.
 Spec: diagrama C4 de componentes existente.
 :::
 
@@ -97,20 +76,12 @@ por su propia base de datos dedicada en lugar de la compartida, para un cliente 
 contrato exigiera aislamiento más fuerte. Ese camino nunca se construyó: los 14
 tenants al momento del traspaso corrían sobre la base de datos compartida.
 
-**El trade-off:** una base de datos compartida es mucho más barata de operar — un
-solo target de migración, una sola cosa que parchear, una sola cosa que monitorear —
-a costa de una garantía de aislamiento más débil que la separación física. Fue una
-apuesta razonable dado que el contrato real de cada cliente quedaba satisfecho igual.
-Lo que no salió gratis fue diseñar y cargar con la vía de escape de base dedicada en
-la capa de acceso a datos para un requisito que ningún cliente terminó ejerciendo —
-ese es un costo que pagué por una opcionalidad que nunca usé.
+**El trade-off:** una base de datos compartida siempre es más barata de operar: un solo target de migración, una sola cosa para parchear y monitorear. Todo bien, pero a costa de una garantía de aislamiento más débil que la separación física. Siendo una apuesta razonable dado que cada cliente quedaba satisfecho igual (eran las empresas del holding, asi que no había mucho problema hasta ahí).
+Lo que no salió gratis fue diseñar e implementar la vía de escape de base dedicada en la capa de acceso a datos para un requisito que ningún cliente terminó usando. Un alto costo a pagar por implementar algo que no se va usar al corto plazo (solo por estar pensando en ahorrar futuro trabajo, incierto btw).
 
 ### Integración en dos direcciones
 
-Las terminales biométricas se integraron primero directamente con el sistema de RRHH,
-y recién después se trajeron a las APIs propias de la plataforma — un enfoque por
-etapas que permitió que la asistencia siguiera funcionando durante la transición, en
-vez de exigir un corte simultáneo en todas las plantas.
+Las terminales biométricas se integraron primero directamente con el sistema de RRHH, y recién después se trajeron a las APIs propias de la plataforma — un enfoque por etapas que permitió que la asistencia siguiera funcionando durante la transición, en vez de exigir un corte simultáneo en todas las plantas.
 
 Del otro lado, una capa de integración se ubica entre el backend móvil propietario y
 el sistema de RRHH de terceros, de forma que el proveedor de RRHH siga siendo el
@@ -120,9 +91,9 @@ sistema de registro mientras la plataforma es dueña de la experiencia del emple
 
 - **14 tenants en producción** dentro del holding al momento del traspaso.
 - Marcado remoto de asistencia y autogestión de RRHH para miles de empleados.
-- **~30% de reducción en la carga administrativa de RRHH** — consultas que antes
+- **~30% de reducción en la carga administrativa de RRHH** consultas que antes
   requerían ir a una oficina pasaron a ser autoservicio.
-- Arquitectura posicionada para una futura oferta SaaS — aunque el modelo de base
+- Arquitectura posicionada para una futura oferta SaaS: aunque el modelo de base
   compartida necesitaría el camino dedicado por tenant realmente construido antes de
   que esa historia sostenga fuera del holding.
 
@@ -139,10 +110,8 @@ que un contrato real lo exigiera, no antes.
 Leí "el aislamiento entre tenants es contractual" como una restricción general y
 diseñé para el caso más estricto en todos los casos. En la práctica, la base
 compartida satisfacía a los 14 tenants que había al traspaso. El requisito era real,
-pero debí verificarlo contra el lenguaje contractual de cada cliente en vez de asumir
-que la interpretación más estricta aplicaba en todos lados.
+pero debí verificarlo contra el lenguaje contractual de cada cliente en vez de asumir que la interpretación más estricta aplicaba en todos lados.
 
 **Documentar para quien opera, no solo para quien diseña.** Los diagramas C4 eran
 buenos para explicar el diseño e inútiles para operar el sistema a las 3 de la
-mañana. Una plataforma repartida en múltiples plantas físicas necesita runbooks tanto
-como diagramas de arquitectura.
+mañana. Una plataforma repartida en múltiples plantas físicas necesita runbooks tanto como diagramas de arquitectura.

@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { readdirSync, readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
 import preact from '@astrojs/preact';
 import { satteri } from '@astrojs/markdown-satteri';
@@ -7,7 +7,7 @@ import { createDiagramDirectivePlugin } from './lib/content/diagrams/diagram-dir
 import { createHeadingIdsPlugin } from './lib/content/articles/toc.mjs';
 import { createArticleSectionsPlugin } from './lib/content/articles/article-sections.mjs';
 import { createAboutBodyPlugin } from './lib/content/pages/about-body.mjs';
-import { collectInputs, fingerprintOf, staleCacheDirs } from './lib/build/pipeline-fingerprint.mjs';
+import { collectInputs, fingerprintOf, sweepStaleCacheDirs } from './lib/build/pipeline-fingerprint.mjs';
 
 // The markdown pipeline's output is cached, and the cache keys on the MARKDOWN — so a
 // change to a plugin below does not invalidate it and the build reuses HTML produced by
@@ -30,27 +30,41 @@ const pipelineInputs = [
 const pipelineKey = fingerprintOf(pipelineInputs);
 
 const modulesDir = fileURLToPath(new URL('./node_modules', import.meta.url));
+
+// The two prefixes are declared once and used three times — twice to mint a directory,
+// once to collect one. Split across those three sites they drift, and a prefix the
+// collector does not know about is a directory that accumulates forever.
+const ASTRO_CACHE_PREFIX = '.astro-';
+const VITE_CACHE_PREFIX = '.vite-';
 const cacheDirFor = (prefix) => `./node_modules/${prefix}${pipelineKey}`;
 
 // Garbage collection, never invalidation: a key whose directory is missing builds slow
-// once, never wrong. Best-effort on purpose — a failure here must not fail a build.
-try {
-  for (const stale of staleCacheDirs(readdirSync(modulesDir), {
-    prefixes: ['.astro-', '.vite-'],
-    keep: pipelineKey,
-  })) {
-    rmSync(`${modulesDir}/${stale}`, { recursive: true, force: true });
-  }
-} catch {
-  // nothing to prune, or the directory is busy; the next build tries again
-}
+// once, never wrong.
+//
+// It runs at BUILD START and not in this module's body. This
+// file is loaded by every consumer of the Astro config — `astro check`, `astro preview`,
+// `vitest run` through getViteConfig(), and anything inside a Stryker sandbox, whose
+// node_modules is a symlink to the real one — so a sweep written here ran in all of them.
+// Measured, not argued: two directories planted in the real node_modules were both deleted
+// by a plain `vitest run`. A test runner cannot be allowed to collect a build's cache, and
+// `astro:build:start` fires for the one consumer that populates these directories.
+const pipelineCacheCollector = {
+  name: 'pipeline-cache-collector',
+  hooks: {
+    'astro:build:start': () =>
+      sweepStaleCacheDirs(modulesDir, {
+        prefixes: [ASTRO_CACHE_PREFIX, VITE_CACHE_PREFIX],
+        keep: pipelineKey,
+      }),
+  },
+};
 
 // compat maps React imports onto Preact, so an island is written as plain React.
 export default defineConfig({
   output: 'static',
-  cacheDir: cacheDirFor('.astro-'),
-  vite: { cacheDir: cacheDirFor('.vite-') },
-  integrations: [preact({ compat: true })],
+  cacheDir: cacheDirFor(ASTRO_CACHE_PREFIX),
+  vite: { cacheDir: cacheDirFor(VITE_CACHE_PREFIX) },
+  integrations: [preact({ compat: true }), pipelineCacheCollector],
   markdown: {
     // The article pipeline is declared once, here, and never per component or per
     // article. `directive` turns on the `:::name{...}` block syntax the diagram tags
