@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Two commands, and only two. Root is where a newcomer looks, so it is where the commands live.",
+  "description": "Three commands. Root is where a newcomer looks, so it is where the commands live. `test` is the fast profile a push runs; `test:full` adds the mutation run and the visual-capture matrix, and is what closes a work item.",
   "scripts": {
     "start": "npm --prefix site run start",
-    "test": "node scripts/gate.mjs"
+    "test": "node scripts/gate.mjs",
+    "test:full": "node scripts/gate.mjs --profile full"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^10.0.0",

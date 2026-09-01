@@ -57,7 +57,7 @@ the agent in the same file in the same minute (`INC-16`), and the orchestrator i
 
 **An agent's report is a claim; the artifact is the evidence** (`P-11`). Verify what the agent says it verified. "I ran the gate and it passed" and "the gate passes" are different propositions, and only the second is a fact about the repository.
 
-Run `node scripts/gate.mjs`. Read the trace under `evidence/runs/` where a claim needs corroborating.
+Run `node scripts/gate.mjs --profile full` — the profile matters, because the bare command defers the mutation run and the visual-capture matrix to keep the inner loop and the per-push CI cheap (`TASK 111`). Read the trace under `evidence/runs/` where a claim needs corroborating.
 
 Then ask of every new invariant, check or abstraction: *what breaks when someone adds to, removes from, or moves one of these next month?* Green-today is not robust-tomorrow (`P-16`).
 

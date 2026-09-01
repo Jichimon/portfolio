@@ -196,6 +196,13 @@ export default {
   // here depends entirely on the workflow persisting incrementalFile between runs via
   // actions/cache — that wiring is in harness.yml, and this line does nothing there on its own.
   //
+  // AND THAT WIRING NOW RUNS ONLY IN THE `full` PROFILE (TASK 111). The mutation step is
+  // `deep`: a push defers it, so there is no incremental file to save and nothing worth
+  // restoring — the cache steps are conditioned on the same trigger that selects the
+  // profile. The consequence, stated rather than discovered later: the cache is only ever
+  // warmed by a nightly or on-demand run, so consecutive deep runs get the benefit and a
+  // one-off dispatch after a quiet week starts cold.
+  //
   // NOT YET TRUSTED FOR THE RATCHET (T-03, break: 77.0). This repo has hit two cache-correctness
   // bugs before (TASK 89: Vite/Vitest cache producing false positives; TASK 103: a config
   // garbage-collecting a build cache), so before this floor is allowed to depend on incremental

@@ -9,6 +9,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateSteps } from './gate-steps.mjs';
+import { TIERS } from './gate.mjs';
 import { STEPS } from '../../gate.mjs';
 
 /** A fake io: `files` maps a path to its text content. Anything not in the map does not exist. */
@@ -21,6 +22,10 @@ const io = (files = {}) => ({
 const step = (overrides = {}) => ({
   name: 'sample step',
   protects: 'something worth protecting',
+  // Declared, like every real step: TASK 111 made the tier a required property, so a
+  // fixture without one is no longer "entirely valid" and every RED test below would
+  // start from two findings instead of the one it means to plant.
+  tier: 'fast',
   redProof: { file: 'proof.test.mjs', test: 'RED: sample proof' },
   ...overrides,
 });
@@ -210,7 +215,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const resolve = (p) => (isAbsolute(p) ? p : join(ROOT, p));
 const realIo = { exists: (p) => existsSync(resolve(p)), read: (p) => readFileSync(resolve(p), 'utf8') };
 
-test('the real STEPS array in gate.mjs validates clean — every one of the 20 steps has a working redProof', () => {
+test('the real STEPS array in gate.mjs validates clean — every step has a working redProof, a tier and a well-formed bound', () => {
   const findings = validateSteps(STEPS, realIo).filter((f) => !f.info);
   assert.deepEqual(findings, [], JSON.stringify(findings, null, 2));
 });
@@ -223,4 +228,81 @@ test('adding a step with no redProof to the real STEPS array is caught, not sile
     findings.some((f) => f.file === 'a future step' && /redProof is missing or malformed/.test(f.message)),
     JSON.stringify(findings, null, 2),
   );
+});
+
+// --- tier (TASK 111) ---------------------------------------------------------------------
+
+test('RED: a step with no tier at all is a finding', () => {
+  // The safe default (runs everywhere) is exactly why the declaration is required: in a
+  // 22-step array nobody can tell "deliberately in the per-push path" from "nobody
+  // thought about it", and only one of those is a decision.
+  const findings = validateSteps([step({ tier: undefined })], io(PROOF_FILE));
+  assert.ok(findings.some((f) => /no tier declared/.test(f.message)), JSON.stringify(findings));
+});
+
+test('RED: a step whose tier is not one of the declared tiers is a finding', () => {
+  // Worse than missing: no profile runs it, so the step is deferred in every profile
+  // and its DEFER line reads like coverage that happens elsewhere. It happens nowhere.
+  const findings = validateSteps([step({ tier: 'nightly' })], io(PROOF_FILE));
+  assert.ok(findings.some((f) => /not one of the declared tiers/.test(f.message)), JSON.stringify(findings));
+});
+
+test('each declared tier is accepted', () => {
+  for (const tier of TIERS) {
+    const findings = validateSteps([step({ tier })], io(PROOF_FILE));
+    assert.ok(!findings.some((f) => /tier/.test(f.message)), `${tier}: ${JSON.stringify(findings)}`);
+  }
+});
+
+// --- timeoutMs (TASK 110) ----------------------------------------------------------------
+
+test('RED: a malformed timeoutMs is a finding — spawnSync would ignore it and run unbounded', () => {
+  // The failure this closes is silent by construction: the step's declaration says
+  // "bounded at 15 minutes", spawnSync drops a non-numeric timeout on the floor, and the
+  // step runs forever while the array claims otherwise.
+  for (const bad of ['900000', 0, -1, Number.NaN, Number.POSITIVE_INFINITY, null]) {
+    const findings = validateSteps([step({ timeoutMs: bad })], io(PROOF_FILE));
+    assert.ok(
+      findings.some((f) => /timeoutMs must be a positive, finite number/.test(f.message)),
+      `${JSON.stringify(bad)} was accepted: ${JSON.stringify(findings)}`,
+    );
+  }
+});
+
+test('a positive finite timeoutMs is accepted, and no bound at all is legitimate', () => {
+  assert.ok(!validateSteps([step({ timeoutMs: 900_000 })], io(PROOF_FILE)).some((f) => /timeoutMs/.test(f.message)));
+  assert.ok(!validateSteps([step()], io(PROOF_FILE)).some((f) => /timeoutMs/.test(f.message)));
+});
+
+// --- cross-tier dependencies (TASK 111) --------------------------------------------------
+
+test('RED: a fast step depending on a deep step is a finding — it would be BLOCKED in every fast run', () => {
+  const steps = [
+    step({ name: 'heavy', tier: 'deep' }),
+    step({ name: 'light', tier: 'fast', dependsOn: 'heavy' }),
+  ];
+  const findings = validateSteps(steps, io(PROOF_FILE));
+  assert.ok(findings.some((f) => /do not run/.test(f.message)), JSON.stringify(findings));
+});
+
+test('a deep step depending on a fast step is fine — the fast one runs in every profile the deep one does', () => {
+  const steps = [
+    step({ name: 'light', tier: 'fast' }),
+    step({ name: 'heavy', tier: 'deep', dependsOn: 'light' }),
+  ];
+  assert.ok(!validateSteps(steps, io(PROOF_FILE)).some((f) => /do not run/.test(f.message)));
+});
+
+test('a dependency naming a step that is not in the array is left to the resolve check', () => {
+  // runGate throws on it (G-13). Reporting it here too would name one defect twice and
+  // teach the reader that the two checks disagree about whose problem it is.
+  const steps = [step({ name: 'light', tier: 'fast', dependsOn: 'nowhere' })];
+  assert.ok(!validateSteps(steps, io(PROOF_FILE)).some((f) => /do not run/.test(f.message)));
+});
+
+test('LIVENESS: the real gate has no cross-tier dependency, checked rather than assumed', () => {
+  // The mutation step depends on both test tiers and is itself `deep`; that direction is
+  // the safe one and this asserts it stayed that way after the split.
+  const findings = validateSteps(STEPS, realIo).filter((f) => /do not run/.test(f.message));
+  assert.deepEqual(findings, [], JSON.stringify(findings, null, 2));
 });

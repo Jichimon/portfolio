@@ -11,7 +11,15 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { existsSync, readdirSync } from 'node:fs';
 
-import { runGate, formatSummary } from './guards/lib/gate.mjs';
+import {
+  runGate,
+  formatSummary,
+  formatStepStart,
+  formatStepEnd,
+  formatDeferrals,
+  PROFILES,
+  DEFAULT_STEP_TIMEOUT_MS,
+} from './guards/lib/gate.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -40,6 +48,7 @@ function holdsFileEndingWith(dir, suffix) {
 export const STEPS = [
   {
     name: 'guard tests',
+    tier: 'fast',
     protects: 'a guard nobody tested is a guard nobody can trust (P-14, T-04)',
     // A step whose runner exits 0 having silently run zero tests must not report PASS
     // (TASK 39) — this is that mechanism's own red proof, generic to every node:test step.
@@ -54,6 +63,7 @@ export const STEPS = [
   },
   {
     name: 'site core tests',
+    tier: 'fast',
     protects: 'the site core has a runner, not only a Stryker glob (ADR-006, T-03) — and S-06 scopes the whole of site/lib/**, so the runner does too (TASK 42)',
     // Same zero-tests-ran mechanism as 'guard tests' above — one node:test runner, one proof.
     redProof: { file: 'scripts/guards/lib/gate.test.mjs', test: 'RED: a step whose command exits 0 but ran zero tests does not report PASS' },
@@ -65,6 +75,7 @@ export const STEPS = [
   },
   {
     name: 'component tests',
+    tier: 'fast',
     protects: 'the DOM-requiring behaviour modules — scroll-spy tracking, theme persistence — are asserted on what the user observes, in a real DOM (ADR-006 amendment, T-07)',
     // countTestsRun only recognized node:test's summary until TASK 63 widened it — this proves
     // Vitest's own real zero-tests summary is now caught the same way.
@@ -88,6 +99,7 @@ export const STEPS = [
   },
   {
     name: 'type check',
+    tier: 'fast',
     protects: 'a type error cannot reach a closed work item because nobody remembered a command (T-09, G-11)',
     // Proves OUR wiring, not Astro's own type detection (TASK 63): the eight escaped defects
     // this item closes were all drifted binary paths, wrong cwds and permanently-true skipIfs
@@ -120,6 +132,12 @@ export const STEPS = [
   },
   {
     name: 'e2e smoke',
+    tier: 'fast',
+    // Ten minutes is a CHOSEN bound, not a measured one (C-01). The whole suite ran
+    // 171 tests in 51.7s on the author's 12-core machine; a 2-core runner is slower
+    // and this half is the smaller one. The first CI run with per-step timing is what
+    // corrects it - and until then a hang costs ten minutes instead of ninety.
+    timeoutMs: 10 * 60_000,
     protects: 'every route the collection derives is actually served, and a route that is not yet built says so out loud instead of 404ing in production (T-02, INC-03)',
     // Playwright's real list-reporter summary is now recognized the same way Vitest's is —
     // an all-skipped run (the shape that genuinely exits 0 with nothing verified in this
@@ -129,7 +147,12 @@ export const STEPS = [
     redProof: { file: 'scripts/guards/lib/gate.test.mjs', test: "RED: a step whose stdout is Playwright\\'s real zero-tests summary does not report PASS" },
     // Playwright's own bin through node, for the reason the two steps around this one
     // already carry: spawnSync has no shell and npx is a .cmd shim on Windows.
-    cmd: [process.execPath, join(ROOT, 'site/node_modules/@playwright/test/cli.js'), 'test'],
+    //
+    // `--grep-invert @deep` is the split TASK 111 made: the visual-capture matrix carries
+    // the tag and runs in the step below, in the `full` profile only. What stays here is
+    // the half that decides whether the site is publishable — routes, links, metadata,
+    // against a real production build.
+    cmd: [process.execPath, join(ROOT, 'site/node_modules/@playwright/test/cli.js'), 'test', '--grep-invert', '@deep'],
     cwd: join(ROOT, 'site'),
     // The suite builds and serves dist/ itself, so this step is the production build's
     // only automated verification. It declares the gap out loud rather than passing on
@@ -138,7 +161,43 @@ export const STEPS = [
     skipNote: 'site/tests/e2e does not exist yet',
   },
   {
+    name: 'e2e visual capture',
+    tier: 'deep',
+    // Twenty minutes: the same chosen-not-measured caveat as the step above, with more
+    // slack because this is the larger half (routes x 3 widths x 2 themes, each a real
+    // navigation and a fullPage screenshot).
+    timeoutMs: 20 * 60_000,
+    protects: 'the design-fidelity images TASK 27 diffs are captured from a real production build, at every sanctioned width and both themes (P-15)',
+    // Same generic zero-tests mechanism as the step above: `--grep @deep` matching nothing
+    // would leave this reporting PASS over a capture that produced no images at all.
+    redProof: { file: 'scripts/guards/lib/gate.test.mjs', test: "RED: a step whose stdout is Playwright\\'s real zero-tests summary does not report PASS" },
+    cmd: [process.execPath, join(ROOT, 'site/node_modules/@playwright/test/cli.js'), 'test', '--grep', '@deep'],
+    cwd: join(ROOT, 'site'),
+    // WHY THIS IS `deep` AND THE STEP ABOVE IS NOT. These images are an input to a human
+    // judgement (TASK 27's fidelity diff), not a publication blocker: a screenshot that
+    // did not get captured on a push blocks nobody, while a route 404ing does. Deferring
+    // it is a cadence decision, not a deletion — the `full` profile runs it nightly and
+    // before any work item is closed, and the gate's own headline names where.
+    skipIf: () => !existsSync(join(ROOT, 'site/tests/e2e')),
+    skipNote: 'site/tests/e2e does not exist yet',
+  },
+  {
     name: 'mutation',
+    // THE ONE STEP THAT LEAVES THE PER-PUSH PATH, and the reason is arithmetic rather
+    // than taste. Stryker's default concurrency is os.availableParallelism() - 1: 11 on
+    // the author's machine, 2 on a standard ubuntu-latest runner, over ~7,900 mutants.
+    // The local cold run measures ~10-11 minutes; CI never once got far enough to
+    // produce a number, because `e2e smoke` hung ahead of it (INC-18) in all three
+    // cancelled runs. So this is deferred on a cost the mechanism makes certain, not on
+    // a measurement nobody has: it runs in the `full` profile — nightly, on demand, and
+    // in the local run that closes a work item — where the break threshold still fails
+    // the gate exactly as it does today. NOTHING is excluded from the mutate glob and
+    // the floor is untouched (T-03); what changed is cadence, not coverage, and the
+    // gate's own headline names where the step went.
+    tier: 'deep',
+    // Ninety minutes, chosen not measured (C-01) — deliberately generous, because the
+    // first full CI run of this step is the thing that finally produces the real number.
+    timeoutMs: 90 * 60_000,
     protects: 'a surviving mutant is observable proof that a test proves nothing (T-03, D3)',
     // This step's own historical failure was exactly a drifted binary path (the npx .cmd-shim
     // substitution documented below) — the same class gate-steps.mjs's cmd-existence check
@@ -179,12 +238,14 @@ export const STEPS = [
   },
   {
     name: 'rules registry',
+    tier: 'fast',
     protects: 'unique ids, every rule has an origin and a rung, no dangling citations (G-10)',
     redProof: { file: 'scripts/guards/lib/rules-registry.test.mjs', test: 'RED: duplicate id across files is caught' },
     cmd: ['node', 'scripts/guards/gate/check-rules-registry.mjs'],
   },
   {
     name: 'confidentiality',
+    tier: 'fast',
     protects: 'no banned term reaches a publishable file (C-05)',
     redProof: { file: 'scripts/guards/lib/terms.test.mjs', test: 'RED: a term in docs/ is found — the exact gap the hardcoded path roster left open' },
     cmd: ['node', 'scripts/guards/gate/check-terms.mjs'],
@@ -198,60 +259,70 @@ export const STEPS = [
   },
   {
     name: 'templates',
+    tier: 'fast',
     protects: 'the fields the delegation gate reads still exist in the spec template (H-05)',
     redProof: { file: 'scripts/guards/lib/templates.test.mjs', test: 'RED: dropping a gate-critical field is caught, with the reason' },
     cmd: ['node', 'scripts/guards/gate/check-templates.mjs'],
   },
   {
     name: 'runtime boundary',
+    tier: 'fast',
     protects: 'every hard rule has a deny rule behind it, and no boundary rests on ask (G-03)',
     redProof: { file: 'scripts/guards/lib/settings.test.mjs', test: 'RED: a write boundary with no Write() deny is caught' },
     cmd: ['node', 'scripts/guards/gate/check-settings.mjs'],
   },
   {
     name: 'contracts',
+    tier: 'fast',
     protects: 'a declared contract names a real enforcer, and cannot claim to be built when it is not',
     redProof: { file: 'scripts/guards/lib/contracts.test.mjs', test: 'RED: claiming built while the enforcer is missing is caught' },
     cmd: ['node', 'scripts/guards/gate/check-contracts.mjs'],
   },
   {
     name: 'agent roster',
+    tier: 'fast',
     protects: 'least privilege by allowlist: six posture dimensions, live bootstrap paths, withheld tools (G-05, G-09)',
     redProof: { file: 'scripts/guards/lib/agents.test.mjs', test: 'RED: a role with no frontmatter is caught' },
     cmd: ['node', 'scripts/guards/gate/check-agents.mjs'],
   },
   {
     name: 'procedures',
+    tier: 'fast',
     protects: 'the router resolves, and no done-dimension claims passed with nothing behind it (P-03, A22)',
     redProof: { file: 'scripts/guards/lib/procedures.test.mjs', test: 'RED: tables outside the router section are not swept' },
     cmd: ['node', 'scripts/guards/gate/check-procedures.mjs'],
   },
   {
     name: 'evidence trace',
+    tier: 'fast',
     protects: 'the trace conforms, seq stays dense, redaction held, and the hooks are wired (A11, INC-08)',
     redProof: { file: 'scripts/guards/lib/evidence.test.mjs', test: 'RED: an empty or whitespace-only agent_type is treated as absent, not as a name' },
     cmd: ['node', 'scripts/guards/gate/check-trace.mjs'],
   },
   {
     name: 'living docs + CI',
+    tier: 'fast',
     protects: 'no document points at a file that does not exist, and CI carries no path filter (P-07, INC-08)',
     redProof: { file: 'scripts/guards/lib/doc-links.test.mjs', test: 'RED: placeholders are not path claims' },
     cmd: ['node', 'scripts/guards/gate/check-docs.mjs'],
   },
   {
     name: 'context budget',
+    tier: 'fast',
     protects: 'always-loaded instructions stay small enough to be followed (D10)',
     redProof: { file: 'scripts/guards/lib/context-budget.test.mjs', test: 'RED: over budget is caught and names the largest contributor' },
     cmd: ['node', 'scripts/guards/gate/check-context-budget.mjs'],
   },
   {
     name: 'content',
+    tier: 'fast',
     protects: 'locale parity and the frontmatter shape each type requires (C-09, C-14)',
     redProof: { file: 'scripts/guards/lib/content.test.mjs', test: 'RED: an English page with no Spanish counterpart is caught' },
     cmd: ['node', 'scripts/guards/gate/check-content.mjs'],
   },
   {
     name: 'design canvas',
+    tier: 'fast',
     protects: 'the design canvas stays internally consistent and in sync with its specification (P-13)',
     // Same raw-source-text nuance again — canvas.test.mjs escapes its apostrophe (home\'s).
     redProof: { file: 'scripts/guards/lib/canvas.test.mjs', test: "RED: the real defect — the Spanish home\\'s wordmark still points at the English home" },
@@ -259,6 +330,7 @@ export const STEPS = [
   },
   {
     name: 'site structure',
+    tier: 'fast',
     protects: 'the file cap, the gateway boundary and the framework-free core (S-02, S-03, ADR-008)',
     redProof: { file: 'scripts/guards/lib/site-structure/file-cap.test.mjs', test: 'RED: a directory at seven files is a finding' },
     cmd: ['node', 'scripts/guards/gate/check-site.mjs'],
@@ -268,12 +340,14 @@ export const STEPS = [
     skipNote: 'site/ does not exist yet',
   },  {
     name: 'eval suite',
+    tier: 'fast',
     protects: 'every incident has a case, every case a resolvable proof, and no unproven case claims Caught (A15, A16)',
     redProof: { file: 'scripts/guards/lib/evals.test.mjs', test: 'RED: a field added to the template becomes required without touching the config' },
     cmd: ['node', 'scripts/guards/gate/check-evals.mjs'],
   },
   {
     name: 'status history',
+    tier: 'fast',
     protects: 'K2 has a substrate: a work item leaving `DONE` carries the reason it did, checked against a history no agent can author (TASK 66, H-01)',
     redProof: { file: 'scripts/guards/lib/status-history.test.mjs', test: 'RED: a derived reopen with no declaration is a finding' },
     cmd: ['node', 'scripts/guards/gate/check-status-history.mjs'],
@@ -290,34 +364,108 @@ export const STEPS = [
 // OS path, and on Windows those two spellings of the same file never string-match each other.
 const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
+/**
+ * `--profile <name>` and `--profile=<name>`, plus the two shorthands a human actually
+ * types. An unrecognized flag is a finding rather than something to ignore: a typo in
+ * `--porfile full` that silently ran `fast` would report a green gate for a profile
+ * nobody ran, which is precisely the class of quiet substitution this gate exists to
+ * refuse (G-13).
+ */
+export function parseProfile(argv) {
+  let profile = 'fast';
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--fast') { profile = 'fast'; continue; }
+    if (arg === '--full') { profile = 'full'; continue; }
+    if (arg.startsWith('--profile=')) { profile = arg.slice('--profile='.length); continue; }
+    if (arg === '--profile') {
+      profile = argv[i + 1] ?? '';
+      i += 1;
+      continue;
+    }
+    throw new Error(`unknown argument "${arg}" — usage: node scripts/gate.mjs [--profile fast|full]`);
+  }
+  if (!Object.hasOwn(PROFILES, profile)) {
+    throw new Error(
+      `unknown gate profile "${profile}" — declared profiles are ${Object.keys(PROFILES).join(', ')}`,
+    );
+  }
+  return profile;
+}
+
 function main() {
-  const { results, failures, incomplete, exitCode } = runGate(STEPS, (step) => {
-    const [bin, ...args] = step.cmd;
-    const exe = bin === 'node' ? process.execPath : bin;
-    // A step may declare its own working directory. Almost none do — the gate reads the
-    // repository from the root — but a package-scoped runner has to start inside its package
-    // to resolve its own config, and passing that as a flag would be a second way to say the
-    // same thing. ROOT stays the default, so nothing that does not ask is affected.
-    //
-    // stdout is captured rather than inherited so `runGate` can derive liveness from a test
-    // runner's own summary line (TASK 39) — a step that exits 0 having run zero tests must
-    // not report PASS. stderr still streams straight to the terminal, so a hung or noisy step
-    // is still visible live; the captured stdout is written out below, once the step is done.
-    const result = spawnSync(exe, args, { cwd: step.cwd ?? ROOT, stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8' });
-    if (result.stdout) process.stdout.write(result.stdout);
-    return { code: result.status ?? 1, stdout: result.stdout ?? '' };
-  });
+  let profile;
+  try {
+    profile = parseProfile(process.argv.slice(2));
+  } catch (error) {
+    console.error(`\n${error.message}`);
+    process.exit(2);
+  }
+
+  const { results, failures, incomplete, deferred, exitCode } = runGate(
+    STEPS,
+    (step) => {
+      const [bin, ...args] = step.cmd;
+      const exe = bin === 'node' ? process.execPath : bin;
+      const timeoutMs = step.timeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
+      // A step may declare its own working directory. Almost none do — the gate reads the
+      // repository from the root — but a package-scoped runner has to start inside its package
+      // to resolve its own config, and passing that as a flag would be a second way to say the
+      // same thing. ROOT stays the default, so nothing that does not ask is affected.
+      //
+      // stdout is captured rather than inherited so `runGate` can derive liveness from a test
+      // runner's own summary line (TASK 39) — a step that exits 0 having run zero tests must
+      // not report PASS. stderr still streams straight to the terminal, so a hung or noisy step
+      // is still visible live; the captured stdout is written out below, once the step is done.
+      //
+      // `timeout` + SIGKILL is INC-18's remedy at the only layer that can apply it. A step
+      // that never returns used to consume the entire job budget and leave nothing to read:
+      // three cancelled GitHub runs, one of them six hours. spawnSync reports the kill as
+      // `error.code === 'ETIMEDOUT'` with a null status, which is passed on as `timedOut`
+      // rather than being flattened into an ordinary non-zero exit — a hung step and a
+      // failing step are different diagnoses and must not print the same sentence.
+      const result = spawnSync(exe, args, {
+        cwd: step.cwd ?? ROOT,
+        stdio: ['inherit', 'pipe', 'inherit'],
+        encoding: 'utf8',
+        timeout: timeoutMs,
+        killSignal: 'SIGKILL',
+      });
+      if (result.stdout) process.stdout.write(result.stdout);
+      return {
+        code: result.status ?? 1,
+        stdout: result.stdout ?? '',
+        timedOut: result.error?.code === 'ETIMEDOUT',
+        timeoutMs,
+      };
+    },
+    {
+      profile,
+      // Written to stderr, which is INHERITED, while stdout is captured and only printed
+      // once a step finishes (INC-18). A run that hangs — or that a CI runner cancels —
+      // leaves these two lines and nothing else, which is the difference between the 89
+      // minutes of silence that produced no diagnosis and a log naming the step in flight.
+      onStepStart: (event) => console.error(formatStepStart(event)),
+      onStepEnd: (event) => console.error(formatStepEnd(event)),
+    },
+  );
 
   console.log('\n' + '-'.repeat(60));
   for (const line of formatSummary(results)) console.log(line);
   console.log('-'.repeat(60));
+
+  // Printed BEFORE the verdict branches below, so it appears on EVERY outcome. CI always
+  // exits INCOMPLETE here - the confidentiality step's term list never reaches a runner by
+  // design (H-04) - so leaving this in the passing branch would hide the deferral list from
+  // the one log anybody actually audits.
+  for (const line of formatDeferrals(deferred, profile)) console.log(line);
 
   if (incomplete.length) console.log(`\n${incomplete.length} step(s) skipped — declared, not silent.`);
 
   if (failures.length) {
     // Reporting every step is not the same as burying the failure: the summary above
     // is scannable, and this block is the thing you cannot scroll past.
-    console.error(`\nGATE FAILED — ${failures.length} of ${results.length} step(s) did not pass:`);
+    console.error(`\nGATE FAILED (profile: ${profile}) — ${failures.length} of ${results.length} step(s) did not pass:`);
     for (const { step, status, note } of failures) {
       console.error(`\n  ${status}  ${step.name}${note ? ` (${note})` : ''}`);
       console.error(`    protects: ${step.protects}`);
@@ -330,6 +478,16 @@ function main() {
     // so "GATE PASSED" here would be exactly the false-green TASK 39 exists to close.
     // A distinct headline and a distinct exit code (2) let a human — and CI — tell
     // "broken" apart from "incomplete" without reading the summary above.
+    //
+    // THIS HEADLINE DELIBERATELY CARRIES NO PROFILE, unlike the other two. harness.yml
+    // parses it with a sed expression anchored on the text ending at `did not run:`, to
+    // read the skip count — and sed's `s///p` prints the rest of the line, so anything
+    // appended here comes back as part of the count and the comparison against "1" fails.
+    // The consequence would be CI going red on the one skip it is designed to accept
+    // (`confidentiality`, whose term list never reaches a runner by design, H-04). The
+    // profile is already named one line above, in the deferral block, which prints on
+    // every outcome. If this ever needs to change, change the sed expression in the same
+    // commit or the failure is silent and looks like a real gate failure.
     console.error(`\nGATE INCOMPLETE — ${incomplete.length} of ${results.length} step(s) did not run:`);
     for (const { step, note } of incomplete) {
       console.error(`\n  SKIP  ${step.name}${note ? ` (${note})` : ''}`);
@@ -338,7 +496,12 @@ function main() {
     process.exit(exitCode);
   }
 
-  console.log('\nGATE PASSED');
+  // NEVER a bare "GATE PASSED" again. The profile is part of the verdict, because
+  // `fast` and `full` are different claims about what was verified, and a headline
+  // that does not distinguish them is how "the gate passes up to the known failure"
+  // starts reading as "the gate passes" (this file's own lib header records that
+  // failure happening once already, in another form).
+  console.log(`\nGATE PASSED (profile: ${profile})`);
 }
 
 if (isMain) main();

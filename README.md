@@ -44,10 +44,16 @@ scripts/gate.mjs     the one command that runs every guard
   `deny` rule or a `PreToolUse` guard denial, never a prompt an agent could be argued past.
   Among them — no agent commits or pushes to git, `resources/**` is read-only to every agent,
   and the runtime trace is written by hooks only, never by the thing it is scoring.
-- **One gate, twenty steps** (`node scripts/gate.mjs`) — type checking, three test tiers, a
-  mutation-coverage floor, and seventeen structural guards over the rules, the content, the
-  agent roster and the CI workflow itself. Every step names the guarantee it protects and the
-  test that proves it fails on a planted defect of its own kind, not just that it runs.
+- **One gate, twenty-two steps, two profiles** (`node scripts/gate.mjs`) — type checking,
+  three test tiers, a mutation-coverage floor, and seventeen structural guards over the
+  rules, the content, the agent roster and the CI workflow itself. Every step names the
+  guarantee it protects and the test that proves it fails on a planted defect of its own
+  kind, not just that it runs. Each also declares a **tier** and a **time bound**: the bare
+  command runs the fast profile on every push, `--profile full` adds the mutation run and
+  the visual-capture matrix nightly, and a step that exceeds its bound fails naming the
+  bound rather than consuming the run. A deferred step is printed by name, with the profile
+  that runs it, and the headline carries the profile — a gate that verified less has to say
+  so out loud, or it is not a gate.
 - **A mutation gate**, not a coverage percentage: Stryker Mutator over the parsing, joining
   and validating code, ratcheted upward as it is measured rather than set once from a hand
   count. The floor holds at 77% today and has moved eight times since it was first measured.
@@ -66,7 +72,8 @@ reaches CI) — the harness says so out loud rather than quietly skipping it.
 ```bash
 npm ci               # root — the guard suite and the mutation runner
 npm ci --prefix site  # the Astro project
-npm test              # node scripts/gate.mjs — the full gate
+npm test              # node scripts/gate.mjs — the fast profile, what CI runs on a push
+npm run test:full     # adds the mutation run and the visual-capture matrix
 npm start              # production build, served on localhost
 ```
 

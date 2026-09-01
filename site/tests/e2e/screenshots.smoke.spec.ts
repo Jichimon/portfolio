@@ -146,7 +146,14 @@ test.beforeAll(() => {
 for (const route of capturedRoutes) {
   for (const width of WIDTHS) {
     for (const theme of THEMES) {
-      test(`captures ${route.path} (slug "${route.slug}", lang "${route.lang}") at ${width}px in ${theme}`, async ({
+      // TAGGED `@deep`, and the gate reads the tag rather than the file: one gate step
+      // runs --grep-invert @deep on every push, a second runs --grep @deep in the heavy
+      // profile. These images are an input to a human's design-fidelity comparison; a
+      // capture that did not happen on a push blocks nobody, while a route 404ing does.
+      // The route-set assertion above stays UNTAGGED on purpose - it is the guard against
+      // this whole loop running zero times, and a guard deferred with the thing it guards
+      // is not a guard.
+      test(`captures ${route.path} (slug "${route.slug}", lang "${route.lang}") at ${width}px in ${theme}`, { tag: '@deep' }, async ({
         page,
         browserName,
       }) => {

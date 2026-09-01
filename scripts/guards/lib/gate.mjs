@@ -10,6 +10,61 @@
 // Fail-fast was a choice, not a bug - it makes a broken repository cheap to
 // diagnose. So the loud exit stays and only the blindness goes: every step runs,
 // every step reports, and the exit code still makes one failure impossible to miss.
+//
+// TASK 111 adds a SECOND way for a step not to run, and the distinction between the
+// two is the whole reason it is a separate verdict rather than another SKIP:
+//
+//     SKIP   the precondition was absent  ->  nothing verified this, anywhere
+//     DEFER  another profile runs it      ->  not verified HERE, and here is where
+//
+// A DEFER that does not name where the step does run is the same blindness in a new
+// costume, so the note carries it and the CLI prints it in the headline.
+
+/** The declared tier vocabulary. A step outside it is a finding, never a default. */
+export const TIERS = ['fast', 'deep'];
+
+/**
+ * Which tiers each profile runs. Derived from this table everywhere else in the
+ * module - a tier added above with no profile that runs it would make every step
+ * carrying it permanently deferred, which is why gate-steps.mjs checks the pairing
+ * rather than trusting it (P-13).
+ */
+export const PROFILES = {
+  fast: ['fast'],
+  full: ['fast', 'deep'],
+};
+
+/**
+ * The bound a step inherits when it declares none. It is a CHOSEN bound, not a
+ * measured one (C-01): five minutes is longer than any fast step has taken on the
+ * machines this repository has been run on, and short enough that a hung step fails
+ * while someone is still watching. The first CI run with per-step timing is what
+ * corrects it.
+ */
+export const DEFAULT_STEP_TIMEOUT_MS = 5 * 60_000;
+
+/**
+ * A step that declares no tier runs in every profile. `validateSteps` requires the
+ * declaration on the real STEPS array, so this default is a courtesy to fixtures and
+ * never a way for a real step to slip its tier.
+ */
+export function tierOf(step) {
+  return step?.tier ?? 'fast';
+}
+
+/**
+ * Human-readable, and deliberately not locale-aware: this string lands in a CI log
+ * and in a failure note, where "11m04s" is read by a person scanning for the step
+ * that ate the budget.
+ */
+export function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return 'an unknown bound';
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  const minutes = Math.floor(ms / 60_000);
+  const seconds = Math.round((ms % 60_000) / 1000);
+  return `${minutes}m${String(seconds).padStart(2, '0')}s`;
+}
 
 /**
  * Sequencing is DERIVED from what a step declares, never assumed of the whole list
@@ -19,19 +74,45 @@
  * guard test reports as one root cause instead of two. The other fifteen steps read
  * the repository independently and declare nothing.
  *
- * @param {{name:string, protects?:string, dependsOn?:(string|string[]), skipIf?:()=>boolean, skipNote?:string}[]} steps
- * @param {(step:object)=>{code:number, stdout:string}} run  runs one step, returns its exit code and captured stdout
+ * @param {{name:string, protects?:string, tier?:string, timeoutMs?:number, dependsOn?:(string|string[]), skipIf?:()=>boolean, skipNote?:string}[]} steps
+ * @param {(step:object)=>{code:number, stdout:string, timedOut?:boolean, timeoutMs?:number}} run  runs one step
+ * @param {{profile?:string, onStepStart?:Function, onStepEnd?:Function, now?:()=>number}} [opts]
  */
-export function runGate(steps, run) {
+export function runGate(steps, run, opts = {}) {
+  const profile = opts.profile ?? 'fast';
+  // G-13: machinery that cannot evaluate must not guess. An unknown profile falling
+  // back to `fast` would run a subset while reporting whatever the caller asked for,
+  // which is a gate that lies about what it verified.
+  if (!Object.hasOwn(PROFILES, profile)) {
+    throw new Error(
+      `unknown gate profile "${profile}" - declared profiles are ${Object.keys(PROFILES).join(', ')}`,
+    );
+  }
   assertDependenciesResolve(steps);
 
+  const active = new Set(PROFILES[profile]);
+  const now = opts.now ?? (() => Date.now());
   const results = [];
   const verdict = new Map();
 
-  for (const step of steps) {
+  for (const [index, step] of steps.entries()) {
+    const deferral = deferralFor(step, profile, active);
+    if (deferral) {
+      // The verdict map records DEFER rather than nothing, so a dependent step is
+      // BLOCKED rather than silently waved through in a profile that never ran its
+      // predecessor.
+      verdict.set(step.name, 'DEFER');
+      results.push(deferral);
+      continue;
+    }
+
+    opts.onStepStart?.({ step, index, total: steps.length, tier: tierOf(step) });
+    const startedAt = now();
     const result = evaluate(step, verdict, run);
+    result.elapsedMs = now() - startedAt;
     verdict.set(step.name, result.status);
     results.push(result);
+    opts.onStepEnd?.({ ...result, index, total: steps.length });
   }
 
   const failures = results.filter((r) => r.status === 'FAIL' || r.status === 'BLOCKED');
@@ -39,8 +120,13 @@ export function runGate(steps, run) {
   // `site/` existed) but it is not a pass either - the step's check did not run, and
   // "nothing failed" is not the same claim as "everything was verified" (TASK 39).
   const incomplete = results.filter((r) => r.status === 'SKIP');
+  // A DEFER is neither. It is not incomplete, because the profile it belongs to runs
+  // it and the note says which; folding it into `incomplete` would make every fast
+  // run exit 2, and CI's own rule - exit 2 accepted only when `confidentiality` is
+  // the single skip - would then have to accept arbitrary skips alongside it.
+  const deferred = results.filter((r) => r.status === 'DEFER');
   const exitCode = failures.length ? 1 : incomplete.length ? 2 : 0;
-  return { results, failures, incomplete, exitCode };
+  return { results, failures, incomplete, deferred, exitCode, profile };
 }
 
 /**
@@ -54,6 +140,23 @@ function dependencies(step) {
   return Array.isArray(step.dependsOn) ? step.dependsOn : [step.dependsOn];
 }
 
+/**
+ * DEFER is decided before the precondition is read, deliberately: a step this profile
+ * does not run has nothing to say about whether its target exists, and calling
+ * `skipIf` would report a precondition the profile was never going to act on.
+ */
+function deferralFor(step, profile, active) {
+  const tier = tierOf(step);
+  if (active.has(tier)) return null;
+  const runners = Object.keys(PROFILES).filter((p) => PROFILES[p].includes(tier));
+  const where = runners.length ? runners.map((p) => `"${p}"`).join(', ') : 'no declared profile';
+  return {
+    step,
+    status: 'DEFER',
+    note: `tier "${tier}" does not run in profile "${profile}" - it runs in ${where}`,
+  };
+}
+
 function evaluate(step, verdict, run) {
   if (step.skipIf?.()) {
     return { step, status: 'SKIP', note: step.skipNote ?? 'precondition absent' };
@@ -63,7 +166,19 @@ function evaluate(step, verdict, run) {
     const names = unmet.map((dep) => `"${dep}"`).join(', ');
     return { step, status: 'BLOCKED', note: `depends on ${names}, which did not pass` };
   }
-  const { code, stdout } = run(step);
+  const { code, stdout, timedOut, timeoutMs } = run(step);
+  // Read BEFORE the exit code, and that ordering is the point (INC-18). A killed
+  // process's exit status says nothing useful, so a run stopped for exceeding its
+  // bound must not be reported as a plain failure of the check it carries. The bound
+  // is named, so a reader knows whether to fix the step or the number.
+  if (timedOut) {
+    const bound = timeoutMs ?? step.timeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
+    return {
+      step,
+      status: 'FAIL',
+      note: `timed out after ${formatDuration(bound)}, its declared bound`,
+    };
+  }
   if (code !== 0) return { step, status: 'FAIL' };
 
   const testsRun = countTestsRun(stdout);
@@ -150,7 +265,46 @@ function assertDependenciesResolve(steps) {
 export function formatSummary(results) {
   const width = Math.max(...results.map((r) => r.step.name.length));
   return results.map(
-    ({ step, status, note }) =>
-      `  ${status.padEnd(7)} ${step.name.padEnd(width)}${note ? `  (${note})` : ''}`,
+    ({ step, status, note, elapsedMs }) =>
+      `  ${status.padEnd(7)} ${step.name.padEnd(width)}${
+        Number.isFinite(elapsedMs) ? `  ${formatDuration(elapsedMs).padStart(7)}` : ''
+      }${note ? `  (${note})` : ''}`,
   );
+}
+
+/**
+ * The live progress lines, written to stderr WHILE a step runs rather than to the
+ * captured stdout printed after it (INC-18). gate.mjs pipes stdout so `countTestsRun`
+ * can read a runner's own summary line; the consequence, unnoticed until a real CI
+ * run went 89 minutes without printing anything, is that a step in flight is
+ * invisible. stderr is inherited, so these are the only two lines a hung run leaves.
+ */
+export function formatStepStart({ step, index, total, tier }) {
+  const bound = step.timeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
+  return `> [${index + 1}/${total}] ${step.name}  (${tier}, bound ${formatDuration(bound)})`;
+}
+
+export function formatStepEnd({ step, status, elapsedMs, note }) {
+  return `< [${status}] ${step.name}  ${formatDuration(elapsedMs)}${note ? `  (${note})` : ''}`;
+}
+
+/**
+ * The deferral block, printed on EVERY outcome rather than only on a pass.
+ *
+ * It lived in the passing branch of the CLI for about an hour, which was wrong in exactly
+ * the environment that matters most: CI always exits INCOMPLETE, because
+ * private/banned-terms.txt is gitignored by design and the confidentiality step skips there
+ * (H-04). So the one log a reader actually audits would have been the one log that never
+ * said which steps this profile did not run. A property that holds on the happy path only
+ * is not the property.
+ */
+export function formatDeferrals(deferred, profile) {
+  if (!deferred.length) return [];
+  const names = deferred.map((d) => d.step.name).join(', ');
+  return [
+    '',
+    `${deferred.length} step(s) deferred by profile "${profile}": ${names}`,
+    '  they run in `node scripts/gate.mjs --profile full` - nightly in CI, on demand, and',
+    '  in the local run that closes a work item. Deferred is not verified.',
+  ];
 }

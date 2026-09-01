@@ -41,7 +41,8 @@ private/               NEVER COMMITTED
 
 | Command | What it protects |
 |---|---|
-| `node scripts/gate.mjs` | everything below, in one command. Run before declaring anything done |
+| `node scripts/gate.mjs` | the **fast** profile — every check except the two heavy ones, in one command. What CI runs on a push |
+| `node scripts/gate.mjs --profile full` | the fast profile **plus** the mutation run and the visual-capture matrix. **Run this before declaring anything done**; CI runs it nightly |
 | `node --test "scripts/guards/**/*.test.mjs"` | the guards themselves — a guard nobody tested is a guard nobody can trust |
 | `./scripts/check-terms.sh` | confidentiality |
 

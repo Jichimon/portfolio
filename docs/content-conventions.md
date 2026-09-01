@@ -30,7 +30,7 @@ Spec: what the diagram must show.
 
 Confidentiality rules for this content are binding and documented in
 `.claude/rules/20-content.md` (`C-05`, `C-06`). Run `node scripts/guards/gate/check-terms.mjs`
-before publishing anything — or `node scripts/gate.mjs`, which runs it as one of twenty steps.
+before publishing anything — or `node scripts/gate.mjs`, which runs it as one of its steps. (The confidentiality step is `fast`-tier, so the bare command runs it; a count is deliberately not written here, because a number about a growing thing goes stale on its own.)
 
 ## Index
 

@@ -24,6 +24,8 @@
 // A malformed step is reported as a finding, never thrown (G-13) — a validator that crashes
 // on bad input is not a boundary.
 
+import { TIERS, PROFILES, tierOf } from './gate.mjs';
+
 /** Matches either path separator, so a resolved path is recognized on POSIX and Windows alike. */
 const PATH_SEP = /[\\/]/;
 
@@ -48,6 +50,26 @@ export function validateSteps(steps, io) {
 
     if (typeof step.protects !== 'string' || !step.protects.trim()) {
       at(label, 'protects is missing or empty — a failure here would read as a broken command, not a broken guarantee');
+    }
+
+    // TASK 111. A step with no tier would run in every profile, which is the SAFE
+    // default and exactly why it must still be declared: the reader of a 22-step array
+    // cannot tell "deliberately runs everywhere" from "nobody thought about it", and the
+    // second one is how a step lands in the per-push path by accident. An unknown tier is
+    // a finding rather than a fallback — it would defer the step in every profile, which
+    // reads as coverage and is not.
+    if (step.tier !== undefined && !TIERS.includes(step.tier)) {
+      at(label, `tier "${step.tier}" is not one of the declared tiers (${TIERS.join(', ')}) — no profile runs it, so the step would be deferred everywhere and verify nothing`);
+    } else if (step.tier === undefined) {
+      at(label, `no tier declared — every step says which profiles run it, so a step in the per-push path is there on purpose (declared tiers: ${TIERS.join(', ')})`);
+    }
+
+    // TASK 110. The bound is optional (the default applies), but a malformed one is not a
+    // small mistake: spawnSync silently ignores a non-numeric `timeout`, so a step meant
+    // to be bounded would run unbounded while its declaration claimed otherwise — the
+    // shape of every guard in this repository that passed forever while checking nothing.
+    if (step.timeoutMs !== undefined && !(typeof step.timeoutMs === 'number' && Number.isFinite(step.timeoutMs) && step.timeoutMs > 0)) {
+      at(label, `timeoutMs must be a positive, finite number of milliseconds, got ${JSON.stringify(step.timeoutMs)} — spawnSync ignores anything else and the step would run unbounded`);
     }
 
     validateRedProof(step, label, io, at);
@@ -80,6 +102,39 @@ export function validateSteps(steps, io) {
     }
   }
 
+  findings.push(...crossTierDependencies(steps));
+
+  return findings;
+}
+
+/**
+ * A step can only depend on one that runs whenever it does. A `fast` step naming a
+ * `deep` predecessor is BLOCKED in every fast run — permanently, invisibly, and for a
+ * reason nobody reading the step would guess. Derived from the profile table rather
+ * than from a list of known-bad pairs (P-13): whether a tier's steps run in a given
+ * profile is exactly what PROFILES says.
+ */
+function crossTierDependencies(steps) {
+  const tierByName = new Map(steps.map((s) => [s?.name, tierOf(s)]));
+  const profilesRunning = (tier) => Object.keys(PROFILES).filter((p) => PROFILES[p].includes(tier));
+  const findings = [];
+
+  for (const step of steps) {
+    if (!step || typeof step !== 'object') continue;
+    const deps = step.dependsOn === undefined ? [] : [].concat(step.dependsOn);
+    for (const dep of deps) {
+      if (!tierByName.has(dep)) continue; // the resolve check already owns this case
+      const mine = profilesRunning(tierOf(step));
+      const theirs = new Set(profilesRunning(tierByName.get(dep)));
+      const orphaned = mine.filter((p) => !theirs.has(p));
+      if (orphaned.length) {
+        findings.push({
+          file: step.name ?? 'step',
+          message: `depends on "${dep}", which its own profile(s) ${orphaned.map((p) => `"${p}"`).join(', ')} do not run — the step would be BLOCKED there every time, silently`,
+        });
+      }
+    }
+  }
   return findings;
 }
 

@@ -1,6 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { runGate } from './gate.mjs';
+import {
+  runGate,
+  formatSummary,
+  formatDuration,
+  formatStepStart,
+  formatStepEnd,
+  formatDeferrals,
+  PROFILES,
+  TIERS,
+} from './gate.mjs';
 
 /**
  * A recording runner: returns the `{ code, stdout }` the fixture asked for, and
@@ -329,4 +338,273 @@ test('the widened regex still leaves plain guard output unrecognized', () => {
 
   const r = runGate(list, run);
   assert.equal(r.results[0].status, 'PASS');
+});
+
+// ---------------------------------------------------------------------------
+// TASK 110 - a step that hangs must fail naming its bound, not eat the budget.
+// INC-18: three GitHub runs were cancelled at their job timeout (once at the
+// 6-hour default) because `e2e smoke` blocked forever in globalSetup. The job
+// died having verified nothing and printed nothing. A bound per step is what
+// turns that into a named failure while someone is still watching.
+// ---------------------------------------------------------------------------
+
+/** A runner that reports one named step as having exceeded its bound. */
+const timingOutRunner = (name, timeoutMs) => {
+  const ran = [];
+  const run = (step) => {
+    ran.push(step.name);
+    return step.name === name
+      ? { code: 0, stdout: '', timedOut: true, timeoutMs }
+      : { code: 0, stdout: '' };
+  };
+  return { run, ran };
+};
+
+test('RED: a step that exceeds its declared time bound fails, naming the bound', () => {
+  const { run } = timingOutRunner('two', 900_000);
+  const r = runGate(steps('one', 'two', 'three'), run);
+
+  assert.equal(r.results[1].status, 'FAIL');
+  assert.match(r.results[1].note, /timed out after 15m00s/);
+  assert.equal(r.exitCode, 1);
+});
+
+test('RED: a timed-out step fails even though the killed process exited 0', () => {
+  // The precedence is the whole point: a killed process's exit status says nothing,
+  // and reading the code first would report the hung step as a PASS.
+  const { run } = timingOutRunner('one', 60_000);
+  const r = runGate(steps('one'), run);
+
+  assert.equal(r.results[0].status, 'FAIL');
+  assert.match(r.results[0].note, /timed out/);
+});
+
+test('RED: a timed-out step with no bound in the result falls back to the step, then to the default', () => {
+  const fromStep = () => ({ code: 0, stdout: '', timedOut: true });
+  const list = steps('one');
+  list[0].timeoutMs = 120_000;
+  assert.match(runGate(list, fromStep).results[0].note, /2m00s/);
+
+  const bare = steps('two');
+  assert.match(runGate(bare, fromStep).results[0].note, /5m00s/);
+});
+
+test('a step that does not time out is unaffected by the mechanism', () => {
+  const { run } = timingOutRunner('nobody', 1000);
+  const r = runGate(steps('one', 'two'), run);
+  assert.deepEqual(r.results.map((x) => x.status), ['PASS', 'PASS']);
+});
+
+test('every step result carries how long it took', () => {
+  // The summary prints it, and a CI log is the only place the per-step cost of a run
+  // has ever been readable (TASK 107 asked for this and did not get it).
+  let clock = 0;
+  const run = () => { clock += 250; return { code: 0, stdout: '' }; };
+  const r = runGate(steps('one', 'two'), run, { now: () => clock });
+
+  assert.deepEqual(r.results.map((x) => x.elapsedMs), [250, 250]);
+});
+
+// ---------------------------------------------------------------------------
+// TASK 111 - profiles. A step the profile does not run is DEFER, never SKIP.
+// ---------------------------------------------------------------------------
+
+const tiered = (spec) =>
+  Object.entries(spec).map(([name, tier]) => ({ name, tier, protects: `${name} holds` }));
+
+test('RED: a deep step is DEFERRED in the fast profile, and never runs', () => {
+  const { run, ran } = runnerFor({});
+  const r = runGate(tiered({ one: 'fast', two: 'deep' }), run, { profile: 'fast' });
+
+  assert.equal(r.results[1].status, 'DEFER');
+  assert.deepEqual(ran, ['one']);
+});
+
+test('RED: a DEFER is not a SKIP - it never makes the gate incomplete', () => {
+  // Folding the two together would exit 2 on every fast run, and CI accepts exit 2
+  // only when `confidentiality` is the single skip - so an arbitrary skip would then
+  // have to be accepted alongside it. That is INC-08's shape arriving through a
+  // verdict name.
+  const { run } = runnerFor({});
+  const r = runGate(tiered({ one: 'fast', two: 'deep' }), run, { profile: 'fast' });
+
+  assert.deepEqual(r.incomplete, []);
+  assert.deepEqual(r.failures, []);
+  assert.deepEqual(r.deferred.map((x) => x.step.name), ['two']);
+  assert.equal(r.exitCode, 0);
+});
+
+test('RED: a deferral names the profile that DOES run the step', () => {
+  // A deferral that does not say where the step runs is the same blindness in a new
+  // costume - the reader cannot tell "runs nightly" from "runs nowhere".
+  const { run } = runnerFor({});
+  const r = runGate(tiered({ one: 'deep' }), run, { profile: 'fast' });
+
+  assert.match(r.results[0].note, /deep/);
+  assert.match(r.results[0].note, /"full"/);
+});
+
+test('the full profile runs every tier', () => {
+  const { run, ran } = runnerFor({});
+  const r = runGate(tiered({ one: 'fast', two: 'deep' }), run, { profile: 'full' });
+
+  assert.deepEqual(ran, ['one', 'two']);
+  assert.deepEqual(r.results.map((x) => x.status), ['PASS', 'PASS']);
+  assert.deepEqual(r.deferred, []);
+});
+
+test('a step declaring no tier runs in every profile', () => {
+  const { run, ran } = runnerFor({});
+  runGate(steps('one'), run, { profile: 'fast' });
+  runGate(steps('one'), run, { profile: 'full' });
+  assert.deepEqual(ran, ['one', 'one']);
+});
+
+test('RED: an unknown profile throws rather than quietly running a subset', () => {
+  // G-13: a gate that cannot evaluate its own selector must not guess one. Falling
+  // back to `fast` would verify less than the caller asked for and still say PASSED.
+  const { run } = runnerFor({});
+  assert.throws(() => runGate(steps('one'), run, { profile: 'nightly' }), /nightly/);
+});
+
+test('RED: a step depending on a DEFERRED step is BLOCKED, not passed', () => {
+  // Nothing in the real gate does this today, and gate-steps.mjs reports it as a
+  // finding before it can. This is what happens if one ever slips through: the
+  // dependent is blocked, never waved through on a predecessor that did not run.
+  const { run } = runnerFor({});
+  const list = tiered({ one: 'deep', two: 'fast' });
+  list[1].dependsOn = 'one';
+
+  const r = runGate(list, run, { profile: 'fast' });
+  assert.equal(r.results[1].status, 'BLOCKED');
+});
+
+test('the default profile is fast - the bare command is the cheap one', () => {
+  const { run, ran } = runnerFor({});
+  const r = runGate(tiered({ one: 'fast', two: 'deep' }), run);
+
+  assert.equal(r.profile, 'fast');
+  assert.deepEqual(ran, ['one']);
+});
+
+test('LIVENESS: every declared tier is run by at least one declared profile', () => {
+  // Derived from the two tables rather than asserted about today's contents (P-13):
+  // a tier added with no profile that runs it would make every step carrying it
+  // permanently deferred, which reads as coverage and is not.
+  for (const tier of TIERS) {
+    assert.ok(
+      Object.values(PROFILES).some((tiers) => tiers.includes(tier)),
+      `tier "${tier}" is run by no declared profile`,
+    );
+  }
+});
+
+test('a deferred step never has its precondition read', () => {
+  // Calling skipIf on a step this profile was never going to run reports a
+  // precondition nobody acted on, and on the real gate those predicates touch disk.
+  let asked = false;
+  const { run } = runnerFor({});
+  const list = tiered({ one: 'deep' });
+  list[0].skipIf = () => { asked = true; return true; };
+  list[0].skipNote = 'not this profile';
+
+  const r = runGate(list, run, { profile: 'fast' });
+  assert.equal(r.results[0].status, 'DEFER');
+  assert.equal(asked, false);
+});
+
+// ---------------------------------------------------------------------------
+// Formatting - the only place a human reads any of the above.
+// ---------------------------------------------------------------------------
+
+test('formatDuration reads as a duration at every magnitude', () => {
+  assert.equal(formatDuration(0), '0ms');
+  assert.equal(formatDuration(450), '450ms');
+  assert.equal(formatDuration(12_400), '12.4s');
+  assert.equal(formatDuration(60_000), '1m00s');
+  assert.equal(formatDuration(664_000), '11m04s');
+  assert.equal(formatDuration(90 * 60_000), '90m00s');
+});
+
+test('RED: formatDuration refuses to invent a number it does not have', () => {
+  assert.equal(formatDuration(undefined), 'an unknown bound');
+  assert.equal(formatDuration(NaN), 'an unknown bound');
+  assert.equal(formatDuration(-1), 'an unknown bound');
+});
+
+test('the summary carries the verdict, the name, the time and the note', () => {
+  const { run } = runnerFor({});
+  let t = 0;
+  const r = runGate(tiered({ one: 'fast', two: 'deep' }), run, {
+    profile: 'fast',
+    now: () => (t += 1500),
+  });
+  const lines = formatSummary(r.results);
+
+  assert.match(lines[0], /PASS\s+one/);
+  assert.match(lines[0], /1\.5s/);
+  assert.match(lines[1], /DEFER\s+two/);
+  assert.match(lines[1], /full/);
+});
+
+test('RED: the progress lines name the step, its tier and its bound before it runs', () => {
+  // INC-18: stdout is captured and printed after a step finishes, so a step in
+  // flight left no trace at all. These two lines go to stderr, which is inherited.
+  const step = { name: 'e2e smoke', protects: 'x', tier: 'fast', timeoutMs: 900_000 };
+  const start = formatStepStart({ step, index: 4, total: 21, tier: 'fast' });
+
+  assert.match(start, /\[5\/21\]/);
+  assert.match(start, /e2e smoke/);
+  assert.match(start, /fast/);
+  assert.match(start, /15m00s/);
+});
+
+test('the closing progress line carries the verdict and the real elapsed time', () => {
+  const step = { name: 'mutation', protects: 'x', tier: 'deep' };
+  const end = formatStepEnd({ step, status: 'PASS', elapsedMs: 664_000 });
+
+  assert.match(end, /PASS/);
+  assert.match(end, /mutation/);
+  assert.match(end, /11m04s/);
+});
+
+test('a step with no bound of its own reports the default in its progress line', () => {
+  const step = { name: 'content', protects: 'x', tier: 'fast' };
+  assert.match(formatStepStart({ step, index: 0, total: 1, tier: 'fast' }), /5m00s/);
+});
+
+test('RED: the deferral block names the steps and the profile that runs them', () => {
+  const { run } = runnerFor({});
+  const r = runGate(tiered({ one: 'fast', two: 'deep', three: 'deep' }), run, { profile: 'fast' });
+  const lines = formatDeferrals(r.deferred, r.profile).join('\n');
+
+  assert.match(lines, /2 step\(s\) deferred/);
+  assert.match(lines, /two, three/);
+  assert.match(lines, /"fast"/);
+  assert.match(lines, /--profile full/);
+});
+
+test('a run with nothing deferred prints no deferral block at all', () => {
+  const { run } = runnerFor({});
+  const r = runGate(tiered({ one: 'fast' }), run, { profile: 'full' });
+  assert.deepEqual(formatDeferrals(r.deferred, r.profile), []);
+});
+
+test('RED: the deferral block is built from the run, so it is printable on ANY outcome', () => {
+  // It sat in the CLI's passing branch for an hour, which is wrong in exactly the place
+  // that matters: CI always exits INCOMPLETE, because private/banned-terms.txt is
+  // gitignored by design and the confidentiality step skips there. The one log anybody
+  // audits would have been the one log that never said what this profile skipped. Proven
+  // here by asking for the block on a run that FAILED and on one that is INCOMPLETE.
+  const failing = runnerFor({ one: 1 }).run;
+  const failed = runGate(tiered({ one: 'fast', two: 'deep' }), failing, { profile: 'fast' });
+  assert.equal(failed.exitCode, 1);
+  assert.match(formatDeferrals(failed.deferred, failed.profile).join('\n'), /two/);
+
+  const list = tiered({ one: 'fast', two: 'deep' });
+  list[0].skipIf = () => true;
+  list[0].skipNote = 'precondition absent';
+  const incomplete = runGate(list, runnerFor({}).run, { profile: 'fast' });
+  assert.equal(incomplete.exitCode, 2);
+  assert.match(formatDeferrals(incomplete.deferred, incomplete.profile).join('\n'), /two/);
 });

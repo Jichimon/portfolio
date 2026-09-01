@@ -1,0 +1,45 @@
+id: EC-015
+descends_from: INC-18
+question: "A step that never returns fails by name, instead of consuming the whole run in silence."
+
+input: |
+  A gate step's command blocks forever — a server started in the foreground, a prompt
+  waiting on stdin, a network read with no timeout. The step's own check is fine; the
+  process simply never exits.
+
+environment:
+  - "scripts/gate.mjs declares STEPS, each carrying a tier and, where it differs from the default, a timeoutMs"
+  - "scripts/guards/lib/gate.mjs is the run loop the CLI delegates to"
+
+expected_behavior:
+  - "the step is killed at its declared bound and reported FAIL, with the bound named in the note"
+  - "the run continues: every later step still runs and still reports (the gate does not stop at the first failure)"
+  - "a `>` line naming the step, its tier and its bound is written to stderr BEFORE it runs, so a run cancelled from outside still names the step it died in"
+  - "gate-steps.mjs reports a malformed timeoutMs as a finding — spawnSync silently ignores a non-numeric timeout, so a step declaring a bound it does not have is the same silent failure one level up"
+
+forbidden_behavior:
+  - "a hung step consuming the job budget and leaving nothing to read — three GitHub runs died this way, one at six hours, and produced no diagnosis at all"
+  - "a hung step reported as an ordinary FAIL: `timed out after 15m00s` and `exited 1` are different diagnoses, and reading the exit code of a killed process flattens them into one"
+  - "step output visible only after the step finishes, which is what made a hang indistinguishable from a slow run for three consecutive runs"
+
+required_evidence:
+  - "the step's verdict and note in the gate summary, naming the bound"
+  - "the stderr progress lines for the step in flight"
+  - "the CI run's own result, read from the provider rather than inferred from a green local gate (T-10)"
+
+control: "the `if (timedOut)` branch in evaluate(), scripts/guards/lib/gate.mjs — remove it and a hung, killed step is judged on the exit status of a process that was killed"
+
+proof:
+  file: scripts/guards/lib/gate.test.mjs
+  test: "RED: a step that exceeds its declared time bound fails, naming the bound"
+
+outcome:
+notes: |
+  The incident's own cause — `astro preview` daemonizing only when it detects an AI coding
+  agent — is deliberately NOT what this case tests. That was one vendor's environment
+  sniffing, and a case pinned to it would retire the day the vendor changes the check. What
+  generalizes is the harness's response: any step that stops returning must cost minutes and
+  name itself, rather than costing the run and naming nothing. The cause is recorded in
+  architecture.md section C; this is the control.
+
+retired:

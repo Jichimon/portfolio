@@ -9,15 +9,44 @@ name: harness
 #
 # `check-ci` fails this file if a filter is ever added back.
 #
-# TASK 106: this workflow now runs against a real remote and reports a real result — the
+# ONE WORKFLOW FILE, DELIBERATELY, and it is the same reasoning one level up: `check-docs`
+# validates `.github/workflows/harness.yml` BY NAME. A second workflow file would carry no
+# guard at all — no path-filter check, no gate-parity check, no Node floor — which is
+# INC-08's shape arriving through a filename instead of through a filter. The deep tier is
+# therefore a trigger of this workflow, never a workflow of its own.
+#
+# TASK 106: this workflow runs against a real remote and reports a real result — the
 # INERT-UNTIL-A-REMOTE comment this file carried until 2026-09-01 stopped being true the
-# day TASK 30 pushed. See TASK 106's own entry in TASKS.md for what was actually failing
-# and why (site/ needed its own install, private/ never reaches a runner by design).
+# day TASK 30 pushed.
+#
+# TASK 110 / INC-18: three consecutive runs were cancelled at their job timeout — one at the
+# GitHub default of six hours, two at 90 minutes — and every one of them was read as "the
+# gate is too slow". It was not. `astro preview` decides between a foreground server and a
+# detached daemon by asking whether an AI coding agent is running it (`am-i-vibing`, whose
+# environment list has CLAUDECODE in it and GITHUB_ACTIONS not in it). Locally the gate runs
+# inside an agent, so the preview daemonized and the e2e suite worked; on a runner the same
+# command blocked forever in globalSetup, and the job died having verified nothing. The fix
+# is one flag in site/tests/e2e/preview-lifecycle.ts; the reason it cost three runs to find
+# is that the gate printed nothing while it hung, which TASK 110 also closed.
 
 on:
   push:
   pull_request:
+  # The deep tier: everything the per-push profile defers — the full mutation run over
+  # ~7,900 mutants and the visual-capture matrix. Nightly rather than never, because a
+  # check that only runs when somebody remembers is a check that runs zero times (INC-08),
+  # and on-demand as well, because "wait until tonight" is not an answer when the question
+  # is whether a change is safe to close. 05:00 UTC is 01:00 in the author's timezone.
+  # NOTE: GitHub disables scheduled workflows after 60 days without repository activity.
+  schedule:
+    - cron: '0 5 * * *'
   workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Gate profile to run'
+        type: choice
+        options: [full, fast]
+        default: full
 
 permissions:
   contents: read
@@ -25,22 +54,26 @@ permissions:
 jobs:
   gate:
     runs-on: ubuntu-latest
-    # TASK 107: the first real push (commit 059a7e5) ran for the full GitHub Actions default
-    # of 6 hours and was cancelled with zero diagnostic output — the 'run the gate' step
-    # redirected all output to a file and only printed it after the process exited, so a run
-    # that never exits leaves nothing to read, live or after the fact (fixed below).
+    # The profile is DERIVED from the trigger rather than duplicated into a second job.
+    # Two jobs sharing eight setup steps drift, and nothing in `check-ci` would notice one
+    # of the copies losing a step — the same class of silent divergence this whole file is
+    # organised against.
     #
-    # Root cause, measured rather than guessed: Stryker's default concurrency is
-    # os.availableParallelism() - 1 (its own source, concurrency-token-provider.js in
-    # @stryker-mutator/core). The author's machine reports 12 cores -> concurrency 11;
-    # GitHub's standard ubuntu-latest runner reports 2 -> concurrency 2. A 5x drop in
-    # parallel test-runner processes, on generally slower shared cloud cores, plausibly turns
-    # a ~10-11min local cold mutation run into hours rather than minutes — not a hang.
-    #
-    # 90 is a provisional bound, not a measured one. This run is the first with output
-    # actually visible (see the streaming fix below); its real timing is what should set this
-    # number honestly on the next pass, instead of guessing twice.
-    timeout-minutes: 90
+    # `github.event.inputs.profile`, NOT `inputs.profile`. The `inputs` context is only
+    # available to manually-triggered and reusable workflows, so on a push it is not merely
+    # empty — the expression can fail to parse, which fails the run before a single step
+    # executes. The event-payload spelling is null on a push and is read by the `||` chain
+    # as such. A workflow that cannot start is a worse failure than the one this file is
+    # being edited to fix.
+    env:
+      GATE_PROFILE: ${{ (github.event_name == 'schedule' && 'full') || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile) || 'fast' }}
+    # A backstop, not the real bound. The real bound is per-step and lives in
+    # scripts/gate.mjs's STEPS array (TASK 110), where a hung step fails by name in minutes
+    # instead of consuming the job's whole budget in silence. These two numbers are CHOSEN,
+    # not measured (C-01): the first runs under the new per-step timing are what correct
+    # them. If the expression ever fails to evaluate, replace it with the larger constant —
+    # losing the tight fast bound costs a slower failure, and nothing else.
+    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 150 || 25 }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -63,11 +96,14 @@ jobs:
             package-lock.json
             site/package-lock.json
 
-      # The mutation step (TASK 15) runs Stryker from the root node_modules. Without an install
-      # here its skipIf fires and the step is skipped — and a SKIP still exits 0, which
-      # is INC-08's shape: a check that exists in CI and runs exactly zero times, invisibly.
+      # The mutation step (TASK 15) runs Stryker from the root node_modules. It is deferred
+      # on a push (TASK 111) rather than skipped — a DEFER is a decision this file makes and
+      # the gate prints by name, while a SKIP would be the step's own precondition missing.
+      # The install stays unconditional so the two profiles run against identical trees: a
+      # setup step that only happens sometimes is a difference nobody remembers when the
+      # nightly run fails and the push run did not.
       # `npm ci` rather than `npm install`, because the root lockfile is committed for exactly
-      # this. It costs ~30s and the mutation run costs ~2.5min; that is the price of CI parity.
+      # this.
       - run: npm ci
 
       # site/ is its own package, not an npm workspace — `npm ci` at the root never touches
@@ -95,14 +131,15 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
 
-      # e2e smoke drives a real browser engine against the built site (T-02) — Chromium only
+      # e2e drives a real browser engine against the built site (T-02) — Chromium only
       # as of TASK 108 (ADR-006, 2026-09-01); still a real build, never a mock. `npm ci`
       # installs the @playwright/test package, never the browser binaries themselves — those
       # are a separate download this repository's dev machine already has and a fresh runner
-      # does not. `--with-deps` also apt-get installs OS-level dependencies, which a browser
-      # cache hit does not need repeated — install-deps alone covers that path so a cache hit
-      # still gets the plain `playwright install` skipped without silently missing OS deps
-      # on a runner image that changed under it.
+      # does not. Needed in BOTH profiles: `e2e smoke` is a fast-tier step. `--with-deps`
+      # also apt-get installs OS-level dependencies, which a browser cache hit does not need
+      # repeated — install-deps alone covers that path so a cache hit still gets the plain
+      # `playwright install` skipped without silently missing OS deps on a runner image that
+      # changed under it.
       - name: install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
@@ -113,13 +150,15 @@ jobs:
         run: npx playwright install-deps
         working-directory: site
 
-      # Spike, 2026-09-01: restores the mutation step's incremental cache (stryker.config.mjs)
-      # from the most recent prior run via the restore-keys prefix — CI has no working
-      # directory that survives between runs, so without this the incremental setting there
-      # does nothing here. Read-only: a miss just means the mutation step runs cold, same as
-      # today. NOT YET the basis for the ratchet (T-03) — see stryker.config.mjs's own note on
-      # what still needs proving before it is.
+      # Restores the mutation step's incremental cache (stryker.config.mjs) from the most
+      # recent prior deep run via the restore-keys prefix — CI has no working directory that
+      # survives between runs, so without this the incremental setting there does nothing
+      # here. Only on the profile that actually runs mutation: on a push the step is
+      # deferred, and restoring a cache for a step that will not run is noise in the log.
+      # Read-only: a miss just means the mutation step runs cold. NOT YET the basis for the
+      # ratchet (T-03) — see stryker.config.mjs's own note on what still needs proving.
       - name: restore Stryker incremental cache
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: actions/cache/restore@v6
         with:
           path: .stryker-tmp/incremental.json
@@ -131,28 +170,41 @@ jobs:
       # the gate's steps: a step added to the gate would then be silently absent from CI,
       # and the local run would verify more than CI does.
       #
+      # THE PROFILE IS PASSED EXPLICITLY, never left to the default. `fast` is what a bare
+      # `node scripts/gate.mjs` runs, so the push job could have omitted the flag — writing
+      # it out means the Actions log states which profile produced the verdict, and a reader
+      # of a green run never has to infer what "green" covered. The gate's own headline says
+      # it too, and names every deferred step.
+      #
       # The verdict is read rather than assumed. gate.mjs exits 0 PASSED, 1 FAILED, 2
-      # INCOMPLETE (one or more steps SKIPPED rather than run). private/banned-terms.txt is
-      # gitignored and never reaches this runner by design (H-04) — the confidentiality check
-      # runs only on a machine that holds the mapping — so the 'confidentiality' step is the
-      # one step this workflow expects to see skipped. An INCOMPLETE run is accepted ONLY when
-      # that is the single skip; any other skip, or a skip alongside a real failure, still
-      # fails the job. A silently-accepted arbitrary skip is INC-08's exact shape, so this
-      # gate is a property of the summary, not a blanket "exit code 2 is fine".
+      # INCOMPLETE (one or more steps SKIPPED rather than run). A DEFER is none of those: it
+      # is a step this profile does not run, printed by name, and it does not move the exit
+      # code — the heavy tier runs nightly, and the log says so on every push.
+      # private/banned-terms.txt is gitignored and never reaches this runner by design (H-04)
+      # — the confidentiality check runs only on a machine that holds the mapping — so the
+      # 'confidentiality' step is the one step this workflow expects to see skipped. An
+      # INCOMPLETE run is accepted ONLY when that is the single skip; any other skip, or a
+      # skip alongside a real failure, still fails the job. A silently-accepted arbitrary
+      # skip is INC-08's exact shape, so this gate is a property of the summary, not a
+      # blanket "exit code 2 is fine".
       # STREAMED THROUGH `tee`, not redirected-then-`cat`-ed at the end (TASK 107, corrected
       # after the first real run went 6 hours with an empty log). `node scripts/gate.mjs >
       # gate.log 2>&1` buffers everything until the process exits, so a merely-slow run shows
       # nothing in the live Actions log, and a cancelled or timed-out run leaves nothing to
       # read post-mortem either. `${PIPESTATUS[0]}` reads node's own exit code rather than
       # tee's, which always succeeds — a plain `$?` after a pipe would read the wrong process.
+      # TASK 110 added the other half that was missing: the gate writes a `>` line before each
+      # step and a `<` line after it, to STDERR, which is inherited rather than captured. A
+      # run cancelled mid-step now names the step it died in — the 89 minutes of silence that
+      # produced no diagnosis at all is what motivated it.
       - name: run the gate
         run: |
           set +e
-          node scripts/gate.mjs 2>&1 | tee gate.log
+          node scripts/gate.mjs --profile "$GATE_PROFILE" 2>&1 | tee gate.log
           code=${PIPESTATUS[0]}
           set -e
           if [ "$code" -eq 2 ]; then
-            # The count comes from the "GATE INCOMPLETE — N of 20..." header line, not from
+            # The count comes from the "GATE INCOMPLETE — N of 22..." header line, not from
             # counting SKIP lines directly: gate.mjs prints each skipped step TWICE — once in
             # the padded summary table, once in the incomplete-detail block below it — and a
             # plain `grep -c '^  SKIP  '` counts both, silently doubling every real count.
@@ -168,12 +220,15 @@ jobs:
           fi
           exit $code
 
-      # Saved unconditionally (`if: always()`), keyed on the run id so every run writes a new
-      # entry rather than fighting the immutable-key restriction on an existing one — a red
-      # gate still keeps whatever mutants that run resolved, so the next run's restore step
-      # starts from THIS run's progress rather than the last green one's. Spike, 2026-09-01.
+      # Saved unconditionally within the deep profile (`if: always()`), keyed on the run id so
+      # every run writes a new entry rather than fighting the immutable-key restriction on an
+      # existing one — a red gate still keeps whatever mutants that run resolved, so the next
+      # deep run's restore step starts from THIS run's progress rather than the last green
+      # one's. Skipped entirely on a push, where the mutation step is deferred and the file
+      # this saves would not exist (that mismatch is what produced a `Path Validation Error`
+      # warning on every run before TASK 111).
       - name: save Stryker incremental cache
-        if: always()
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         uses: actions/cache/save@v6
         with:
           path: .stryker-tmp/incremental.json

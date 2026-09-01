@@ -1105,6 +1105,8 @@ This is `INC-15`'s family in a second place. `INC-15` was the same collision ins
 
 **The "depends on `TASK 106`" constraint fired exactly as written, and badly.** `TASK 106`'s own push (`059a7e5`, before this item's caching/incremental changes existed) ran the workflow for the **full 6-hour GitHub Actions default and was cancelled — with an empty log.** `node scripts/gate.mjs > gate.log 2>&1` buffers everything until the process exits, so a run that never exits inside the timeout leaves nothing to read, live or after the fact — a real gap, found the expensive way rather than reviewed for it beforehand.
 
+**CORRECTED 2026-09-01 by `TASK 110`, and the correction is the point (`P-04`).** The paragraph below root-causes the six-hour run as a *compute-bound cost, not a hang*. It was a hang: `astro preview` blocks in the foreground on a runner, because it daemonizes only when it detects an AI coding agent in the environment, and `e2e smoke` therefore ran zero tests in all three cancelled runs while `mutation` never started. The concurrency arithmetic below is accurate and remains the reason mutation cannot sit on the per-push path (`TASK 111`); what it was not is the cause of the cancelled runs. **The caching work this item shipped stands and is unaffected.** Recorded here rather than rewritten away, because a wrong cause deleted is a wrong cause the next session re-derives.
+
 **Root-caused, not guessed, before spending a second 6-hour run to find out.** Stryker's own source (`concurrency-token-provider.js`) defaults concurrency to `os.availableParallelism() - 1`. The author's machine: 12 cores → concurrency 11. GitHub's standard `ubuntu-latest` runner: 2 cores → concurrency 2 — a >5x drop in parallel test-runner processes, compounding with generally slower shared cloud cores. That gap alone plausibly turns a ~10–11min local cold mutation run into multiple hours, which is a **compute-bound cost**, not a hang. Two fixes landed on top of the caching work above, both required before another real CI run is worth spending:
 - **`run the gate` streams through `tee` instead of redirecting and `cat`-ing at the end.** `${PIPESTATUS[0]}` reads node's own exit code rather than `tee`'s (which always succeeds) — a plain `$?` after a pipe would read the wrong process. Verified: `bash -c '(exit 7) | tee /dev/null; echo ${PIPESTATUS[0]}'` reads `7`.
 - **The job gains `timeout-minutes: 90`**, stated in the workflow as provisional rather than measured — GitHub Actions has no default escape short of its own 6-hour ceiling, and hitting that ceiling blind is itself uninformative. 90 minutes is a bound to fail loud and fast on; the next real run's live-streamed timing is what should set this number honestly, not a second guess.
@@ -3030,7 +3032,7 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 
 | Serves | Items | Note |
 |---|---|---|
-| **Goal 1 — publish** | `TASK 30` · `TASK 32` · `TASK 28` · `TASK 29` | **71 items are closed and nobody can see any of it.** Goal 1 has no delivered value until this ships |
+| **Goal 1 — publish** | `TASK 110` · `TASK 111` · `TASK 30` · `TASK 32` · `TASK 28` · `TASK 29` | **71 items are closed and nobody can see any of it.** Goal 1 has no delivered value until this ships. **`TASK 110` and `TASK 111` are first as of 2026-09-01**: CI cannot go green at all until the e2e hang is fixed, and cannot finish in a sane budget until the heavy tiers leave the per-push path — and `TASK 30`'s own `Done` is a green run on the remote |
 | **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 104` · `TASK 27` | The pages a reader actually judges |
 | **Goal 1 — credibility** | ~~`TASK 94`~~ **`DONE` 2026-08-31** · ~~`TASK 101`~~ **`DONE` 2026-09-01** | `TASK 94` **retired the bypass series** by stating the residual instead of chasing it — the cheapest high-leverage item on the board, and it closed without opening a single item in the surface it documents. `TASK 101` decided the exhibit is `README.md` only and rewrote it |
 | **Goal 2 — the deliverable** | `TASK 9` (blocked) · `TASK 100` (the unblocker) | `TASK 9`'s own trigger is *the first `EVAL` with a real, non-harness workload*, and nothing was advancing it. `TASK 100` is that workload |
@@ -3077,6 +3079,46 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 **Deliberately not built yet, and the reason is `P-19` itself.** Building it now means editing 26 existing entries to add a marker, to enforce a rule that has existed for one day and has been applied exactly once — ceremony bought before the judgment has been shown to fail. **Trigger:** a second drift of the shape `INC-17` describes, or the register passing ~40 open items, whichever comes first.
 
 **Done:** when triggered — a goal marker in the heading grammar, `check-status-history` asserting it as a property rather than a roster (`P-13`), and `P-19`'s rung updated to 2 with the claim made honest (`G-11`).
+
+## TASK 110 — `e2e smoke` hangs in CI; the gate reports nothing while it does · `bugfix` · `TODO`
+
+**Opened 2026-09-01**, after a third consecutive GitHub Actions run was cancelled at its timeout. Two sessions had already acted on this symptom — `TASK 107` added caching and a 90-minute bound on a root cause it stated as *"a compute-bound cost, not a hang"*, `TASK 108` cut the e2e tier from three browser engines to one — and **neither moved the wall time at all**. Both runs died at exactly 90 minutes. A 3× reduction that changes nothing was never fixing what was wrong, and that is the tell this item started from.
+
+**Root cause, read from the run rather than reasoned about (`P-04`).** `astro preview` runs in the **foreground** unless `--background` is passed *or* it detects an AI coding agent in the environment (`isRunByAgent()`, backed by `am-i-vibing`, whose variable list contains `CLAUDECODE` and does not contain `GITHUB_ACTIONS`). The author's gate runs inside an agent, so the preview daemonized, `execFileSync` returned, and the suite passed — locally, every time, for weeks. On a runner the same line blocks forever: `globalSetup` never returns, zero tests run, nothing is printed. The last cancelled run's own cleanup named it, one screen below where anyone had looked: `Terminate orphan process: (6262) (npm exec astro preview)`.
+
+**The second failure, which is why it took three runs.** `gate.mjs` captured each step's stdout and printed it when the step **finished**, so a step that never finished printed nothing — 89 minutes of empty log. A hang and a slow run are indistinguishable when the instrument only reports at the end. `INC-18` is both halves.
+
+**Deliverable:** `site/tests/e2e/preview-lifecycle.ts` asks for the daemon explicitly; every gate step carries a time bound and a hung step FAILS naming it; the gate writes a progress line per step to **stderr**, which is inherited rather than captured, so a cancelled run names the step it died in.
+
+**Proven in red before the fix and green after, with the CI condition reproduced locally** — `env -u CLAUDECODE node node_modules/@playwright/test/cli.js test`: killed at the 180s bound having run no test, failing at `preview-lifecycle.ts:16` inside `globalSetup`; after the fix, **171 passed in 51.7s** under the identical environment. The three new mechanisms were each neutered and their batteries re-run: the timeout branch, the progress lines and the malformed-bound check all fail red and pass restored (`P-14`).
+
+**Done:** a real `harness.yml` run on a push **passes `e2e smoke`** and reaches the end of the gate, with per-step timing visible in the Actions log. Read from `gh run view`, never inferred from a green local gate (`T-10`). A failure there for some other reason is a new finding, recorded rather than folded into this one.
+
+**Constraints**
+- **`TASK 107`'s diagnosis is corrected in place, not deleted.** Its caching work is real and stands; its root cause was wrong, and a wrong cause left in the register is one the next session re-derives.
+- The bounds are **chosen, not measured** (`C-01`). The first CI run with per-step timing is what corrects them.
+
+---
+
+## TASK 111 — Gate profiles: the heavy tiers leave the per-push path · `harness` · `TODO`
+
+**Opened 2026-09-01**, from the author's own framing: the CI run has to finish, or nothing ships, and *"ningún extremo es positivo"*. `TASK 110` fixes the hang; this item answers the cost that is still there once it is fixed. Stryker's default concurrency is `os.availableParallelism() - 1` — 11 on the author's machine, **2** on a standard runner — across ~7,900 mutants. The local cold run measures ~10–11 minutes; **no CI run has ever produced a number**, because the hang sat in front of it every time.
+
+**Serves goal 1 first, goal 2 second.** Seventy-one items are closed and nobody can see any of it (`TASK 30`, `TASK 32`); a gate that cannot go green on a push is what stands between the repository and its own audience. The harness half is that the mechanism is one an export can carry.
+
+**Deliverable:** every step in `scripts/gate.mjs` declares a `tier`; `runGate` takes a profile and reports a step outside it as **`DEFER`** — a fourth verdict, deliberately not a `SKIP`. `fast` (the bare command, and every push) runs everything except the mutation run and the visual-capture matrix; `full` (`--profile full`) runs everything, nightly in CI, on demand, and in the local run that closes a work item. The e2e tier splits by tag rather than by file: 69 tests on a push, 102 tagged `@deep` in the full profile — 69 + 102 = 171, checked rather than assumed.
+
+**What this is not, stated because it is the whole risk.** Nothing left the `mutate` glob, the floor did not move (`break: 77.0`), and no test was deleted. This is **cadence, not coverage**. Three mechanisms keep that honest rather than aspirational: a deferral is printed by name with the profile that runs it, the headline reads `GATE PASSED (profile: fast)` and never a bare `GATE PASSED`, and `wrap-up` requires `--profile full` to close an item. If any of the three is lost, this becomes a gate that verifies less while saying the same thing — which is exactly the failure `runGate`'s own header records the harness making once before.
+
+**The concern raised and accepted, once (`P-17`).** Making `fast` the default changes what "the gate passed" means, and the author chose that trade deliberately after being shown it. The residual is real and belongs in the record rather than in a footnote: between a push and the next nightly run, a mutation regression is not caught by CI.
+
+**Done:** a push run reports `GATE PASSED (profile: fast)` with both deferrals named, **and** a manual `gh workflow run harness.yml -f profile=full` completes the full profile inside its bound. Two real runs read, neither inferred from the other. If the full run does not fit, the number is recorded and the decision is taken on it — a larger runner, a validated incremental cache, or a different cadence — never a lowered floor.
+
+**Constraints**
+- **One workflow file.** `check-docs` validates `.github/workflows/harness.yml` by name; a second file would carry no guard at all, which is `INC-08` arriving through a filename instead of a filter.
+- The deep tier runs on a `schedule`, and **GitHub disables scheduled workflows after 60 days of repository inactivity** — recorded so a silently-stopped nightly is recognized rather than discovered.
+
+---
 
 ## Deliberately out of scope
 

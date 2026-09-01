@@ -24,7 +24,7 @@ Done is the **conjunction of every applicable dimension**, each carrying a statu
 ```yaml
 done:
   tests:      { status: passed,         evidence: ["node --test scripts/guards/**/*.test.mjs", "247 pass 0 fail"] }
-  gate:       { status: passed,         evidence: ["node scripts/gate.mjs", "exit:0, 9 steps green"] }
+  gate:       { status: passed,         evidence: ["node scripts/gate.mjs --profile full", "exit:0, 22 steps, 0 deferred"] }
   content:    { status: passed,         evidence: ["check-terms.mjs", "exit:0"] }
   docs:       { status: passed,         evidence: ["contracts.md enforcement table", "TASKS.md step 9"] }
   ci:         { status: not_applicable, reason: "no remote exists" }
@@ -49,8 +49,10 @@ Run the gate. `check-procedures` fails any dated log whose `done` block reads `p
 One consequence worth knowing before it surprises you: **a log opened as a skeleton, per `P-09`, fails this check until its block is filled.** That is the correct behaviour and not a reason to delay opening the log — an empty `done:` is an empty conjunction, which is true of everything.
 
 ```
-node scripts/gate.mjs
+node scripts/gate.mjs --profile full
 ```
+
+**The full profile, not the bare command, and the distinction is load-bearing** (`TASK 111`). A bare `node scripts/gate.mjs` runs the `fast` profile: it defers the mutation run and the visual-capture matrix, prints both by name, and says so in its own headline. That is the right default for the inner loop and for a push, and it is the wrong evidence for closing a work item — `gate: { status: passed }` against a fast run is a claim about less than the reader will assume. If you record a fast run anyway, record the profile in the evidence string, so nobody has to infer it.
 
 If the gate cannot pass, say so and name the step. `gate: { status: blocked, ... }` with the reason is a true report; omitting the dimension is not.
 
