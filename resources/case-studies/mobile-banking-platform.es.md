@@ -9,7 +9,7 @@ context: "Banco regulado · Latinoamérica"
 period: "2023–2025"
 scale: "+1M"
 scale_caption: "usuarios activos"
-stack: [".NET",  "Flutter", "Android", "iOS", "AWS", "SNS/SQS", "Postgres", "SQL Server", "RabbitMq", "BIAN", "Firebase"]
+stack: [".NET",  "Flutter", "Android", "iOS", "AWS", "SNS/SQS", "Postgres", "SQL Server", "RabbitMq", "MassTransit", "BIAN", "Firebase", "Azure DevOps", "Application Insights"]
 skills: [sistemas-distribuidos, integracion-legacy, diseño-de-apis, mensajeria-asincrona, entornos-regulados, micro-servicios, clean-architecture, DDD]
 featured: true
 order: 1
@@ -47,6 +47,12 @@ Sin nombres internos de servicios.
 **Confirmación asincrónica.** Las confirmaciones de las entradas y salidas de transacciones se publican en topics de SNS y se encolan en SQS de cada canal. El cliente móvil recibe la notificación de transacción entrante o saliente al toque. Eso es lo que bajó la percepción de cada transacción end-to-end de 5-7 segundos a 1–3 segundos.
 
 **Servicio on-premise para datos restringidos.** Un servicio dedicado guarda los datos de usuario que la normativa no permite alojar en la nube. Los servicios cloud guardan referencias, no el dato. Todo el sistema legacy del banco también se encuentra on-premise.
+
+## Despliegue en Nube
+
+Toda la infrastructura se encontraba hosteada en AWS. Cada equipo manejaba sus propias EKS, donde según la carga que recibía cada "pod" se podían escalar horizontalmente hasta 5 de ellos. y si la carga bajaba, se mantenía funcionando 1 o 2 dependiendo del servicio. Cada servicio tenía sus propias especificaciones acorde a la carga que debía soportar verticalmente.
+
+Todo se controlaba a través de terraform. Los despliegues eran realizados a través de AzureDevOps. Usando Azure Application Insights para observabilidad.
 
 ## Servicios que diseñé y mantuve
 

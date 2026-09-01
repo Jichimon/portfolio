@@ -8,7 +8,7 @@ role: "Systems Analyst & Lead Developer"
 context: "Agro-industrial holding · multiple plants nationwide"
 period: "2022–2023"
 outcome: "Production across multiple companies, thousands of employees"
-stack: [".NET", "Entity Framework", "Angular", "biometric terminals", "C4 model"]
+stack: [".NET", "Entity Framework", "Angular", "Android", "Java", "Kotlin", "biometric terminals", "C4 model"]
 skills: [multi-tenancy, systems-integration, architecture-documentation, modular-monolith]
 featured: false
 order: 5
@@ -17,14 +17,9 @@ confidentiality: sanitized
 
 ## Context
 
-An agro-industrial holding operating several companies and industrial plants across
-the country needed employees to mark attendance and access HR information from their
-phones. Until then, attendance meant a biometric terminal at the plant gate, and any
-HR query meant a trip to an office.
+An agro-industrial holding operating several companies and industrial plants across the country needed employees to mark attendance and access HR information from their phones. Until then, attendance meant a biometric terminal at the plant gate, and checking whether a punch had actually registered meant waiting for HR's monthly report.
 
-I designed and led the implementation of the platform that connects those three
-worlds: biometric hardware on the plant floor, a third-party HR system, and a mobile
-app in the employee's hand.
+I designed and led the implementation of the platform that connects those three worlds: biometric hardware on the plant floor, a third-party HR system, and a mobile app in the employee's hand.
 
 ## Problem
 
@@ -41,16 +36,16 @@ Build an attendance and HR self-service platform that:
 
 ## Constraints
 
-- The biometric terminals were already deployed and could not be replaced.
-- The HR system was third-party and could not be modified — only integrated with.
+- The biometric terminals were already deployed and could not be replaced. Those models only shipped an integration for .NET Framework 4.7.2.
+- The HR system was third-party and could not be modified, only integrated with.
 - Tenant isolation was a contractual requirement from the client, not a technical
   preference.
-- Small team, single operations capability. Whatever we built, we had to run.
+- A team of four, single operations capability. Whatever we built, we had to maintain.
 
 :::diagram{id="attendance-c4-context" type="c4-context"}
 System context: employees and HR administrators, the mobile app, the platform, the
 biometric terminals and the third-party HR system.
-Spec: existing C4 context diagram — sanitise vendor and company names before publishing.
+Spec: existing C4 context diagram: sanitise vendor and company names before publishing.
 :::
 
 ## Approach
@@ -58,17 +53,11 @@ Spec: existing C4 context diagram — sanitise vendor and company names before p
 ### Modular monolith, with microservice-shaped boundaries
 
 The obvious 2022 answer was microservices. I chose a modular monolith instead, and
-documented the module boundaries with C4 diagrams as though they were services —
-so that extraction later would be a deployment change rather than a redesign.
+documented the module boundaries with C4 diagrams as though they were services, so that extraction later would be a deployment change rather than a redesign.
 
-Reasoning: a small team, a single deployment target, and a tenant count in the tens
-rather than the thousands. Microservices would have bought independent scaling we did
-not need, at the cost of operational complexity we could not staff. The boundaries
-were the valuable part; distributing them was not.
+Reasoning: a small team, a single deployment target, and fewer than 15 tenants for the first launch. Microservices would have caused us more problems than benefits. To name one: independent scaling we did not need, at the cost of operational complexity we could not staff with the people we had. The module boundaries were the valuable part; distributing them was not.
 
-The modules: organisational data, identity and access, attendance, and internal
-communications — each with its own domain, its own persistence access, and an
-explicit contract to the others.
+The modules: organisational data, identity and access, attendance, and internal communications. Each with its own domain, its own persistence access, and an explicit contract to the others. A vertical-slice approach, ambitious for a technology that tempts you toward horizontal slices and solution-wide clean architecture. Here I pushed clean architecture down into each module. If you ask me, it was too ambitious, and that is why it took us so long. Over time I learned to be more pragmatic.
 
 :::diagram{id="attendance-c4-container" type="c4-container"}
 Container view of the platform: mobile app, admin panel, API modules and the shared
@@ -89,20 +78,15 @@ from the system database (configuration and cross-tenant data), with every row
 scoped by tenant id and the connection resolved at request time. The design also
 included a path for a tenant to opt into its own dedicated database instead of the
 shared one, for a client whose contract demanded stronger isolation. That path was
-never built — all 14 tenants at handover ran on the shared database.
+never built: all 14 tenants at handover ran on the shared database.
 
-**The trade-off:** a shared database is far cheaper to operate — one migration
-target, one thing to patch, one thing to monitor — at the cost of a weaker isolation
-guarantee than physical separation gives. It was a reasonable bet given that every
-tenant's actual contract was satisfied by it. What was not free was designing and
-carrying the dedicated-database escape hatch in the data-access layer for a
-requirement no client ever exercised — that is a cost I paid for optionality I never
-used.
+**The trade-off:** a shared database is always cheaper to operate: one migration target, one thing to patch and monitor. All fine, but at the cost of a weaker isolation guarantee than physical separation gives. It was a reasonable bet, since every client was satisfied by it anyway (they were the holding's own companies, so there was not much of a problem there).
+What was not free was designing and implementing the dedicated-database escape hatch in the data-access layer for a requirement no client ever used. A high price to pay for building something that was not going to be used any time soon, purely to save future work that was uncertain anyway.
 
 ### Integration in two directions
 
 The biometric terminals were first integrated with the HR system directly, and then
-brought into the platform's own APIs — a staged approach that let attendance keep
+brought into the platform's own APIs, a staged approach that let attendance keep
 working through the transition rather than requiring a cutover at every plant
 simultaneously.
 
@@ -114,9 +98,9 @@ while the platform owns the employee-facing experience.
 
 - **14 tenants in production** across the holding at handover.
 - Remote attendance marking and HR self-service for thousands of employees.
-- **~30% reduction in HR administrative workload** — queries that previously
+- **~30% reduction in HR administrative workload**, queries that previously
   required an office visit became self-service.
-- Architecture positioned for a future SaaS offering — though the shared-database
+- Architecture positioned for a future SaaS offering: although the shared-database
   model would need the dedicated-per-tenant path actually built before that story
   holds up outside the holding.
 

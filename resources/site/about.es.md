@@ -2,7 +2,7 @@
 slug: about
 lang: es
 type: page
-title: "Luis Octavio Antelo — Sobre mí"
+title: "Luis Octavio Antelo · Sobre mí"
 confidentiality: sanitized
 h1: "Entender la esencia de las personas te permite amarlas, entender la esencia de un sistema, te permite mejorarlo."
 lead: ""
@@ -11,7 +11,7 @@ reads_as: "INTJ-A"
 photos:
   - file: "Huayna-Potosi-landscape.jpg"
     slot: break
-    alt: "El Huayna Potosí visto desde el altiplano — su cara nevada bajo nubes de tormenta, y un refugio de techo rojo al pie de la ladera que da la escala."
+    alt: "El Huayna Potosí visto desde el altiplano: su cara nevada bajo nubes de tormenta, y un refugio de techo rojo al pie de la ladera que da la escala."
     caption: "Huayna Potosí, 6.088 msnm. (yala)."
   - file: "me-profile.jpeg"
     slot: pair
@@ -26,7 +26,7 @@ photos:
 Comencé mi carrera laboral como trainee en una empresa industrial, resolviendo problemas de integración entre sistemas legacy, integridad de datos en procesos "sucios" y largos, disponibilidad 24/7 y una adicción a la cafeína que... (otro rato les cuento de eso).
 **Para resolver realmente un problema, hay que entenderlo.**
 Ese ha sido mi aprendizaje más valioso desde que era peladingo. Y vaya que me ha servido. Me ayudó a enfrentarme con mis primeras conversaciones reales de traducción técnica de lo que necesitaba un usuario de fábrica, un asistente de RRHH, gerencia... me tocó hablar con todingos. Y gracias a eso, pude diseñarles y entregarles un sistema que realmente les impactó en su productividad, su tiempo y sobre todo sus resultados.
-Gracias a mi imparable curiosidad y ganas de hacer las cosas bien, he pasado de trainee a ser dueño de arquitecturas de las que hoy dependen cientos de miles de personas. Porque una cosa es desarrollar, y otra cosa es realmente entender el negocio en el que estás y traducir problemas a soluciones reales bajo criterios específicos.
+Gracias a mi imparable curiosidad y ganas de hacer las cosas bien, he pasado de trainee a ser dueño de arquitecturas de las que hoy dependen millones de personas. Porque una cosa es desarrollar, y otra cosa es realmente entender el negocio en el que estás y traducir problemas a soluciones reales bajo criterios específicos.
 
 **El criterio se forja tomando decisiones con consecuencias reales.** Se requiere valentía para salir al frente a equivocarse, y mucho más coraje enmendar tus errores. El criterio te enseña a preguntar antes las preguntas que después te muerden. Un título, no.
 

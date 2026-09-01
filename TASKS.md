@@ -1047,7 +1047,11 @@ This is `INC-15`'s family in a second place. `INC-15` was the same collision ins
 
 **Moved from position 1 to position 11 on 2026-08-23**, when the backlog was re-cut local-first. Nothing downstream of this item is needed to reach a presentable `localhost`, and the author judges the site before publishing it. The constraint below that mattered most gets *more* true as a result, not less: by the time this runs, the working tree additionally carries all of `site/`, so there is more to review in the first diff, not less.
 
-**Blocked by `TASK 76` as of 2026-08-28.** The Spanish was rewritten across three pages and the English was not. Publishing now makes a bilingual portfolio that contradicts itself public, in the locale most of the target audience reads. That is not a thing to fix after the first push.
+**~~Blocked by `TASK 76` as of 2026-08-28.~~ Unblocked 2026-08-31.** The Spanish had been rewritten across three pages, and later across all five case studies, while the English was not. Publishing then would have made a bilingual portfolio that contradicts itself public, in the locale most of the target audience reads, which is not a thing to fix after the first push. `TASK 76` closed on 2026-08-31: both locales now say the same thing, verified file by file rather than asserted.
+
+**The one thing flagged to weigh before pushing is resolved.** `TASK 104` held six content questions the rewrite left open, plus two minors and a seventh gap found along the way. All closed 2026-09-01, applied to `resources/**` and verified against the tree (`check-content`, `check-terms` both PASS) — see its own entry. No longer a consideration for this item.
+
+**And one thing that is closer to a blocker than it looks: `TASK 69`.** This item's own §*What CI does* has `.github/workflows/harness.yml` running the gate on push. As of 2026-08-31 the gate's `e2e smoke` step failed **2 of 2** runs on a clean tree while the same suite passed **2 of 2** standalone. Whatever the mechanism turns out to be, a repository whose first CI run goes red is a repository showing a red badge to the audience it was published for. Either `TASK 69` lands first, or the push happens with the workflow's trigger narrowed deliberately and that decision recorded here. **2026-08-31, later the same day: eight further controlled attempts (including the real, unmodified `node scripts/gate.mjs`) all passed cleanly, under heavier load than either real failure was measured under** — see `TASK 69`'s own entry. The mechanism is still unnamed, so `TASK 69` is not closed and this is not resolved to zero risk. But GitHub Actions runs on a dedicated runner with no concurrent human/editor activity, which is structurally closer to today's 8/8-clean isolated conditions than to the one session that produced both known failures — evidence toward lower CI risk than this note originally assumed, weighed here rather than acted on unilaterally. The choice of whether to land `TASK 69` first, narrow the workflow trigger, or accept the residual risk and push is still the author's call. **2026-09-01: decided.** The author accepted the residual risk and chose to proceed with `TASK 30` rather than hold it on `TASK 69`, on the strength of the evidence above. `TASK 69` stays open, deprioritized rather than closed — see its own entry — and is not being carried as a blocker on this item anymore.
 
 **Deliverable:** the repository public on GitHub, `main` tracking the remote.
 
@@ -2059,6 +2063,65 @@ The third line is as load-bearing as the first: the collector is **scoped, not r
 
 Detail: `progress/2026-08-31-02-task89-component-tier-cache.md`.
 
+## TASK 104 — Six content questions the bilingual rewrite left open · `content` · `DONE` · **goal 1** · before `TASK 30` publishes
+
+**Opened 2026-08-31 by `TASK 76`, which produced them rather than inherited them.** `TASK 76` matched the English to the rewritten Spanish in substance, which is what it promised. Along the way it found six things the Spanish rewrite left ambiguous or self-contradicting, and **filling any of them with the reading that sounds better would have been `C-01`'s exact failure**, so they were carried out of the item instead of decided inside it.
+
+**Why this serves a goal and is not audit residue (`P-19`).** Two of the six are a published page contradicting itself, in a locale most of the target audience reads, on a page `TASK 30` is about to make public. The other four are `C-04` traceability: a claim whose source nobody can name. The adversary who notices is an interviewer reading the case study.
+
+**Each needs the author, not an agent.** No agent may write `resources/**` (`H-02`), and four of the six are facts only the author holds (`C-04`).
+
+| # | Question | Where | Why it matters |
+|---|---|---|---|
+| 1 | MassTransit or RabbitMq? | `experience.es.md` keeps `MassTransit`; `mobile-banking-platform.es.md` dropped it and added `RabbitMq`; the Spanish prose names RabbitMQ. `profile-README.md`'s career-wide stack still lists MassTransit **and** Polly | Three files, three answers. English mirrors each file as it stands, so it inherits the disagreement |
+| 2 | **A page contradicting itself.** `qr-collections-for-merchants.es.md` says the delegate holds *"un QR genérico de cobro"*, and two paragraphs later the design principle still says *"una única capacidad revocable, de un solo uso"* | Spanish only; the English dropped *single-use* from the principle | `C-02`. The security argument of that section rests on which one is true |
+| 3 | **A sentence that reads as unfinished.** *"un enfoque vertical ambicioso en una tecnología que te seduce con slices horizontales"* | `multi-tenant-biometric-attendance.es.md`, end of the modules paragraph | It has **no English counterpart**, deliberately: rendering it meant inventing the missing half (`C-01`). Locale parity is open until it is answered or removed |
+| 4 | Does a QR delegate read the transaction history of the QR they generated? | Both locales now say yes; both previously said *no transaction history* | `C-04`. The change was made in the Spanish rewrite and the English followed it |
+| 5 | The OTP constraint that was swapped. The Spanish removed *"equipo chico, capacidad de operación limitada"* and added a fraud-exposure constraint, but the *two functions or one service* argument further down still argues from operability | `otp-provider-decoupling.{en,es}.md` | An argument standing on a constraint the page no longer states. Either the constraint returns or the argument is refooted |
+| 6 | **A traceability record that went stale in the same change that fixed two others.** `ui.es.md`'s closing note says *"El artboard escribe `EE.&nbsp;UU.` con espacio duro. Acá va con espacio normal, igual que en `home.es.md`"*. `rail.timezone` now reads `EEUU`, with no periods and no space, and `home.es.md` carries no such string at all | `ui.es.md`, last section | `P-07`. Found 2026-08-31 by comparing the applied tree against the packet; the restored clause used the author's own wording, which the note does not describe |
+
+**Two minor ones, recorded so they are decisions rather than oversights, and not blocking. Both closed 2026-09-01, applied by the author:** `profile-README.md`'s `h1` now reads *Luis Octavio Antelo* (was *Luis Antelo*); `ui.es.md`'s `home.standalone_label` now uses a colon where it had a plain hyphen.
+
+**Closed 2026-09-01. All six answered by the author and applied to `resources/**`**, plus a seventh gap this round found and closed in the same packet. Verified against the applied tree, not assumed (`P-11`):
+
+1. **MassTransit or RabbitMq** — reconciled. `profile-README.md`, `mobile-banking-platform.{en,es}.md` and `experience.{en,es}.md` now all carry both.
+2. **The generic-vs-single-use contradiction** — gone. Both locales of `qr-collections-for-merchants.*` say *generic* QR, and neither claims *single-use* any more.
+3. **The unfinished sentence** — rendered. `multi-tenant-biometric-attendance.es.md`'s full passage now has an English counterpart at `multi-tenant-biometric-attendance.en.md:60`.
+4. **Transaction-history read access** — confirmed **yes**, a delegate reads only the history of the QR they generated. Both locales agreed already.
+5. **The OTP constraint** — returned. `otp-provider-decoupling.{en,es}.md` both carry the team-capacity bullet, English at line 55.
+6. **The stale traceability note** — rewritten, not just the abbreviation it described. `rail.timezone` reads `US` in both locales; `ui.es.md`'s `## Un detalle tipográfico` now states that fact instead of describing a retired `EE.&nbsp;UU.` hard-space decision with no referent left in the file.
+7. **Found and closed in the same round, not part of the original six:** the author added `## Despliegue en Nube` to `mobile-banking-platform.es.md` mid-round — a fresh `C-09` gap. Its English counterpart, `## Cloud Deployment`, landed in the same packet, at `mobile-banking-platform.en.md:60`.
+
+Both minor items also closed 2026-09-01 (see above). `check-content` PASS (20 content files, 9 locale pairs, 2 reasoned exemptions) and `check-terms` PASS (33 terms × 456 files, whole repo minus 13 exclusions) on the applied tree.
+
+**Constraint honored throughout:** `H-02`. No agent wrote `resources/**` — every change here was drafted in `progress/handoff/` and applied by the author.
+
+Detail: `progress/2026-08-31-03-task76-english-half.md` and `progress/handoff/2026-08-31-task76-content.md` § *Open questions* for how the six were found; `progress/2026-09-01-01-task104-content-answers.md` and `progress/handoff/2026-09-01-task104-content.md` for how the last three (3, 5, and the traceability note) were closed.
+
+## TASK 105 — A human refusal is invisible in the trace, and looks identical to a call in flight · `bugfix` · `TODO` · **goal 2**
+
+**Opened 2026-08-31 from `TASK 76`'s wrap-up measurement (`P-12`), not from a hypothesis.** The session offered a natural experiment: the human refused two tool calls, an `ExitPlanMode` at `seq 92` and a `Bash` at `seq 156`. **The trace records no denial for either.**
+
+**What the trace actually holds for a refused call**, read rather than assumed:
+
+```text
+tool.requested    seq 92    ExitPlanMode
+policy.decision   seq 93    decision: allow    source: guard
+(no tool.result)
+```
+
+`policy.decision: allow` is correct in isolation: the `PreToolUse` guard did allow it, and the refusal came later, from the human. But the composite record is **`allow` plus no result**, which is byte-for-byte the shape of a call that is still running. This session ended with four such orphans: two refusals and two backgrounded gate runs, indistinguishable from each other in the trace.
+
+**Why it matters more than its size suggests.** `G-02`'s unsafe-action metric is defined as *`tool.requested` carrying a deny decision and no result*, and `docs/harness/evidence.md` builds the whole *attempt versus event* distinction on it. A human saying no is the single most informative refusal the harness can observe, and it is the one the metric cannot see. Worse, `check-trace` reads an orphaned request as delivery loss or truncation, so a refusal is currently miscounted as evidence of a broken trace.
+
+**The machinery exists and is wired, which is what makes this worth an item rather than a feature request.** `.claude/settings.json` registers `PermissionDenied` → `record-event.mjs`, and `scripts/guards/lib/evidence.mjs:644` already emits `policy.decision` with `decision: 'deny'`, `source: 'permission'`. Its own comment scopes it to *"every deny rule in settings.json"*. So the likely answer is that the runtime does not fire `PermissionDenied` for an interactive refusal at all, and the branch has only ever been exercised by rule-based denials.
+
+**First step is a question, not a fix:** does `PermissionDenied` fire for an interactive rejection? Refuse one call deliberately and read the trace. Everything after that depends on the answer, and guessing it wrong costs a wasted implementation.
+
+**Done:** either the trace distinguishes *refused by the human* from *still in flight* on both vectors, with a red-path proof that the new event appears (`P-14`); **or** the runtime is shown not to expose the signal, and that is written into `docs/harness/evidence.md` as a **stated limit** with `G-02`'s metric definition narrowed to match what it can actually count (`G-11`, `G-07`). The second outcome is a legitimate close, not a failure: a metric that names its blind spot is worth more than one that quietly has one.
+
+**Scope guard (`P-19`):** this touches the trace's own claims about itself, which is goal 2's substrate. It is one item. If closing it opens more in the same surface, that surface is generating work and the next act is to bound the claim, not take the next item.
+
 ## TASK 89 — The `component tests` step fails at module evaluation, with zero tests collected · `bugfix` · `TODO`
 
 **Worked 2026-08-31 and NOT closed — both candidate mechanisms are refuted, the flake is still unreproduced, and one real defect found on the way was fixed.** Reported `partial` rather than `done`, because this item's `Done` asks for a named mechanism and there is not one.
@@ -2176,11 +2239,42 @@ Detail: `progress/2026-08-30-02-task88-mutation-surface-shape.md`.
 
 **Measured, not inferred.** Under the full suite — 513 tests, three engines — `tests/e2e/about-experience-404.smoke.spec.ts:122` (*"the byline prints its three pairs and reuses the rail location verbatim"*) failed with `page.goto: Test timeout of 30000ms exceeded` navigating to `http://localhost:4321/about`; 308 passed, 204 skipped. Re-run alone on Firefox, the same file's **25 tests all pass in 59.4s**, the byline test among them. It passes in isolation and fails under load: the definition of the class.
 
+**2026-08-31: four runs on one unchanged tree, and the split is total.** Measured during `TASK 76`'s wrap-up, on content that had just been applied to `resources/`, with no change to `site/` at all.
+
+| Run | Context | Result | Wall clock |
+|---|---|---|---|
+| 1 | inside `node scripts/gate.mjs` | **FAIL**, 1 test, `NS_ERROR_CONNECTION_REFUSED` on `/es/about` | 3.5 min |
+| 2 | the suite alone | **309 passed, 0 failed** | 2.5 min |
+| 3 | inside `node scripts/gate.mjs` | **FAIL**, **19 tests**, all Firefox, all `Test timeout of 30000ms`, several at `browserContext.newPage` before any navigation | **49.3 min** |
+| 4 | the suite alone | **309 passed, 0 failed** | 2.6 min |
+
+**Inside the gate, 0 of 2. Alone, 2 of 2.** Same tree, same commit, same machine, minutes apart.
+
+**Three things this rules out, each checked rather than assumed:**
+
+- **Not the content.** Run 3's failures include `GET /` and `GET /es/`, and several never reached a navigation at all: they timed out *opening a browser page*. A markdown change cannot do that, and the suite passed twice on the same files.
+- **Not gate-internal parallelism.** `scripts/gate.mjs` drives every step through `spawnSync`, sequentially. The gate does not compete with itself.
+- **Not a fixed timeout being marginally too tight.** A 20x swing in wall clock, 2.5 min against 49.3, is not a budget that needs five more seconds. `TASK 57` already established that raising it closes the symptom and nothing else.
+
+**What run 1 adds on its own:** the error was `NS_ERROR_CONNECTION_REFUSED`, and the line directly above it in the gate output is `Stopped preview server (pid 262964)`. Connection *refused* is not a slow server, it is **no server**, so at least that instance is a teardown racing a worker that still had a test in flight rather than contention.
+
+**Where to look:** what the preceding gate steps leave the machine in. The suite manages its own preview server in `globalSetup`; the open questions are what ends it, and whether teardown waits for every worker or only for the reporter.
+
+**This now blocks more than a green local gate.** `TASK 30` publishes, and `.github/workflows/harness.yml` runs the gate. A step that fails 2 of 2 inside the gate and passes 2 of 2 outside it will fail in CI too, in front of whoever the repository is being shown to.
+
 **It is not this item's doing.** `TASK 60` changed no file under `site/` — the working tree at the time held only `TASKS.md` and additions under `progress/`.
 
 `T-06` is explicit that a flake is a finding and that intermittent means a real race, a real timing assumption or a real ordering bug. The timeout is on navigation rather than on an assertion, which points at contention for the single preview server the suite manages in `globalSetup`, not at the byline markup.
 
-**Done:** the mechanism is named — server contention, a fixed 30s navigation budget under parallel load, or an ordering dependency — with the evidence that distinguishes them; the fix addresses that mechanism rather than raising the timeout; and the full three-engine suite passes twice consecutively from a cold build. **Raising the timeout closes the symptom and is not this item's done**, because `TASK 57` already established that this class survives that treatment.
+**2026-08-31, later the same day: eight controlled reproduction attempts, zero repro — a finding in its own right, not an absence of one.** A faithful repro harness (`scripts/gate.mjs`'s own exported `STEPS` and `scripts/guards/lib/gate.mjs`'s `runGate`, so the invocation is byte-for-byte the production one — same binaries, same cwd, same sequential `spawnSync` semantics) ran `guard tests` → `site core tests` → `component tests` → `type check` → `e2e smoke` seven times, plus one run of the real, unmodified `node scripts/gate.mjs` (all 21 steps) as a tie-breaker. Process/CPU sampling (2s interval, `tasklist` + `Get-CimInstance Win32_Processor`) ran throughout. **All eight `e2e smoke` results: 309 passed, 0 failed.** The unmodified full gate reached `GATE PASSED`, 21/21.
+
+This was not a soft test: attempt 1 alone sustained 85–100% CPU with `firefox.exe` peaking at 71 concurrent processes, and the machine also carries ambient, unrelated background load (`msedge.exe`/`msedgewebview2.exe` processes, present throughout, no relation to this repo's Chromium/Firefox/WebKit-only Playwright config) — genuinely less headroom than a clean run, not more. None of it reproduced the failure. That weakens, without fully retiring, the leading contention-based hypotheses (a Vitest `forks`-pool worker-cleanup lag — version-matched to open upstream issues on the installed 4.1.11 — or general resource contention from the preceding steps): heavier load than either known failure was ever measured under still didn't tip it over.
+
+**The honest reading is that this session could not name the mechanism**, and closing this item requires that, not just clean runs — `TASK 69`'s own `Done` conjoins them. Two things are worth weighing, not resolving unilaterally: first, both real failures happened inside one specific, long (141-minute), file-write-heavy session (`TASK 76`'s wrap-up, 192 tool calls) — a concurrent-activity confound (the author's own editor/IDE indexing freshly-built or freshly-edited files, for instance) that an isolated diagnostic session run with nobody else touching the machine cannot exercise or rule out. Second, and this cuts toward less urgency rather than more: `.github/workflows/harness.yml` runs on a dedicated GitHub Actions runner with no concurrent human or editor activity — structurally closer to this session's clean, isolated conditions (8/8) than to the one session that produced both known failures. That is evidence toward lower CI risk than the original framing assumed, not proof of zero risk.
+
+Full instrumented log: `progress/2026-08-31-04-task69-e2e-contention.md`.
+
+**Done:** unchanged — the mechanism is named — server contention, a fixed 30s navigation budget under parallel load, or an ordering dependency — with the evidence that distinguishes them; the fix addresses that mechanism rather than raising the timeout; and the full three-engine suite passes twice consecutively from a cold build. **Raising the timeout closes the symptom and is not this item's done**, because `TASK 57` already established that this class survives that treatment. **Not met by today's eight clean runs alone** — mechanism-naming is a separate conjunct, unmet, and the item stays `TODO`.
 
 ## TASK 75 — `C-09` claims rung 2, and `check-content` only sees the structure · `bugfix` · `TODO`
 
@@ -2194,7 +2288,33 @@ Detail: `progress/2026-08-30-02-task88-mutation-surface-shape.md`.
 
 **Constraint:** do not "fix" this by editing `resources/**`. That is the author's content and `H-02` denies it; this item owns the *guard*, not the copy.
 
-## TASK 76 — The English half of the Spanish rewrite · `content` · `TODO` · **blocks `TASK 30`**
+## TASK 76 — The English half of the Spanish rewrite · `content` · `DONE` · **unblocks `TASK 30`**
+
+> **Closed 2026-08-31, session 03.** All four `Done` criteria met and verified on the applied tree. The author applied the packet (`progress/handoff/2026-08-31-task76-content.md`) across 18 files; the 19th staged file, `mobile-banking-platform.es.md`, carried no changes and is correctly unmodified. Log: `progress/2026-08-31-03-task76-english-half.md`.
+>
+> | Criterion | Evidence |
+> |---|---|
+> | 1 · the scale figures settled and consistent | `grep -rn` over `resources/`: **one claim per subject**, each qualified. Total = *millions of people* / *millones de personas* in `about.{en,es}`, `experience.{en,es}`, `profile-README.md`. Active = *more than a million active users* / *más de un millón de usuarios activos* in `mobile-banking-platform.{en,es}`. QR = 100,000 in three months. The surviving *hundreds of thousands* / *cientos de miles* is monthly **OTP operations**, a different subject, paired correctly |
+> | 2 · English matching its Spanish in substance, and the two Spanish gaps closed | 19 staged files compared line by line against the applied tree: **one substantive deviation**, the author's own `rail.timezone` wording. The thesis anchor is restored in `experience.es.md`; the US-overlap clause is restored in `ui.es.md` |
+> | 3 · the two traceability bodies reconciled | `ui.en.md` and `ui.es.md` provenance sections rewritten to match the values they describe. **A third record went stale in the same act** and is `TASK 104` |
+> | 4 · `check-content` and `check-terms` pass | **Both PASS**, which is what this criterion asks. `check-terms` 33 terms × 472 files; `check-content` green inside the gate, twice. **The gate as a whole is 20/21 on this tree**, and the failing step is `e2e smoke`: `TASK 69`, now 0 of 2 inside the gate and 2 of 2 standalone (309 passed each) on this exact content, with one gate run failing 19 Firefox tests at `browserContext.newPage` before any navigation. Not this change, and reported rather than waved through |
+>
+> **Scope the author added mid-item:** the em-dash `—` left **both** locales. 81 English lines and 24 Spanish at session start; `grep -rc` over `resources/` now returns zero everywhere except `intake.md` (50), which is internal, unpublished, and declared out of scope rather than skipped.
+>
+> **Five content questions survive this item and are `TASK 104`.** They are the author's to answer, not blockers on the copy: the English matches the Spanish in substance, which is what this item promised.
+>
+> **Four things in the original entry below are out of date, corrected here rather than edited away:**
+>
+> **Four things below are now out of date, corrected here rather than edited away:**
+>
+> 1. **The scale table is superseded.** The author settled it this session: the **total** reads *millions of people* (`about.{en,es}`, `experience.{en,es}`, `profile-README.md`), the **active** figure reads *more than a million active users* (`mobile-banking-platform.{en,es}`, already correct). The register's *hundreds of thousands = active* is retired.
+> 2. **The live `C-01` finding below is resolved.** `7c5014c` set `scale: "+1M"` in both locales, so the body and the frontmatter agree. The English's ungrammatical *"more than a million **of** active users"* survived and is fixed in the packet.
+> 3. **The divergence reached all five case studies, not two.** `7c5014c` rewrote `otp-provider-decoupling.es.md` (120 lines), `multi-tenant-biometric-attendance.es.md` (75) and `qr-collections-for-merchants.es.md` (59) as well. `check-content` passes on all of it: `TASK 75`'s gap, fifth independent instance.
+> 4. **The working tree is not uncommitted.** The author committed as `7c5014c` on 2026-08-31 18:38.
+>
+> **And one finding the item did not predict: the rewrite changes facts, not only voice.** A delegate now reads the transaction history of the QR they generated (previously *no transaction history*); that QR is *generic* rather than *single-use*, while the design principle two paragraphs later still says single-use; the OTP item swapped its *small team* constraint for a fraud-exposure one while keeping an argument that rests on operability; and phase zero of the migration went from *the only part that determined whether the migration would be correct* to *the part that gave me the confidence*. All four are open questions in the packet, not decisions taken on the author's behalf (`C-01`, `P-17`).
+>
+> **Scope added by the author this session:** the em-dash `—` leaves **both** locales, on the author's own precedent (they removed it from two subtitles in `7c5014c`). 81 English lines and 24 Spanish at session start; zero in the packet. `resources/site/intake.md` is out of scope and stated as such: 53 occurrences, internal, never published.
 
 **Opened 2026-08-28.** The author rewrote the Spanish across `about`, `experience` and `ui` — new `h1`s, a new voice, expanded stacks, new photo captions, one corrected job title — and the English was not touched in the same change. `C-09` makes that a violation on its face; `TASK 75` is the guard that should have caught it and did not. This item owns the **copy**; `TASK 75` owns the **check**. They are separate because fixing one does not fix the other.
 
@@ -2320,7 +2440,9 @@ Both files carry a traceability body asserting where each value came from. The r
 | — | `TASK 102` — every open item declares the goal it serves | **deferred, with a trigger** — `P-19` is one day old | — |
 | 10 | `TASK 75` — `C-09` claims rung 2 and `check-content` sees only structure | fix | — |
 | — | `TASK 69` — the load-sensitive `/about` e2e | **site suite, not this milestone** | — |
-| — | `TASK 76` — the English half of the Spanish rewrite | **site suite** · blocks `TASK 30` | — |
+| — | `TASK 76` — the English half of the Spanish rewrite | **site suite** · `DONE` 2026-08-31 · **unblocks `TASK 30`** | `progress/2026-08-31-03-task76-english-half.md` |
+| — | `TASK 104` — six content questions the rewrite left open | **goal 1** · opened by `TASK 76` · `DONE` 2026-09-01 | `progress/2026-09-01-01-task104-content-answers.md` |
+| — | `TASK 105` — a human refusal is invisible in the trace | **goal 2** · opened by `TASK 76`'s wrap-up measurement (`P-12`) | — |
 | 11 | `TASK 78` — cost per completed item becomes computable | mechanize · **after the fix phase** | `TASK 77` |
 | 12 | `TASK 73` — the brief contract becomes a guard | mechanize | `TASK 71` · **runs after the site is published** |
 
@@ -2736,7 +2858,7 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 | Serves | Items | Note |
 |---|---|---|
 | **Goal 1 — publish** | `TASK 30` · `TASK 32` · `TASK 28` · `TASK 29` | **71 items are closed and nobody can see any of it.** Goal 1 has no delivered value until this ships |
-| **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 27` | The pages a reader actually judges |
+| **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 104` · `TASK 27` | The pages a reader actually judges |
 | **Goal 1 — credibility** | ~~`TASK 94`~~ **`DONE` 2026-08-31** · `TASK 101` | `TASK 94` **retired the bypass series** by stating the residual instead of chasing it — the cheapest high-leverage item on the board, and it closed without opening a single item in the surface it documents |
 | **Goal 2 — the deliverable** | `TASK 9` (blocked) · `TASK 100` (the unblocker) | `TASK 9`'s own trigger is *the first `EVAL` with a real, non-harness workload*, and nothing was advancing it. `TASK 100` is that workload |
 | **Goal 2 — efficiency & trust** | `TASK 89` · `TASK 78` · `TASK 81` · `TASK 73` · `TASK 102` | **This note was wrong and is corrected 2026-08-31.** `TASK 39` already closed the silent-pass class: the step **FAILS**, loudly, and nothing is quietly unverified. What it costs is a gate that intermittently cannot be trusted to have run — `T-06` shaped, one tier over from `TASK 69`/`TASK 85`. `TASK 89`'s own hand-off had already retracted this premise, and it survived here for a day (`P-07`) |

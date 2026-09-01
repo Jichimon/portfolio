@@ -17,15 +17,9 @@ confidentiality: sanitized
 
 ## Context
 
-The bank was retiring its old vendor mobile app in favour of the platform we had
-built. One feature could not simply be rebuilt: saved service payments. Users had
-configured their utility bills, their subscriptions, their recurring payees in the
-old app, over years. Some of them had a dozen. Millions of records in total.
+The bank was retiring its old third-party vendor mobile app and we had to get an in-house one out in record time. Along the way my team and I found a feature that could not simply be rebuilt: saved service payments. Users had configured their electricity bills, their water bills, their taxes, their recurring payees in the old app, over years. Some of them had a dozen. Millions of records in total.
 
-The new platform used a different data model on a different database server, and
-the payment flow itself now belonged to a different team behind a payment gateway.
-That gateway did not yet support saved multi-channel payments — but we had to ship
-the feature to users on day one regardless.
+The new platform used a different data model on a different database server, and the payment flow itself now belonged to a different team behind a payment gateway. That gateway did not yet support saved multi-channel payments, and we still had to ship the feature to users.
 
 ## Problem
 
@@ -48,11 +42,9 @@ team, after security and management approval. My deliverable could not be "a
 migration I ran". It had to be a specification precise enough for another team to
 execute without me in the room.
 
-**Production could not be locked.** The legacy database was still serving traffic
-during the transition.
+**Production could not be locked.** The legacy database was still serving traffic during the transition.
 
-**One shot.** A migration of financial records is not something you iterate on in
-production.
+**One single opportunity.** A migration of financial records is not something you iterate on in production.
 
 **Sensitive data.** Every step subject to security review.
 
@@ -60,14 +52,9 @@ production.
 
 ### Phase zero: reverse-engineering
 
-Before writing a line of migration code, I worked the legacy application as a user
-and documented what came out the other side. Every scenario, every combination,
-every column, every state transition. What each field meant. What made it null. What
-made it change.
+Before writing any migration code, I started using the legacy application as a user and documenting everything it did. I checked the database after every action. Every scenario, every combination, every column, every state transition. What each field meant. What made it null. What made it change.
 
-This is the part of the project that took the longest and looked, from the outside,
-like nothing was happening. It was also the only part that determined whether the
-migration would be correct.
+This is the part of the project that took me by far the longest and looked, from the outside, like nothing was happening. It is also the part that gave me the confidence that the migration was going to be correct.
 
 Out of it came two documents: a specification of the legacy model as it actually
 behaved, and a column-by-column mapping to the target model with the exact
@@ -75,13 +62,11 @@ configuration each destination field required.
 
 ### Three phases, because the model changed shape
 
-The new model was not a renamed version of the old one. Several legacy columns
-became tables in the new schema, which meant they had parents that had to exist
-first. So the migration ran in three ordered phases:
+The new model was not a renamed version of the old one, it was a different thing altogether. Several legacy columns became tables in the new schema, which meant they had parents that had to exist first. So I decided the migration had to run in three ordered phases:
 
 1. Extract into staging tables on the source server, then export to flat files.
 2. Load into the new server during an off-hours window.
-3. Reshape into the target model — the phase where columns became rows in new
+3. Reshape into the target model: the phase where columns became rows in new
    tables.
 
 :::diagram{id="migration-phases" type="flow"}
@@ -119,7 +104,7 @@ stored procedures and SQL instead, for three reasons:
    approval path, their tooling and their review process are built around SQL. A
    .NET service would have put the work *outside* the bank's data governance path
    and made approvals slower, not faster.
-3. **The deliverable was never code — it was a runbook.** Since I could not execute
+3. **The deliverable was never code, it was a runbook.** Since I could not execute
    in production, the artifact that mattered was a document another team could
    follow step by step. SQL procedures with logging and verification built in are a
    far better fit for that than an application someone else has to operate.
@@ -143,13 +128,9 @@ behaved, and each wrong assumption surfaced as a failed test run.
 migration and treated reverse-engineering as part of implementation. They are
 different activities with different risk profiles, and folding one into the other is
 why the schedule was wrong from the first day. Discovery on an undocumented system
-is unbounded until it isn't — the estimate has to say so.
+is unbounded until it isn't, and the estimate has to say so.
 
-**Write the verification procedure before the migration procedure.** In two of the
-three phases I wrote them in that order and it worked far better: defining what
-"correct" means before writing the thing being checked is test-first, applied to
-data. In the phase where I did it the other way round, the verifier ended up
-quietly shaped by the migration's assumptions.
+**Write the verification procedure before the migration procedure.** In the first phase I wrote the migration procedure first, and the verifier ended up shaped by what the migration assumed. For the other two I swapped the order and it worked far better: defining what "correct" means before writing the thing being checked is test-first, applied to data.
 
 **Ask earlier who else needs the specification.** The legacy documentation I produced
 turned out to be useful to two other teams that were also migrating away from the

@@ -63,7 +63,7 @@ El modelo nuevo no era una versión renombrada del viejo, era otra cosa diferent
 
 1. Extraer a tablas intermedias en el servidor origen, y exportar a archivos planos.
 2. Cargar en el servidor nuevo durante una ventana nocturna.
-3. Remodelar hacia el modelo destino — la fase donde las columnas se volvían filas de tablas nuevas.
+3. Remodelar hacia el modelo destino: la fase donde las columnas se volvían filas de tablas nuevas.
 
 :::diagram{id="migration-phases" type="flow"}
 Pipeline de migración en tres fases del servidor legacy al nuevo.

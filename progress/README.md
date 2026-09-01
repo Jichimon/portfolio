@@ -77,6 +77,26 @@ iterations:      { status: passed, evidence: ["3"] }
 iteration_split: { status: passed, evidence: ["checkpoint=1", "verify=2"] }
 ```
 
+**There is no such thing as a skeleton done block.** `P-09` says to open the log
+first, as a skeleton, because that is the one mitigation measured to survive a cut
+run. `check-procedures` does not accept a placeholder in the `## Done` section, and
+as one session found out the expensive way on 2026-08-31, all three obvious
+placeholders are red:
+an **empty** `done:` fails (*an empty conjunction is true of everything*), **no
+block at all** fails (*a log without one records that work happened, not that it
+finished*), and a block **missing `iterations`** fails (*leaves K1 unmeasurable*).
+
+So write a complete, valid block the moment the log exists, with real statuses for
+what is true so far (`blocked` and `partial` are legitimate and carry a reason)
+and `iterations` reading the count **to date**, updated at wrap-up. It costs two
+minutes and it is not optional.
+
+**And green guard tests do not imply a green `procedures` step.**
+`procedures.test.mjs`'s LIVENESS case validates the blocks that *exist*;
+`check-procedures` additionally asserts that one exists and carries `iterations`.
+A session that reads `guard tests 1050/1050` and infers the gate is clean has read
+the wrong instrument.
+
 ## `handoff/` — the packet that starts the next session
 
 `progress/handoff/` holds documents written **by the session that is ending, for
@@ -108,6 +128,21 @@ over an unbounded read; one that hands over the extract has not.**
 
 `YYYY-MM-DD-<task>.md`, and any section beyond these four is optional because a
 section appearing in one of two packets is not yet a convention.
+
+**`<task>` is the item the NEXT session opens, never the one just closed.** The
+whole file is addressed to a session that has not started, so naming it after the
+finished work sends the reader to the wrong item. Said out loud on 2026-08-31,
+after a wrap-up produced `2026-08-31-task76-close.md` whose body was entirely
+about `TASK 69`: the packet was opened mid-session, when resuming `TASK 76` really
+was the goal, and the body was rewritten at wrap-up while the filename was not.
+That is `P-07`'s characteristic failure, the obvious half done. **If the body
+changes which item it hands off to, the filename changes with it.**
+
+Two consequences worth knowing before they bite. A `-close`-style suffix is not a
+convention and should not be invented to dodge a name collision; and a collision
+is possible, because two sessions in one day can hand off to the same next item.
+When it happens, the second gets `-02`, the same way session logs already
+disambiguate.
 
 1. **`# Hand-off — TASK N: <goal>`**, then one line naming the session that wrote
    it and stating that the packet is a **claim, not ground truth** — the next

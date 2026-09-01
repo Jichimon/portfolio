@@ -18,7 +18,7 @@ nav:
 rail:
   role: "Senior Software Engineer"
   location: "Cochabamba, Bolivia"
-  timezone: "GMT-4"
+  timezone: "GMT-4 · solapamiento completo con horario laboral en US"
   language_group: "Idioma"
   theme_to_dark: "Modo oscuro"
   theme_to_light: "Modo claro"
@@ -32,7 +32,7 @@ socials:
     url: "https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/"
 
 home:
-  standalone_label: "Fuera de la plataforma - otro empleador, otro sistema"
+  standalone_label: "Fuera de la plataforma: otro empleador, otro sistema"
   employers_heading: "Acá ya trabajé"
   work_heading: "Lo que hice"
   stack_heading: "Tecnologías que manejo"
@@ -95,13 +95,13 @@ contact_form:
   submit: "Enviar"
 
 footer:
-  metrics_slot: "Métricas de visitas — lugar reservado, todavía sin construir"
+  metrics_slot: "Métricas de visitas: lugar reservado, todavía sin construir"
 
 not_found:
   status_code: "HTTP 404"
   status_word: "no encontrado"
   heading: "Este enlace no conecta con nada."
-  body: "Que es, más o menos, para lo que me contratan. La dirección quedó vieja o tiene un error de tipeo — acá abajo está todo lo que sí existe."
+  body: "Que es, más o menos, para lo que me contratan. La dirección quedó vieja o tiene un error de tipeo. Acá abajo está todo lo que sí existe."
   destinations:
     - name: "Trabajo"
       what: "Qué construí, y qué costó"
@@ -115,7 +115,7 @@ not_found:
 
 Todo string que el chrome del sitio imprime, en español. Nada de acá es copy de página: un string vive en este archivo cuando un template lo imprime sin importar qué contenido cargue, y en el `.md` de su propia página cuando no.
 
-**Nada renderiza este cuerpo.** Es el registro de trazabilidad — de dónde salió cada string — y es lo que permite revisar este archivo en vez de confiar en él.
+**Nada renderiza este cuerpo.** Es el registro de trazabilidad (de dónde salió cada string) y es lo que permite revisar este archivo en vez de confiar en él.
 
 ## Lo que ya existía en el diseño
 
@@ -126,15 +126,19 @@ Se levanta tal cual del artboard, sin tocar una coma.
 | `nav` completo, incluido `pronto` | `HomeES.dc.html` 430–436 |
 | `rail.location`, `rail.timezone`, `rail.theme_to_dark`, `rail.theme_to_light` | `HomeES.dc.html` 427, 783 |
 | `rail.wordmark` | `HomeES.dc.html` 425 |
-| `socials` — los dos, nombre y URL | `HomeES.dc.html` 448 · idénticos al artboard inglés: un nombre propio y una URL, nada que traducir |
-| `home` — los cuatro títulos, `contact_invite`, `contact_note` | `HomeES.dc.html` 532, 542, 655, 667, 668, 687 |
-| `contact_form` — los siete | `HomeES.dc.html` 672–683 |
+| `socials`, los dos: nombre y URL | `HomeES.dc.html` 448 · idénticos al artboard inglés: un nombre propio y una URL, nada que traducir |
+| `home.contact_heading`, `home.contact_email` | `HomeES.dc.html` 667, 687 |
+| `contact_form`: los siete | `HomeES.dc.html` 672–683 |
 | `footer.metrics_slot` | `HomeES.dc.html` 716 |
-| `not_found` — `status_word`, `heading`, `body` y las cuatro destinaciones | `NotFound.dc.html` 228, 275–286 |
+| `not_found`: `status_word`, `heading`, `body` y las cuatro destinaciones | `NotFound.dc.html` 228, 275–286 |
+
+**`home.employers_heading`, `home.work_heading`, `home.stack_heading`, `home.contact_invite` y `home.contact_note` ya no salen del artboard.** Se levantaron de `HomeES.dc.html` 532, 542, 655, 668 y después se reescribieron con voz propia. Hoy la fuente de esos cinco strings es este archivo, y el inglés se alinea contra él, no al revés.
+
+**Y hay una sustitución que corre sobre todo el archivo.** Donde el artboard usaba raya, acá van dos puntos, un punto o paréntesis. Así que `footer.metrics_slot` y `not_found.body` difieren de su origen en el artboard por esa puntuación y por nada más.
 
 `rail.role` queda en inglés a propósito: *Senior Software Engineer* es el título del puesto, y así aparece en el artboard español.
 
-## Lo que se escribió acá y no existe en ningún artboard — **revisar uno por uno**
+## Lo que se escribió acá y no existe en ningún artboard, **revisar uno por uno**
 
 Ningún artboard tiene la mitad española de las páginas de artículo, About ni Experience, así que estos dieciséis se escribieron para este archivo. No los apruebes en bloque (`C-01`, `C-04`).
 
@@ -159,11 +163,13 @@ Ningún artboard tiene la mitad española de las páginas de artículo, About ni
 
 **Dos que necesitan una decisión tuya, no solo una revisión:**
 
-- **`article.deep_dives` — se dejó en inglés.** *Deep dives* es término de oficio y la traducción literal (*En profundidad*, *A fondo*) pierde el sentido de "los hijos de esta plataforma". Si preferís traducirlo, el candidato es **En profundidad**.
-- **`article.platform_tag` — se dejó mezclado:** *Plataforma · raíz de los deep dives*. Arrastra el mismo término dentro de una frase en español. La alternativa consistente es *Plataforma · de la que cuelgan los casos en profundidad*, más larga y sin el término de oficio.
+- **`article.deep_dives`, se dejó en inglés.** *Deep dives* es término de oficio y la traducción literal (*En profundidad*, *A fondo*) pierde el sentido de "los hijos de esta plataforma". Si preferís traducirlo, el candidato es **En profundidad**.
+- **`article.platform_tag`, se dejó mezclado:** *Plataforma · raíz de los deep dives*. Arrastra el mismo término dentro de una frase en español. La alternativa consistente es *Plataforma · de la que cuelgan los casos en profundidad*, más larga y sin el término de oficio.
 
-`article.stack` se dejó como **Stack**: es la palabra que la industria usa en español y traducirla a *Tecnologías* chocaría con `home.stack_heading`, que ya dice *Tecnologías con las que trabajé*.
+`article.stack` se dejó como **Stack**: es la palabra que la industria usa en español y traducirla a *Tecnologías* chocaría con `home.stack_heading`, que ya dice *Tecnologías que manejo*.
 
 ## Un detalle tipográfico
 
-El artboard escribe `EE.&nbsp;UU.` con espacio duro. Acá va con espacio normal, igual que en `home.es.md`, para que las dos fuentes de esa misma línea digan lo mismo.
+`rail.timezone` deja **US** sin traducir, no `EE. UU.` — más corto, y evita
+la duda entre espacio duro y espacio normal que tenía el artboard. La misma
+razón por la que `rail.role` se queda en inglés.

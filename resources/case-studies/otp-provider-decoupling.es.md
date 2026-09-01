@@ -42,6 +42,7 @@ que resultan interesantes técnicamente.
 - Los flujos de autenticación no pueden tener downtime durante la transición.
 - Las fronteras de servicio deben mapear a capacidades de negocio bajo el estándar BIAN del banco.
 - Un hueco de seguridad implicaba que un usuario podría hacer fraude al banco directamente.
+- El equipo que me asignarón eran 2 personas al 40% (seguían trabajando con sus equipos igual), asi que teníamos capacidad de operación limitada.
 
 :::diagram{id="otp-c4-before" type="c4-container"}
 Antes: un servicio atendiendo cinco flujos salientes sin relación contra una base compartida.
@@ -96,7 +97,7 @@ Elegí Fargates (la opción más cara) por razones que tenía que defender contr
 
 El mismo análisis lambda-vs-fargates, aplicado al listener de
 notificaciones push a decenas de millones de operaciones mensuales, dio el resultado
-opuesto — y no por poco. Serverless habría costado unas cincuenta veces más.
+opuesto, y no por poco. Serverless habría costado unas cincuenta veces más.
 
 Así que el output útil del análisis nunca fue "usemos fargate". Fue el **punto de equilibrio: alrededor de 430.000 operaciones mensuales**, un umbral que, por debajo gana lambda (sale más barato) pero por encima, lambda-serverless es inconcebible.Ese umbral es reutilizable. Una recomendación no lo es.
 

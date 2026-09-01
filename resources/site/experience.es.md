@@ -2,7 +2,7 @@
 slug: experience
 lang: es
 type: page
-title: "Luis Octavio Antelo — Experiencia"
+title: "Luis Octavio Antelo · Experiencia"
 confidentiality: sanitized
 h1: "El mismo problema tuve que resolver en cada lugar en el que estuve"
 intro: "Un sistema construido para una realidad que ya no existía, y un negocio que evolucionó más rápido que él. Otra industria, la misma forma. Una vez más."
@@ -11,9 +11,9 @@ roles:
     period: "2025–2026"
     title: "Senior Software Engineer"
     body:
-      - "Entré a una plataforma que atiende a millones de usuarios y pasé seis meses en dos tipos de responsabilidad distintos: la técnica —funcionalidades multitenant y una mejora de performance que empujé como ADR en vez de mandarla en silencio— y la de personas, haciendo mentoría a la mitad junior del equipo de backend y construyendo el tooling de IA agéntica que hoy es parte de cómo revisamos código."
-      - "La plataforma es un producto CX empresarial distribuido globalmente — PHP legacy y JavaScript vanilla conviviendo con un stack moderno en .NET, el mismo problema de \"hacer que lo viejo y lo nuevo se hablen\", a otra escala. Trabajar para clientes en jurisdicciones de US y EU significó diseñar teniendo en cuenta cómo difieren realmente sus regímenes de protección de datos, no solo tildar un casillero de cumplimiento."
-    stack: [".NET", "PHP legacy", "JavaScript vanilla", "elasticSearch", "AWS", "Jenkins", "RAG", "LLMs", "Snowflake"]
+      - "Entré a una plataforma que atiende a millones de usuarios y pasé seis meses en dos tipos de responsabilidad distintos: la técnica (funcionalidades multitenant y una mejora de performance que empujé como ADR en vez de mandarla en silencio) y la de personas, haciendo mentoría a la mitad junior del equipo de backend y construyendo el tooling de IA agéntica que hoy es parte de cómo revisamos código."
+      - "La plataforma es un producto CX empresarial distribuido globalmente: PHP legacy y JavaScript vanilla conviviendo con un stack moderno en .NET, el mismo problema de \"hacer que lo viejo y lo nuevo se hablen\", a otra escala. Trabajar para clientes en jurisdicciones de US y EU significó diseñar teniendo en cuenta cómo difieren realmente sus regímenes de protección de datos, no solo tildar un casillero de cumplimiento."
+    stack: [".NET", "PHP legacy", "JavaScript vanilla", "elasticSearch", "AWS", "Jenkins", "RAG", "LLMs", "Snowflake", "Grafana"]
 
   - company: "Banco Solidario S.A."
     period: "2023–2025"
@@ -31,7 +31,7 @@ roles:
     title: "Analista de Sistemas"
     body:
       - "El equipo de Sistemas de mi rol anterior se independizó como esta empresa, y me fui con ellos. Mismo problema, otra empresa: integrando soluciones satélites a un ERP, evaluando a los proveedores del otro lado de esas integraciones. También ví plataformas low-code"
-      - "El trabajo tenía la misma forma que antes de la separación y el core era literalmente el mismo — solo que ahora integraba sistemas satélite desde el otro lado de una frontera corporativa en vez de desde adentro."
+      - "El trabajo tenía la misma forma que antes de la separación y el core era literalmente el mismo, solo que ahora integraba sistemas satélite desde el otro lado de una frontera corporativa en vez de desde adentro."
     stack: ["Oracle EBS", "PL/SQL", "integración ERP", "Android", "Angular", ".NET", "low-code", "javascript"]
 
   - company: "Avícola Sofía"
@@ -39,20 +39,20 @@ roles:
     title: "Trainee → Analista de Sistemas"
     body:
       - "Mi primer sistema real, de punta a punta: una plataforma de asistencia multitenant que conectaba terminales biométricas en varias plantas industriales con el sistema de RRHH de la empresa. El proyecto nació como una mejora a los módulos de integración de HRMS que se utilizaban, reemplazando procesos más limitados por una solución propia, escalable y adaptada a la operación distribuida a nivel nacional. Llevada a producción mientras todavía estaba aprendiendo qué significaba \"producción\" en serio."
-      - "También desarrollé integraciones entre los sistemas de producción y Oracle EBS, participando en la evolución de los sistemas que soportaban procesos críticos del negocio."
+      - "También desarrollé integraciones entre los sistemas de producción y Oracle EBS, participando en la evolución de los sistemas que soportaban procesos críticos del negocio. Esa brecha entre lo que el sistema sabía hacer y lo que el negocio necesitaba es en la que vengo trabajando desde entonces."
     case_studies:
       - multi-tenant-biometric-attendance
     stack: ["Oracle EBS", "hardware biométrico", "monolito modular", "Angular", ".NET", "SQL Server", "PL/SQL", "PLCs"]
 ---
 
-**Nada renderiza este cuerpo.** Todos los elementos de esta página salen del frontmatter de arriba, y esta nota es el registro de trazabilidad — la misma forma que tomó `home.{en,es}.md` cuando su prosa dejó de renderizarse.
+**Nada renderiza este cuerpo.** Todos los elementos de esta página salen del frontmatter de arriba, y esta nota es el registro de trazabilidad, la misma forma que tomó `home.{en,es}.md` cuando su prosa dejó de renderizarse.
 
 | Elemento de la página | De dónde sale |
 |---|---|
 | el titular y la bajada | `h1` e `intro` |
 | empresa, años y rol de cada entrada | `roles[].company`, `.period`, `.title` |
 | la prosa de cada entrada | `roles[].body` |
-| las filas de casos de estudio | `roles[].case_studies` — **slugs**, unidos contra el set de rutas, así el título y el href salen del archivo de ese caso en el idioma de esta página |
+| las filas de casos de estudio | `roles[].case_studies`: **slugs**, unidos contra el set de rutas, así el título y el href salen del archivo de ese caso en el idioma de esta página |
 | la línea de tecnologías | `roles[].stack` |
 | la insignia "más reciente" | derivada del orden del propio registro, no escrita en ningún lado |
 | los cuadrados de logo | un archivo de logo donde exista; ausente es un valor soportado |

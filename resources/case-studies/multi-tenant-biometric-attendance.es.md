@@ -41,7 +41,7 @@ Construir una plataforma de asistencia y autogestión de RRHH que:
 :::diagram{id="attendance-c4-context" type="c4-context"}
 Contexto de sistema: empleados y administradores de RRHH, la app móvil, la plataforma,
 las terminales biométricas y el sistema de RRHH de terceros.
-Spec: diagrama C4 de contexto existente — sanitizar nombres de proveedor y de empresa antes de publicar.
+Spec: diagrama C4 de contexto existente: sanitizar nombres de proveedor y de empresa antes de publicar.
 :::
 
 ## Enfoque
@@ -54,7 +54,7 @@ modo que extraerlos después fuera un cambio de despliegue y no un rediseño.
 
 Razonamiento: equipo chico, un solo target de despliegue, y menos de 15 tenants para el primer lanzamiento. Los microservicios nos hubieran dado más problemas que beneficios. Por citar un simple ejemplo: escalado independiente que no necesitábamos, al costo de una complejidad operativa que no podíamos cubrir con la gente que teníamos. Lo valioso eran las fronteras entre módulos, no distribuirlas.
 
-Los módulos: datos organizacionales, identidad y accesos, asistencia y comunicaciones internas. Cada uno con su dominio, su acceso a persistencia y un contrato explícito hacia los demás. un enfoque vertical ambicioso en una tecnología que te seduce con slices horizontales.
+Los módulos: datos organizacionales, identidad y accesos, asistencia y comunicaciones internas. Cada uno con su dominio, su acceso a persistencia y un contrato explícito hacia los demás. Un enfoque con slices verticales, ambicioso para una tecnología que te seduce con slices horizontales y clean architecture a nivel solución. Acá se traslado clean a cada módulo. Si me preguntás, es muy ambicioso y por eso nos demoramos mucho. Con el tiempo aprendí a ser más pragmático.
 
 :::diagram{id="attendance-c4-container" type="c4-container"}
 Vista de contenedores de la plataforma: app móvil, panel de administración, módulos de API y la base de datos compartida entre tenants.
@@ -81,7 +81,7 @@ Lo que no salió gratis fue diseñar e implementar la vía de escape de base ded
 
 ### Integración en dos direcciones
 
-Las terminales biométricas se integraron primero directamente con el sistema de RRHH, y recién después se trajeron a las APIs propias de la plataforma — un enfoque por etapas que permitió que la asistencia siguiera funcionando durante la transición, en vez de exigir un corte simultáneo en todas las plantas.
+Las terminales biométricas se integraron primero directamente con el sistema de RRHH, y recién después se trajeron a las APIs propias de la plataforma, un enfoque por etapas que permitió que la asistencia siguiera funcionando durante la transición, en vez de exigir un corte simultáneo en todas las plantas.
 
 Del otro lado, una capa de integración se ubica entre el backend móvil propietario y
 el sistema de RRHH de terceros, de forma que el proveedor de RRHH siga siendo el

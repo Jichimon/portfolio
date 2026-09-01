@@ -70,14 +70,14 @@ Vista de contenedores: app móvil → BFF → servicio de dominio de comercios, 
 Spec: mostrar con claridad que el servicio de comercios no tiene ningún camino directo a datos de cuenta o saldo. Esa ausencia es el punto del diagrama.
 :::
 
-### Los delegados autentican en un nivel de confianza menor — a propósito
+### Los delegados autentican en un nivel de confianza menor, a propósito
 
 ¿Cómo funcionan los delegados?
 En vez de forzar a los delegados dentro del modelo de identidad de clientes existente, se los identifica por una clave compuesta: un identificador único de dispositivo más un número de teléfono, vinculados al momento de la invitación. El dueño los incorpora compartiendo una invitación por QR.
 
 Esto es deliberadamente más débil que la autenticación de un cliente. Es aceptable porque la capacidad otorgada es extremadamente estrecha: Tener un QR genérico de cobro para un negocio específico. Sin acceso a saldos. Solo viendo el historial de transacciones del QR generado. Sin datos personales. Sin poder sumar otro delegado. El dueño puede revocar en cualquier momento.
 
-El principio de diseño: **cuando ponerle más seguridad a una identidad te quita UX, bajá al mínimo lo que esa identidad puede hacer.** Una identidad débil con una única capacidad revocable, de un solo uso y sin lectura es una posición defendible. La misma identidad con acceso de lectura a cualquier cosa no lo sería.
+El principio de diseño: **cuando ponerle más seguridad a una identidad te quita UX, bajá al mínimo lo que esa identidad puede hacer.** Una identidad débil con una única capacidad revocable y sin lectura es una posición defendible. La misma identidad con acceso de lectura a cualquier cosa no lo sería.
 
 :::diagram{id="qr-permission-model" type="flow"}
 Modelo de permisos: roles Dueño y Delegado contra las operaciones que cada uno puede ejecutar y los datos que cada uno puede leer.
