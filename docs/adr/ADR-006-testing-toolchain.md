@@ -1,7 +1,7 @@
 # ADR-006: Testing toolchain — `node:test`, Stryker, Playwright
 
 **Status:** Accepted
-**Date:** 2026-08-19 · amended 2026-08-23
+**Date:** 2026-08-19 · amended 2026-08-23, 2026-08-24 (×2), 2026-09-01
 **Context:** The last of TASK 7's six decisions. Fills five rows `.claude/rules/30-testing.md` has left deliberately blank since TASK 5: unit test runner, mutation tool + threshold, e2e runner, the gate's sub-gate commands, and integration test strategy. That file already fixes *where* TDD/mutation bite (`scripts/guards/**` and `site/lib/content/**` — frontmatter parsing, the slug join, `:::diagram` resolution, locale parity, term checking) and where e2e/build checks apply (rendered pages, both locales). This decision only fixes *which tools*. No `package.json` exists anywhere in the repository yet — whichever tools are chosen here are the first npm dependencies this repository carries, and `site/lib/content/**` itself does not exist yet (`TASK 8` hasn't broken down the site work).
 
 ## Options considered
@@ -42,6 +42,8 @@ Only one real candidate surfaced: **Stryker Mutator** (`@stryker-mutator/core`) 
 **Mutation tool: Stryker Mutator with `@stryker-mutator/tap-runner`, `break: 100`** (not Stryker's own default `break: null`, i.e. non-enforcing). The threshold matches this project's own established convention — every mutation result reported by hand in `progress/` to date (TASK 8's 7/7, TASK 9's 3/3, TASK 10's 6/6, TASK 13's 11/11) is 100% mutant-kill, matching `T-04`'s standard that a guard's battery must fail when the guard is neutered. Stryker's ship defaults (`high: 80, low: 60`) are informational bands, not enforced thresholds, unless `break` is set — leaving it at the default would silently enforce nothing, the opposite of this project's practice.
 
 **E2E runner: Playwright.** Astro's own documented pattern for it matches this project's own `T-02` rule word for word — a test that would still pass with the built site absent is not an e2e test, and Playwright's `webServer` config against a real `npm run build` is exactly that discipline, shown in Astro's docs rather than assumed.
+
+> ✏️ **Amended 2026-09-01** — see [the amendment below](#amendment--2026-09-01--e2e-narrowed-to-chromium-for-ci). Playwright itself is unchanged; the **three-engine matrix** named in the options table above as a reason to prefer it over Cypress is narrowed to Chromium for the CI-blocking gate, on real evidence rather than a guess.
 
 **Gate sub-gate commands** (mechanical, once `site/` exists):
 
@@ -170,6 +172,18 @@ Proven in red rather than reasoned about, which is the only form that distinguis
 **The first review trigger has fired and resolved, in the negative.** This ADR left open whether the core's eventual code would need Vite's runtime to test meaningfully, and said the question was unanswerable because that code did not exist. It exists now: four modules and 26 tests, every one running under plain `node --test` with no Astro in the import graph — which is what the gateway pattern was built to make possible. **Vitest is not introduced for this surface, and the second Stryker config stays declined.** The trigger is not deleted; it is simply no longer a question about code nobody has written.
 
 **What this amendment deliberately does not do.** It does not re-measure `break`. A wider `mutate` glob is a new denominator, so the floor recorded in the 2026-08-24 threshold amendment is stale from the moment these globs change — but the layout-shell item lands two more mutated guard functions in the same stretch of work, and measuring twice would price two intermediate denominators nobody will ever use. The number is re-measured once, against the run that follows all of it, with the measurement written beside it. Recorded here rather than left implicit, because a stale threshold that nobody flagged is indistinguishable from one nobody noticed.
+
+## Amendment · 2026-09-01 — E2E narrowed to Chromium for CI
+
+**What this ADR decided, and what it did not.** The options table above named "three browser engines (Chromium, Firefox, WebKit) relevant for a public site on unknown reader devices" as a reason to prefer Playwright over Cypress — a real property of the *tool*, not a commitment to run all three on every push. `30-testing.md`'s stack table read it as the latter: *"Three real browser engines"* as what `e2e smoke` runs in CI. Nobody had priced that against a shared CI runner, because CI was inert until `TASK 30` published the remote.
+
+**Measured, not assumed, the first time it could be.** `TASK 106`'s first real push (`059a7e5`) ran the gate for the full 6-hour GitHub Actions default and was cancelled with no diagnostic output — a separate defect, fixed by streaming the gate's output live (`TASK 107`). The **second** real run, with that fix in place and a 90-minute job timeout as an explicit bound, gave the first actual evidence: `guard tests` (1050 `node:test` cases) finished in ~2 seconds, then **89 minutes of silence** across `site core tests`, `component tests`, `type check` and `e2e smoke`, ending in cancellation. At cleanup, GitHub listed an orphan process it had to kill: `npm exec astro preview` — spawned only by `e2e smoke`'s `globalSetup`, after `astro build` had already completed. `mutation` (Stryker) never started; its incremental-cache save step found no file to save. So the step still running at 89 minutes, provably, was `e2e smoke` — not `mutation`, which every prior estimate in this repository (including this ADR's own) had assumed would dominate, on the strength of local measurements taken with Stryker's default concurrency at 11 (12 local cores). GitHub's standard `ubuntu-latest` runner reports 2 cores, so Stryker itself would run at concurrency 2 there — slower, but that comparison turned out not to be the one that mattered first.
+
+**The decision.** `e2e smoke`'s blocking CI run narrows from three browser engines to one — Chromium. `T-05` ("risk-based, not coverage-based... a test earns its place where a bug is both likely and costly") applies directly: this is a content-heavy, largely static site built from one markdown pipeline, not an application with browser-specific interactive logic: Firefox- or WebKit-specific rendering defects are a real but low-probability risk for this shape of output, and the cost of checking for them on every push — three engines' worth of process launches on a 2-core shared runner — was disproportionate before anyone had measured it.
+
+**What is accepted, stated rather than left implicit (`C-11`).** Firefox and WebKit-specific rendering defects are no longer caught automatically by the blocking gate. `playwright.config.ts`'s `projects` array is exactly where to restore either or both if a real defect specific to one of them is ever found — that is the trigger, not a calendar date.
+
+**What is not yet known.** Whether Chromium alone brings the gate comfortably under a sane bound, or whether `mutation` (never yet reached in a real CI run) is a second, independent cost once `e2e smoke` stops absorbing the whole 90-minute budget. That is `TASK 108`'s own open question, not assumed here.
 
 ## Sources
 

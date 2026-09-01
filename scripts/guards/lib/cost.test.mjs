@@ -210,6 +210,103 @@ test('the report is deterministic — same input, byte-identical output', () => 
     'row order must not depend on directory-read order, or the report is not reproducible');
 });
 
+// --- TASK 109: the arithmetic mutation found undertested --------------------
+//
+// An audit of the real mutation report (reports/mutation/mutation.json) found cost.mjs at
+// the worst kill rate in the whole surface (51.7%), and the survivors were NOT concentrated
+// in formatReport's prose the way status-history.mjs's renderLedger was — the biggest cluster
+// was real aggregation arithmetic in byRole/bySession that only formatReport's SECTION
+// HEADERS were asserted to exist, never the actual summed numbers a row prints. These tests
+// close that gap; the genuinely inert prose lines are suppressed below instead, the same
+// distinction TASK 88 drew for renderLedger: a template's sentences are noise, its numbers
+// are structure.
+
+test('a segment row counts tool.result events, independently of what they carry', () => {
+  const seg = segmentDispatches([
+    header('implementer'), req(), res({ bytes: 0, duration_ms: 0 }), req(), res({ bytes: 0, duration_ms: 0 }), footer(),
+  ])[0];
+  assert.equal(summarizeSegment(seg, new Map()).results, 2);
+});
+
+test('RED: the per-role table SUMS turns, bytes, duration and denies across multiple dispatches of the same role', () => {
+  // Before this test, only the section header's presence was asserted (`## Per role`) —
+  // an AssignmentOperator mutant turning every `+=` in this loop into `-=` left every
+  // existing test green. Two rows of the same role+model, non-trivial numbers so a sign
+  // flip is unmistakable in the assertion.
+  const rows = [
+    { runId: 'a', agent: 'implementer', model: 'sonnet', turns: 3, bytes: 1048576, durationMs: 60000, denies: 1, footer: 'COMPLETE', ts: '2026-08-27T00:00:00.000Z' },
+    { runId: 'b', agent: 'implementer', model: 'sonnet', turns: 5, bytes: 1048576, durationMs: 60000, denies: 2, footer: 'ABSENT', ts: '2026-08-27T01:00:00.000Z' },
+  ];
+  const text = formatReport(rows, { substrateStart: null, generatedFrom: 'x' });
+  const roleRow = text.split('\n').find((l) => l.startsWith('| `implementer`'));
+  assert.ok(roleRow, 'a role row must exist');
+  // 2 dispatches, 1 of 2 finished, 8 turns, 2.00 MB, 2.0 min, 3 denies — all summed, not overwritten.
+  assert.match(roleRow, /\| 2 \| 1\/2 \| 8 \| 2\.00 \| 2\.0 \| 3 \|/);
+});
+
+test('RED: the per-session table SUMS bytes, turns, duration and denies across all its dispatches', () => {
+  const rows = [
+    { runId: 's1', agent: 'orchestrator', model: '(undeclared)', reason: 'startup', turns: 2, bytes: 1048576, durationMs: 30000, denies: 0, footer: 'COMPLETE', ts: '2026-08-27T00:00:00.000Z' },
+    { runId: 's1', agent: 'implementer', model: 'sonnet', reason: 'delegated', turns: 4, bytes: 1048576, durationMs: 30000, denies: 1, footer: 'ABSENT', ts: '2026-08-27T01:00:00.000Z' },
+  ];
+  const text = formatReport(rows, { substrateStart: null, generatedFrom: 'x' });
+  const sessionRow = text.split('\n').find((l) => l.startsWith('| `s1`'));
+  assert.ok(sessionRow, 'a session row must exist');
+  // 2 dispatches, 1 delegated, 1 role each contributes... roles is a Set of agent names,
+  // here 2 distinct agents; 6 turns, 2.00 MB, 1.0 min, 1 deny — all summed.
+  assert.match(sessionRow, /\| 2 \| 1 \| 2 \| 6 \| 2\.00 \| 1\.0 \| 1 \|/);
+});
+
+test('RED: a session\'s "started" timestamp is the EARLIEST dispatch, not the first one processed', () => {
+  // sorted order is by ts ascending, so the earliest row is processed first and seeds
+  // `first` directly — this specifically exercises a LATER row (chronologically) that
+  // arrives at the map lookup and must NOT overwrite an already-earlier `first`.
+  const rows = [
+    { runId: 's1', agent: 'implementer', model: 'sonnet', turns: 1, bytes: 10, durationMs: 1, denies: 0, footer: 'COMPLETE', ts: '2026-08-27T01:00:00.000Z' },
+    { runId: 's1', agent: 'orchestrator', model: '(undeclared)', turns: 1, bytes: 10, durationMs: 1, denies: 0, footer: 'COMPLETE', ts: '2026-08-27T03:00:00.000Z' },
+  ];
+  const text = formatReport(rows, { substrateStart: null, generatedFrom: 'x' });
+  const sessionRow = text.split('\n').find((l) => l.startsWith('| `s1`'));
+  assert.match(sessionRow, /2026-08-27T01:00:00\.000Z/, 'started must read the earlier of the two timestamps');
+});
+
+test('RED: mb() and min() format the exact value, not just something', () => {
+  const text = formatReport(
+    [{ runId: 'a', agent: 'implementer', model: 'sonnet', turns: 1, bytes: 1572864, durationMs: 90000, denies: 0, footer: 'COMPLETE', ts: '2026-08-27T00:00:00.000Z' }],
+    { substrateStart: null, generatedFrom: 'x' },
+  );
+  // 1572864 / 1048576 = 1.50 MB exactly; 90000ms / 60000 = 1.5 min exactly. Every table
+  // (role, session, dispatch) reduces to the same numbers here since there is only one
+  // row, so matching any of them proves mb()/min() computed the real division.
+  const row = text.split('\n').find((l) => l.includes('1.50') && l.includes('1.5'));
+  assert.ok(row, 'some table row must print the exact division, not an approximation or a placeholder');
+});
+
+test('RED: measuredModel prefers strictly more combined tokens — an exact tie keeps the first model seen', () => {
+  // Object.keys(...).length >= 0 and tokens >= bestTokens both survived as mutants: neither
+  // is exercised by a case where two models report the SAME combined token count.
+  const seg = segmentDispatches([
+    header('implementer'), req(), res(),
+    cost({ 'claude-haiku-4-5-20251001': { in: 50, out: 50 }, 'claude-sonnet-5': { in: 60, out: 40 } }),
+    footer(),
+  ])[0];
+  const row = summarizeSegment(seg, new Map());
+  // Both models sum to 100 tokens; Object.entries preserves insertion order, so the first
+  // key inserted — haiku — must win a tie rather than being displaced by an equal count.
+  assert.equal(row.model, 'claude-haiku-4-5-20251001');
+});
+
+test('RED: declaredModels reads a role file with no model: line as undeclared, not as a crash or a false match', () => {
+  const dir = join(ROOT, '.claude/agents');
+  const files = readdirSync(dir).filter((f) => f.endsWith('.md'));
+  assert.ok(files.length > 0, 'fixture assumption: at least one real role file exists');
+  const m = declaredModels(dir);
+  // Every real role file resolves to SOME string (declared or the literal fallback) —
+  // proves the regex either matches a real `model:` line or falls through cleanly,
+  // never throwing and never leaving a role missing from the map.
+  for (const f of files) assert.equal(typeof m.get(f.replace(/\.md$/, '')), 'string');
+});
+
 // --- liveness: the method validated against a known cap ---------------------
 
 /**

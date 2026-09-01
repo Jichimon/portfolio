@@ -1119,6 +1119,124 @@ This is `INC-15`'s family in a second place. `INC-15` was the same collision ins
 
 ---
 
+## TASK 108 — E2E narrowed to Chromium for CI · `harness` · `DONE`
+
+**Opened 2026-09-01, by `TASK 107`'s own monitored diagnostic run** — not a hypothesis. The 90-minute job timeout fired at 1h30m32s (the escape hatch worked); the live-streamed log showed `guard tests` finishing in ~2 seconds, then **89 minutes of silence** across `site core tests`, `component tests`, `type check` and `e2e smoke`, ending in cancellation. At cleanup GitHub listed an orphan process it had to kill: `npm exec astro preview`, spawned only by `e2e smoke`'s `globalSetup` — meaning the build had finished and Playwright was mid-run across three browser engines when the timeout hit. `mutation`'s own incremental-cache save step found nothing to save, confirming Stryker never started. **Every prior estimate in this repository, including `ADR-006`'s own, had assumed `mutation` would dominate CI cost** — true locally (Stryker gets concurrency 11 on this machine's 12 cores), not demonstrated on GitHub's 2-core standard runner, where `e2e smoke`'s three-engine matrix turned out to be the thing actually running when the clock ran out.
+
+**Serves the author's direct concern, raised the same session:** the gate's total size (1050+ guard tests, three e2e browser engines, a 7,000+-mutant Stryker run) read as disproportionate for "a harness and an almost-static site," and the author asked for real cuts rather than a defense of the status quo. This item is the first one backed by hard evidence rather than the request alone.
+
+**Deliverable:** `site/playwright.config.ts`'s `projects` array narrowed to Chromium; `docs/adr/ADR-006-testing-toolchain.md` amended (inline marker at the E2E decision paragraph, plus a full `## Amendment · 2026-09-01` section); `docs/adr/README.md`'s level-1 date and level-2 table updated; `.claude/rules/30-testing.md`'s E2E stack-table row updated to match; `.github/workflows/harness.yml`'s now-stale "three real browser engines" comment corrected.
+
+**Done:** `node node_modules/@playwright/test/cli.js test` from `site/` passes with Chromium alone — verified locally, **171 passed in 2.2 minutes**, down from a three-engine run that was still in flight past 89 minutes on CI. `check-rules-registry` and `check-docs` both PASS against the amended ADR/rules/README. `screenshots.smoke.spec.ts`'s own `browserName !== 'chromium'` skip guard (already present, unrelated to this item) now never fires, confirmed rather than assumed to be harmless.
+
+**What is accepted, not hidden (`C-11`):** Firefox and WebKit-specific rendering defects are no longer caught by the blocking gate. `playwright.config.ts`'s `projects` array is exactly where to restore either the day a real cross-engine defect motivates it — that is the trigger, not a calendar date.
+
+**What this does not resolve, stated rather than assumed:** whether Chromium alone is now enough to bring the whole gate under a sane CI bound, or whether `mutation` — never yet reached in a real CI run — is a second, independent cost once `e2e smoke` stops absorbing the 90-minute budget. The next real push is what answers that, not this item.
+
+**Constraints**
+- **Evidence-driven, not a percentage target.** This item cuts the one step a real, monitored CI run showed was actually the bottleneck. It does not cut mutation coverage, which is the harness's own enforcement mechanism and the subject the public `README.md` (`TASK 101`) uses as its credibility claim — that surface gets its own deliberate audit, not a reflexive haircut (see the author's own request, addressed separately).
+- **Local proof required before claiming done**, not just a config edit — `T-02`'s standard applies to changing the e2e tier's shape as much as to building it: a test that would pass without the change proving anything is not evidence.
+
+---
+
+## TASK 109 — The coverage audit's two candidates, implemented · `harness` · `DONE`
+
+**Opened 2026-09-01, the audit `TASK 108`'s own entry deferred.** That item cut e2e to the one
+step a real CI run showed was the bottleneck; the author's broader concern — that ~1050 guard
+tests and a 7,951-mutant Stryker run read as disproportionate for "a harness and an
+almost-static site" — was answered separately by an audit of `scripts/guards/lib/**` and
+`site/lib/**`. The audit pushed back (`P-17`) on cutting most of that surface: `evidence.mjs`,
+`shell.mjs`, `path-boundary.mjs`, `delegation-gate.mjs`, `procedures.mjs` and `evals.mjs` are
+each tied directly to a hard rule (`H-01`–`H-05`) or a documented incident (`INC-05`, `INC-07`,
+`INC-08`) in their own header — and it is the exact mechanism the public `README.md`
+(`TASK 101`) cites as the portfolio's credibility claim. It found two narrower, real
+candidates, approved by the author, and this item is both of them implemented and verified.
+
+**Candidate 1 — `scripts/guards/lib/site-structure.mjs` split.** 877 lines, a header claiming
+"three things" while implementing eight unrelated `S-*` checkers, and the single largest
+(1,126 mutants, 16.2% of the guards surface) and worst-covered (61.2%) large file in the
+mutation report. Split into `scripts/guards/lib/site-structure/`: one module per rule
+(`file-cap`, `gateway-boundary`, `framework-free`, `route-literals`, `design-tokens`,
+`visible-strings`, `config-declarative`, `comment-references`), a `shared.mjs` for the four
+genuinely cross-cutting primitives, and an `index.mjs` composing `checkSite`. The original path
+is now a one-line barrel, so every external citation (`check-site.mjs`, `gate.mjs`'s
+`redProof`, `ADR-008`, the rules registry) needed no edit. Verified behavior-preserving before
+anything else moved: all 107 pre-existing tests passed against the split implementation before
+the test file itself was split 1:1 alongside it (+2 new regression tests, 109 total).
+
+**A real bug found while splitting, not invented to justify the item.** Diffing the three
+near-identical hand-rolled comment/quote state machines against each other —
+`codeStringLiteralsByLine`, `withCommentsBlanked`, `commentsByLine` — found that two of the
+three closed a backtick-quoted template literal at its first internal newline, which only
+single/double-quoted strings can legally do. A multi-line template literal containing a
+`//`-shaped run of characters then desynced the state machine badly enough that a real,
+subsequent comment could be misread — a false `S-05`/`S-08` finding or a missed one, depending
+on what followed. Fixed with a one-line exception in each, proven in red: reverted, both new
+regression tests fail with the predicted failure mode; restored, both pass.
+
+**Candidate 2 — `cost.mjs`'s kill rate (51.7%, the worst in the whole 7,951-mutant surface),
+fixed rather than excluded.** The audit's own proposal to the author — get it "out from under
+the blocking floor" — assumed a Stryker lever that does not exist: there is no per-file
+"measure but do not block" setting, only mutate-glob inclusion or exclusion, all or nothing.
+Excluding the file would have reversed its own header's stated intent and hidden real gaps
+rather than genuine noise — checked by reading all 139 survivors individually, not assumed
+from the score. They were not concentrated in prose the way `renderLedger` was (`TASK 88`); the
+largest cluster was real aggregation arithmetic (`byRole`/`bySession`'s `+=` totals, the
+`results` counter, `mb()`/`min()`'s formatting, `measuredModel`'s tie-break) proven only by a
+section header's presence, never a summed value. Closed with 7 new tests (one proven
+load-bearing in red: a planted `+=`→`-=` flip failed it before the fix), 13 `Stryker disable
+next-line StringLiteral` suppressions on inert prose only — never a table header or a `|---|`
+row, which stay live — and one dead-code deletion (`bySession`'s `last` timestamp, computed and
+read by nothing).
+
+**Found and fixed along the way:** this item's own `check-site.mjs` verification (not assumed
+clean) surfaced 3 pre-existing `S-08` findings in `site/playwright.config.ts` — a comment from
+`TASK 108`'s own uncommitted session cited `TASK 108`, `T-05` and `C-11` by id from inside
+`site/**`. Confirmed unrelated to this item's own changes (the file's only template literal is
+single-line) and fixed: the reasoning kept, the citations removed to where `ADR-006`'s
+amendment already carries them.
+
+**Deliverable:** `scripts/guards/lib/site-structure/` (9 modules + 9 colocated test files +
+barrel); `scripts/guards/lib/cost.mjs` and `cost.test.mjs`; `scripts/gate.mjs`'s `redProof`
+repointed; `site/playwright.config.ts`'s comment fix.
+
+**Done:** `node --test "scripts/guards/**/*.test.mjs"` — 1,059 passed, 0 failed (was 1,050).
+`check-site.mjs` — PASS, 0 findings (was 3). A full mutation run:
+**aggregate 79.21%** (break threshold 77.0, comfortably passed — floor left untouched, raising
+the ratchet is `TASK 38`'s own item); `cost.mjs` **66.67%** (was 51.7%); the `site-structure/`
+directory **61.80%** in aggregate (was 61.2% as one file — **the split itself does not move
+this number**, stated rather than implied otherwise, since the same code produces the same
+mutants regardless of which file holds it; the file most improved by the actual bugfix,
+`comment-references.mjs`, reads 87.65%).
+
+**What this does not claim (`C-01`):** that the gate's total size is now "right" in some
+absolute sense — no number in this audit could produce that. It claims two specific,
+evidence-backed items closed the way the audit found them, and states plainly where the
+audit's own earlier framing (site-structure's mutant count as a splitting target, `cost.mjs`'s
+exclusion) did not survive contact with the real mechanism (`P-04`, `P-11`).
+
+**Residual, not silently dropped (`P-19`):** unifying the three comment/quote state machines
+into one shared walker — their trigger conditions are identical, verified by diffing them
+character by character — was considered and declined this session on a risk basis, not a value
+basis. A shared primitive done wrong would silently weaken three guards (`S-01`, `S-05`,
+`S-08`) at once, and verifying a rewrite that thoroughly was not realistic in the time
+available; the narrower one-line fix applied to each of the two buggy copies closes the actual
+defect without that risk. Revisit if a fourth near-identical parser appears, or one of the
+three needs a fix the others don't get.
+
+**Constraints**
+- **Exactly the two candidates the audit named and the author approved** — not a broader pass
+  over the surface the audit already defended (`H-01`–`H-05`'s enforcement mechanism), and not
+  a reflexive haircut.
+- **No number claimed without a real run behind it (`C-01`).** The mutation figures above are
+  from an incremental run; `stryker.config.mjs`'s own comment states incremental mode is not
+  yet validated as the basis for moving the ratchet — irrelevant here, since the floor was not
+  touched, but stated so the number is not read as more certain than it is.
+
+Full account: `progress/2026-09-01-05-task109-coverage-audit-closed.md`.
+
+---
+
 ## TASK 31 — Reconcile the brief and the decision docs with what was built · `content` · `DONE` · **ran first**
 
 **Closed 2026-08-23**, with the full `done` block and `iterations: 3` in `progress/2026-08-23-21-task31-design-docs-reconciled.md`. The status line here said `TODO` until 2026-08-24, when the session opening the site backlog checked it against the log rather than reading it (`P-04`). The work was finished; only the register was stale — which is exactly the half of `P-07` that gets skipped.

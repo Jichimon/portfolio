@@ -17,9 +17,14 @@ export default defineConfig({
   use: {
     baseURL: PREVIEW_URL,
   },
+  // Chromium only. A real, monitored CI run caught this step still in flight at 89 minutes on
+  // GitHub's 2-core standard runner — one browser engine's worth of process launches, not
+  // three, was the difference that mattered first. This is a content-heavy, largely static
+  // site, not an app with browser-specific interactive logic: Firefox/WebKit-specific
+  // rendering defects are a real but low-probability risk here, accepted rather than hidden.
+  // Add either back the day a real defect specific to one of them is found — that is the
+  // trigger, not a calendar date.
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
 });

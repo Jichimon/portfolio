@@ -90,7 +90,7 @@ behaviors:
       - "nothing outside site/src/gateway/** imports astro:content (S-02)"
       - "site/lib/** imports no Astro and nothing from site/src/** (S-06)"
     tests:
-      - "scripts/guards/lib/site-structure.test.mjs (already green) + check-site against the real tree"
+      - "scripts/guards/lib/site-structure/{file-cap,gateway-boundary,framework-free}.test.mjs (already green, split from the original site-structure.test.mjs by TASK 109) + check-site against the real tree"
 
   - id: SKEL-006
     given: "resources/ is a sibling of site/, not a child"
@@ -191,7 +191,7 @@ The content layer, tokens and the shell, any page, deploy configuration, and the
 | `manual::build-emits-one-static-route` | e2e | `dist/` contains one HTML route; no adapter in the config | SKEL-003 | green |
 | `manual::preact-island-hydrates-then-removed` | e2e | the island responds to interaction in a browser; the island and its route are gone afterwards | SKEL-004 | green |
 | `scripts/guards/gate/check-site.mjs` | integration | the created tree reports PASS, not SKIP | SKEL-005 | green |
-| `scripts/guards/lib/site-structure.test.mjs` | unit | the three properties, 21 tests, 12/12 mutants | SKEL-005 | green |
+| `scripts/guards/lib/site-structure/{file-cap,gateway-boundary,framework-free}.test.mjs` | unit | the three properties, 21 tests, 12/12 mutants at the time (split from the original site-structure.test.mjs by TASK 109; the file grew well past these three properties before it split) | SKEL-005 | green |
 | `manual::glob-base-outside-project-root` | e2e | a real `resources/` entry loads during the build, or the failure is recorded verbatim | SKEL-006 | green |
 
 **Coverage gaps:** none claimed. The `manual::` rows are browser and command-line verification because there is no test runner in `site/` yet and this item does not add one — Playwright arrives with the fidelity-harness item, which is where these become automated. Recorded as a gap with a named owner rather than as coverage.
@@ -204,7 +204,7 @@ The content layer, tokens and the shell, any page, deploy configuration, and the
 | SKEL-002 | critical | green | `manual::npm-test-is-the-gate`, `manual::npm-test-fails-when-the-gate-fails` | n/a | — (T-09) |
 | SKEL-003 | critical | green | `manual::build-emits-one-static-route` | n/a | ADR-001, ADR-004 |
 | SKEL-004 | critical | green | `manual::preact-island-hydrates-then-removed` | n/a | ADR-007 |
-| SKEL-005 | critical | green | `check-site`, `site-structure.test.mjs` | yes — the guard's tests were written red before the guard, in the architecture item | ADR-008 |
+| SKEL-005 | critical | green | `check-site`, `site-structure/{file-cap,gateway-boundary,framework-free}.test.mjs` | yes — the guard's tests were written red before the guard, in the architecture item | ADR-008 |
 | SKEL-006 | critical | green | `manual::glob-base-outside-project-root` | n/a | ADR-008 |
 
 ## Drift log

@@ -42,7 +42,7 @@ jobs:
     # number honestly on the next pass, instead of guessing twice.
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # check-status-history derives K2 from `git log -- TASKS.md`. The default
           # fetch-depth of 1 hands it a single commit with no history to diff, and it would
@@ -55,7 +55,7 @@ jobs:
       # package). This does not skip `npm ci` itself, only the network fetch inside it: a
       # cache hit still reinstalls from the local cache, which is fast. Spike, 2026-09-01, CI
       # cost only — nothing here changes what installs or what the gate verifies.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'npm'
@@ -90,12 +90,13 @@ jobs:
 
       - name: cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
 
-      # e2e smoke drives three real browser engines against the built site (T-02). `npm ci`
+      # e2e smoke drives a real browser engine against the built site (T-02) — Chromium only
+      # as of TASK 108 (ADR-006, 2026-09-01); still a real build, never a mock. `npm ci`
       # installs the @playwright/test package, never the browser binaries themselves — those
       # are a separate download this repository's dev machine already has and a fresh runner
       # does not. `--with-deps` also apt-get installs OS-level dependencies, which a browser
@@ -119,7 +120,7 @@ jobs:
       # today. NOT YET the basis for the ratchet (T-03) — see stryker.config.mjs's own note on
       # what still needs proving before it is.
       - name: restore Stryker incremental cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .stryker-tmp/incremental.json
           key: stryker-incremental-${{ github.run_id }}
@@ -173,7 +174,7 @@ jobs:
       # starts from THIS run's progress rather than the last green one's. Spike, 2026-09-01.
       - name: save Stryker incremental cache
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .stryker-tmp/incremental.json
           key: stryker-incremental-${{ github.run_id }}

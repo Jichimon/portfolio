@@ -260,7 +260,7 @@ export const STEPS = [
   {
     name: 'site structure',
     protects: 'the file cap, the gateway boundary and the framework-free core (S-02, S-03, ADR-008)',
-    redProof: { file: 'scripts/guards/lib/site-structure.test.mjs', test: 'RED: a directory at seven files is a finding' },
+    redProof: { file: 'scripts/guards/lib/site-structure/file-cap.test.mjs', test: 'RED: a directory at seven files is a finding' },
     cmd: ['node', 'scripts/guards/gate/check-site.mjs'],
     // Until the skeleton item lands there is no tree to shape. A PASS here would be
     // a guard reporting coverage it does not have (P-03).

@@ -219,20 +219,34 @@ export function formatReport(rows, opts = {}) {
   const { substrateStart = null, generatedFrom = 'evidence/runs', malformed = 0 } = opts;
   const L = [];
 
+  // TASK 109: the header below is prose — a title, a description sentence, four caveat
+  // bullets — exactly the distinction TASK 88 drew for renderLedger: D3 scopes mutation
+  // away from a render template's SENTENCES, because emptying one proves nothing about
+  // test quality, while its SHAPE (blank lines as block separators, the table headers and
+  // `|---|` separator rows below) stays live and unsuppressed — nothing here hides those.
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push('# What a run costs');
   L.push('');
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push(`Generated from \`${generatedFrom}\` by \`scripts/guards/gate/check-cost.mjs\`. Read-only, reproducible: the same corpus produces this file byte-for-byte.`);
   L.push('');
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push('## What these numbers are, and what they are not');
   L.push('');
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push('- **`bytes` counts tool results only** — not the prompt, not the re-sent conversation history, not model output. It is a proxy for marginal context inflow and is **not tokens billed**. Do not quote it as a token count.');
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push('- **`model` prefers a measurement over a derivation** (`TASK 64` clause 6): when a dispatch\'s own `run.cost.by_model` exists and is non-empty, that is the model that actually ran. Only when it is absent does this fall back to the tier the role file declares, joined by the header\'s `agent` — a fallback that would miss a dispatch-time override. Each row\'s `model_source` (`measured` \\| `declared` \\| `unknown`) says which kind it is looking at.');
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push(`- **\`footer: ABSENT\` means the run did not terminate normally — never that a budget stopped it** (\`G-06\`). A crash, a kill and a hook that never fired look identical from outside.`);
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push('- **Network tools are under-counted, and `researcher` is the role this distorts.** `WebFetch` averages ~78 recorded bytes per result and `WebSearch` ~154 — the response wrapper, not the page the model actually read. A role whose work is fetching therefore reads as nearly free. Do not compute a delegation break-even for `researcher` from this column.');
   if (substrateStart) {
+    // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
     L.push(`- **Byte counts are only meaningful from \`${substrateStart}\`.** Earlier runs recorded every result as 0 bytes (the \`tool_result\`/\`tool_response\` bug, \`evidence.mjs:375\`), so a role active only before that reads as free when it was not.`);
   }
   if (malformed > 0) {
+    // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
     L.push(`- **${malformed} trace line(s) could not be parsed** and are excluded. A torn line narrows this report; it is never silently dropped.`);
   }
   L.push('');
@@ -254,6 +268,7 @@ export function formatReport(rows, opts = {}) {
     byRole.set(k, a);
   }
 
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push('## Per role');
   L.push('');
   L.push('| role | model (measured or declared — see limits above) | dispatches | finished | turns | result MB | wall-clock min | denies |');
@@ -266,7 +281,14 @@ export function formatReport(rows, opts = {}) {
   // Per session, which is the unit the human experiences: one sitting, one bill.
   const bySession = new Map();
   for (const r of sorted) {
-    const a = bySession.get(r.runId) ?? { runId: r.runId, first: r.ts, last: r.ts, dispatches: 0, delegated: 0, roles: new Set(), turns: 0, bytes: 0, durationMs: 0, denies: 0 };
+    // TASK 109: this loop used to also track `last` (the latest ts in the session), the
+    // same way `first` is tracked below. Nothing ever read it — not this file, not
+    // check-cost.mjs, not a test — so it was dead weight contributing untestable
+    // survivors (mutating a computation nobody observes cannot be caught by any
+    // assertion on the report's actual output). Deleted rather than tested or
+    // suppressed: T-03's own reasoning for a suppression is "this is genuinely
+    // equivalent", and dead code is neither equivalent nor covered, it is unused.
+    const a = bySession.get(r.runId) ?? { runId: r.runId, first: r.ts, dispatches: 0, delegated: 0, roles: new Set(), turns: 0, bytes: 0, durationMs: 0, denies: 0 };
     a.dispatches += 1;
     if (r.reason === 'delegated') a.delegated += 1;
     if (r.agent) a.roles.add(r.agent);
@@ -275,12 +297,13 @@ export function formatReport(rows, opts = {}) {
     a.durationMs += r.durationMs;
     a.denies += r.denies;
     if (r.ts && (!a.first || r.ts < a.first)) a.first = r.ts;
-    if (r.ts && (!a.last || r.ts > a.last)) a.last = r.ts;
     bySession.set(r.runId, a);
   }
 
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push('## Per session');
   L.push('');
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push('One session is one run directory. `delegated` counts the dispatches inside it, which is the number `ADR-009`\'s break-even rule is about.');
   L.push('');
   L.push('| session | started | dispatches | delegated | roles | turns | result MB | tool min | denies |');
@@ -290,6 +313,7 @@ export function formatReport(rows, opts = {}) {
   }
   L.push('');
 
+  // Stryker disable next-line StringLiteral: prose text, not structure — see the TASK 109 note above
   L.push('## Per dispatch');
   L.push('');
   L.push('| when | role | model | turns | result MB | min | denies | footer |');
