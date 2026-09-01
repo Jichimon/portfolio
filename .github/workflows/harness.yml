@@ -9,9 +9,10 @@ name: harness
 #
 # `check-ci` fails this file if a filter is ever added back.
 #
-# INERT UNTIL A REMOTE EXISTS. This repository has no remote today, so nothing here has run.
-# That is why the `ci` done-dimension reads `not_applicable, reason: "no remote exists"`
-# rather than `passed` — and why T-10 says a green local gate is not evidence CI fired.
+# TASK 106: this workflow now runs against a real remote and reports a real result — the
+# INERT-UNTIL-A-REMOTE comment this file carried until 2026-09-01 stopped being true the
+# day TASK 30 pushed. See TASK 106's own entry in TASKS.md for what was actually failing
+# and why (site/ needed its own install, private/ never reaches a runner by design).
 
 on:
   push:
@@ -26,6 +27,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # check-status-history derives K2 from `git log -- TASKS.md`. The default
+          # fetch-depth of 1 hands it a single commit with no history to diff, and it would
+          # report a clean zero-transitions window that measures the checkout, not the
+          # register (T-10: read the real result, don't trust what a shallow clone implies).
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -38,15 +45,53 @@ jobs:
       # this. It costs ~30s and the mutation run costs ~2.5min; that is the price of CI parity.
       - run: npm ci
 
+      # site/ is its own package, not an npm workspace — `npm ci` at the root never touches
+      # it. Without this, `site/node_modules` is absent on the runner and three gate steps
+      # (type check, component tests, e2e smoke) resolve a binary that was never installed,
+      # which reads as a plain FAIL rather than the missing-install it actually is. Found by
+      # simulating a fresh checkout against gate-steps.mjs's own validator (TASK 106).
+      - run: npm ci
+        working-directory: site
+
+      # e2e smoke drives three real browser engines against the built site (T-02). `npm ci`
+      # installs the @playwright/test package, never the browser binaries themselves — those
+      # are a separate download this repository's dev machine already has and a fresh runner
+      # does not.
+      - run: npx playwright install --with-deps
+        working-directory: site
+
       # One command, matching exactly what a human runs locally (T-09). CI must not re-list
       # the gate's steps: a step added to the gate would then be silently absent from CI,
       # and the local run would verify more than CI does.
-      - run: node scripts/gate.mjs
-
-      # The confidentiality check needs private/banned-terms.txt, which is gitignored and
-      # never reaches the runner. The gate step above therefore FAILS in CI on a fresh
-      # checkout — by design, and named here so nobody debugs it as a mystery.
       #
-      # Resolving it is TASK 7's business: either a repository secret materializing the term
-      # list, or a CI-only mode that asserts the check ran and skipped for a stated reason.
-      # Choosing now, with no remote and no runner, would be guessing.
+      # The verdict is read rather than assumed. gate.mjs exits 0 PASSED, 1 FAILED, 2
+      # INCOMPLETE (one or more steps SKIPPED rather than run). private/banned-terms.txt is
+      # gitignored and never reaches this runner by design (H-04) — the confidentiality check
+      # runs only on a machine that holds the mapping — so the 'confidentiality' step is the
+      # one step this workflow expects to see skipped. An INCOMPLETE run is accepted ONLY when
+      # that is the single skip; any other skip, or a skip alongside a real failure, still
+      # fails the job. A silently-accepted arbitrary skip is INC-08's exact shape, so this
+      # gate is a property of the summary, not a blanket "exit code 2 is fine".
+      - name: run the gate
+        run: |
+          set +e
+          node scripts/gate.mjs > gate.log 2>&1
+          code=$?
+          set -e
+          cat gate.log
+          if [ "$code" -eq 2 ]; then
+            # The count comes from the "GATE INCOMPLETE — N of 20..." header line, not from
+            # counting SKIP lines directly: gate.mjs prints each skipped step TWICE — once in
+            # the padded summary table, once in the incomplete-detail block below it — and a
+            # plain `grep -c '^  SKIP  '` counts both, silently doubling every real count.
+            # Proven in red before this shipped: a synthetic single-skip log scored skips=2
+            # against the naive pattern and only the header-derived count read 1.
+            skips=$(sed -n 's/^GATE INCOMPLETE — \([0-9]\+\) of [0-9]\+ step(s) did not run:/\1/p' gate.log)
+            conf=$(grep -c '^  SKIP  confidentiality' gate.log || true)
+            if [ "$skips" = "1" ] && [ "$conf" = "1" ]; then
+              echo "::warning::GATE INCOMPLETE — 'confidentiality' skipped: private/banned-terms.txt never reaches a runner by design (H-04). Every other step ran."
+              exit 0
+            fi
+            echo "::error::GATE INCOMPLETE with an unexpected skip set — see the summary above. Only 'confidentiality' may be skipped in CI."
+          fi
+          exit $code

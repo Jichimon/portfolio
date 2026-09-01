@@ -60,7 +60,7 @@ private/               NEVER COMMITTED
 | Contract shapes and what enforces them | `docs/harness/contracts.md` |
 | What the runtime trace records, and what it deliberately does not | `docs/harness/evidence.md` |
 | A past architectural decision | `docs/adr/README.md` **first**, then the ADR |
-| Content conventions and diagram tags | `README.md` |
+| Content conventions and diagram tags | `docs/content-conventions.md` |
 | What a past session decided | `progress/` |
 
 ## The boundary

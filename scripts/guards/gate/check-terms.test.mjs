@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -118,7 +118,16 @@ test('a fixture run says so, so nobody reads it as a real confidentiality pass',
   });
 });
 
-test('LIVENESS: the real repository run is a real run — no fixture banner, git checks on', () => {
+// H-04: private/ is gitignored and never reaches a CI runner, so THIS repository's own term
+// list is present only on a machine that holds the confidentiality mapping. Declared as a
+// node:test skip rather than an assertion, so the property this test proves — the CLI's real,
+// non-fixture behavior — is still checked wherever the mapping actually is, and stated rather
+// than silently absent everywhere else (gate.mjs's own 'confidentiality' step carries the same
+// skipIf/skipNote pairing for the same reason).
+const TERMS = join(ROOT, 'private/banned-terms.txt');
+test('LIVENESS: the real repository run is a real run — no fixture banner, git checks on', {
+  skip: existsSync(TERMS) ? false : 'private/banned-terms.txt is absent on this machine (H-04) — nothing to run this against',
+}, () => {
   const r = spawnSync(process.execPath, [CLI], { encoding: 'utf8' });
   const out = `${r.stdout}${r.stderr}`;
   assert.equal(r.status, 0, out);

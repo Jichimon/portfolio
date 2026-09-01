@@ -64,7 +64,7 @@ if (!existsSync(wf)) {
 
 const refCount = docs.reduce((n, d) => n + d.refs.length, 0);
 console.log(`      ${docs.length} living document(s), ${refCount} path reference(s) resolved · ${(cfg.ignore ?? []).length} reasoned exemption(s)`);
-console.log(`      ${WORKFLOW}: no path filter, runs the gate — inert until a remote exists (T-10)`);
+console.log(`      ${WORKFLOW}: no path filter, runs the gate — live against a real remote since TASK 30/106 (T-10)`);
 
 if (findings.length === 0) {
   console.log('PASS  check-docs');

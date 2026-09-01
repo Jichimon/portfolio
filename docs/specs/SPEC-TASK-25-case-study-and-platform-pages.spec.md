@@ -25,7 +25,7 @@ related_docs:
   - docs/design/canvas/src/PlatformPage.dc.html
   - docs/design/canvas/src/Components.dc.html
   - docs/design/decisions/2026-08-22-site-structure.md
-  - README.md
+  - docs/content-conventions.md
 
 depends_on_author:
   - "resources/site/ui.{en,es}.md gains two strings in the `article:` group — `part_of` and `figure_prefix` — before CASE-006 and CASE-003 can render their copy. `resources/**` is frozen (H-02), so this is an author hand-off, same shape as TASK 49 and TASK 50. Until they land, both behaviors ship the block WITHOUT the affected clause rather than with an invented one (S-01, C-01)."
@@ -70,7 +70,7 @@ behaviors:
     priority: critical
     status: implemented
     edge_cases:
-      - "**The `Spec:` half is an instruction to whoever draws the diagram and must never reach a reader.** `README.md` §Diagram tags is the convention this implements; the default remark-directive behavior renders all children, which would publish `Spec: show the cloud/on-premise boundary explicitly…` on a public page. That is the defect this edge case exists to prevent."
+      - "**The `Spec:` half is an instruction to whoever draws the diagram and must never reach a reader.** `docs/content-conventions.md` §Diagram tags is the convention this implements; the default remark-directive behavior renders all children, which would publish `Spec: show the cloud/on-premise boundary explicitly…` on a public page. That is the defect this edge case exists to prevent."
       - "the `<img>`'s `alt` is the caption text — the only string available for it; there is no other source and none is invented (S-01)"
       - "a directive with no caption line before `Spec:` renders the figure with no figcaption and an empty alt, rather than falling back to the id or the `Spec:` text"
       - "`type` is metadata carried on the element and does not change the resolution — every value, `table` included, resolves to one `.svg`"
@@ -291,7 +291,7 @@ The markup is the easy half. The work is the pipeline, and it is concentrated in
 
 ### CASE-003 — The diagram directive, and the half of it that must never ship · `critical` · `implemented`
 
-`README.md` §Diagram tags defines the block's body as *caption, then `Spec:` for whoever draws it*. Remark-directive's default renders every child, so the naive implementation publishes the drawing instructions. The caption is also the only string available for `alt`, which is why an absent caption yields an absent figcaption and an empty alt rather than a fallback.
+`docs/content-conventions.md` §Diagram tags defines the block's body as *caption, then `Spec:` for whoever draws it*. Remark-directive's default renders every child, so the naive implementation publishes the drawing instructions. The caption is also the only string available for `alt`, which is why an absent caption yields an absent figcaption and an empty alt rather than a fallback.
 
 - **Governed by:** ADR-002 · **Tests:** `diagram-directive.test.mjs`
 

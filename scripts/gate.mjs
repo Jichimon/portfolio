@@ -188,6 +188,13 @@ export const STEPS = [
     protects: 'no banned term reaches a publishable file (C-05)',
     redProof: { file: 'scripts/guards/lib/terms.test.mjs', test: 'RED: a term in docs/ is found — the exact gap the hardcoded path roster left open' },
     cmd: ['node', 'scripts/guards/gate/check-terms.mjs'],
+    // H-04: private/ is gitignored by design — the mapping never reaches a CI runner, and
+    // must not. TASK 106: this step declares the gap out loud (P-03) rather than the checkout
+    // pretending to be a pass or the checker forced to fail on a runner that was never meant
+    // to hold this file. gate.mjs's own summary prints this skip by name, and CI's own gate
+    // step treats a run whose ONLY skip is this one as accepted — every other check still ran.
+    skipIf: () => !existsSync(join(ROOT, 'private/banned-terms.txt')),
+    skipNote: 'private/banned-terms.txt is absent — the confidentiality check runs where the mapping lives (H-04), never on a runner',
   },
   {
     name: 'templates',
