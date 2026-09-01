@@ -77,3 +77,56 @@ test('the same missing reference in three files is reported three times, with ea
   const docs = ['a.md', 'b.md', 'c.md'].map((file) => ({ file, refs: ['docs/harness/metrics.md'] }));
   assert.equal(validateRefs(docs, exists, []).length, 3);
 });
+
+// --- machine-local references (TASK 112) -------------------------------------------------
+//
+// CI reached this guard for the first time on 2026-09-01, after the hang that had been
+// stopping the gate at step 5 was fixed, and reported eleven findings: living documents
+// citing `private/**`, `reports/**` and `resources/site/intake.md`. All four files exist on
+// the author's machine, all four are gitignored on purpose, and none can ever reach a runner.
+// The citations are correct — `H-04`'s own rule row names `private/glossary.md` — so what had
+// to change is the question the guard asks.
+
+test('RED: a missing reference the repository deliberately excludes is reported, not failed', () => {
+  const docs = [{ file: 'TASKS.md', refs: ['private/glossary.md'] }];
+  const findings = validateRefs(docs, () => false, [], (ref) => ref.startsWith('private/'));
+
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].info, true, 'a machine-local reference must not be a hard finding');
+  assert.match(findings[0].message, /private\/glossary\.md/);
+  assert.match(findings[0].message, /deliberately excludes/);
+});
+
+test('RED: a missing reference the repository does NOT exclude is still a hard finding', () => {
+  // The half that matters most: this guard exists because architecture.md cited two files
+  // thirteen times that had never been written. Excusing machine-local paths must not excuse
+  // that, and this is the assertion that would fail if the predicate were ever widened.
+  const docs = [{ file: 'TASKS.md', refs: ['docs/harness/never-written.md'] }];
+  const findings = validateRefs(docs, () => false, [], () => false);
+
+  assert.equal(findings.length, 1);
+  assert.notEqual(findings[0].info, true);
+  assert.match(findings[0].message, /has stopped being true/);
+});
+
+test('a machine-local reference that DOES resolve is not reported at all', () => {
+  // On the machine that holds `private/`, the file is there and the question never arises.
+  // The predicate is consulted only after resolution has already failed.
+  const docs = [{ file: 'TASKS.md', refs: ['private/glossary.md'] }];
+  assert.deepEqual(validateRefs(docs, () => true, [], () => true), []);
+});
+
+test('the reasoned ignore list still wins before the machine-local question is asked', () => {
+  const docs = [{ file: 'TASKS.md', refs: ['.github/workflows/deploy.yml'] }];
+  const ignore = [{ ref: '.github/workflows/deploy.yml', reason: "TASK 32's deliverable" }];
+  assert.deepEqual(validateRefs(docs, () => false, ignore, () => true), []);
+});
+
+test('RED: with no predicate supplied, every missing reference stays a hard finding', () => {
+  // The default is the old behaviour, exactly. A caller that forgets to pass the oracle gets
+  // a stricter guard, never a blinder one.
+  const docs = [{ file: 'TASKS.md', refs: ['private/glossary.md'] }];
+  const findings = validateRefs(docs, () => false);
+  assert.equal(findings.length, 1);
+  assert.notEqual(findings[0].info, true);
+});

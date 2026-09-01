@@ -57,13 +57,17 @@ const exempt = (path, list) => list.some((e) => path === e.path);
  * of them. A check whose verdict depends on how much of the world the caller happened to
  * pass is a check that will be wrong somewhere.
  */
-export function validateExemptions(allFiles, config = {}) {
+export function validateExemptions(allFiles, config = {}, isMachineLocal = () => false) {
   const findings = [];
   for (const e of [...(config.noFrontmatter ?? []), ...(config.singleLocale ?? [])]) {
     if (!(e.reason ?? '').trim()) {
       findings.push({ file: 'guards.config.json', message: `${e.path} is exempt with no reason recorded — every calibrated exception here carries one` });
     }
-    if (!allFiles.some((f) => f.path === e.path)) {
+    if (!allFiles.some((f) => f.path === e.path) && !isMachineLocal(e.path)) {
+      // A path the repository deliberately excludes is absent from every checkout by design,
+      // so its exemption is not stale — it is unverifiable here, which is a different claim
+      // (TASK 112). `resources/site/intake.md` is the live case: gitignored working notes,
+      // exempt for a real reason, and missing on every runner.
       findings.push({ file: 'guards.config.json', message: `${e.path} is exempt but does not exist — a stale exemption hides the next real gap` });
     }
   }

@@ -55,8 +55,12 @@ export function extractRefs(text) {
  * @param {{file:string, refs:string[]}[]} docs
  * @param {(ref:string, from:string)=>boolean} resolves
  * @param {{ref:string, reason?:string}[]} ignore
+ * @param {(ref:string)=>boolean} isMachineLocal
+ *   Whether the repository deliberately excludes this path (repo-ignore.mjs). Injected, and
+ *   defaulting to "no", so every existing caller and fixture keeps its exact behaviour: a
+ *   missing reference is a finding unless something states otherwise. TASK 112.
  */
-export function validateRefs(docs, resolves, ignore = []) {
+export function validateRefs(docs, resolves, ignore = [], isMachineLocal = () => false) {
   const findings = [];
   const ignored = new Map(ignore.map((i) => [i.ref, i.reason]));
 
@@ -72,6 +76,14 @@ export function validateRefs(docs, resolves, ignore = []) {
       seenRefs.add(ref);
       if (ignored.has(ref)) continue;
       if (resolves(ref, file)) continue;
+      if (isMachineLocal(ref)) {
+        // Not a defect and not silence: `info` marks it for the caller to PRINT by name.
+        // The repository excludes this path on purpose, so no checkout can verify it —
+        // "does this file exist" is a question about a machine, and the only honest answer
+        // from a clone is to say which references it could not check (TASK 112).
+        findings.push({ info: true, message: `${file} cites \`${ref}\`, which the repository deliberately excludes — machine-local, not verifiable from a checkout` });
+        continue;
+      }
       findings.push({ message: `${file} cites \`${ref}\`, which does not exist. A living document pointing at a missing file is a claim that has stopped being true (P-07)` });
     }
   }

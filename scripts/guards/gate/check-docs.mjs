@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 import { extractRefs, validateRefs } from '../lib/doc-links.mjs';
 import { validateWorkflow } from '../lib/ci.mjs';
 import { logDate } from '../lib/procedures.mjs';
+import { makeIgnoreOracle } from '../lib/repo-ignore.mjs';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const WORKFLOW = '.github/workflows/harness.yml';
@@ -50,7 +52,15 @@ for (const r of roots) {
 const resolves = (ref, from) =>
   existsSync(join(ROOT, ref)) || (from && existsSync(join(ROOT, dirname(from), ref)));
 
-findings.push(...validateRefs(docs, resolves, cfg.ignore ?? []));
+// TASK 112. `git check-ignore` is the repository's own answer to "do you deliberately
+// exclude this path?", asked once per distinct reference and cached. It is the same source
+// of truth the checkout obeys, which is why it is asked rather than a list of paths kept
+// here (P-13). The `-q` form is silent and answers with its exit status alone.
+const ignoresPath = makeIgnoreOracle((ref) =>
+  spawnSync('git', ['check-ignore', '-q', '--', ref], { cwd: ROOT, encoding: 'utf8' }),
+);
+
+findings.push(...validateRefs(docs, resolves, cfg.ignore ?? [], ignoresPath));
 
 // --- the workflow -----------------------------------------------------------
 const wf = join(ROOT, WORKFLOW);
@@ -63,13 +73,23 @@ if (!existsSync(wf)) {
 }
 
 const refCount = docs.reduce((n, d) => n + d.refs.length, 0);
+// `info` findings are not defects: they are references into paths the repository excludes on
+// purpose, and printing every one BY NAME is the whole mitigation for excusing them at all
+// (repo-ignore.mjs states the residual). Split before the verdict, never counted as failures.
+const machineLocal = findings.filter((f) => f.info);
+const defects = findings.filter((f) => !f.info);
+
 console.log(`      ${docs.length} living document(s), ${refCount} path reference(s) resolved · ${(cfg.ignore ?? []).length} reasoned exemption(s)`);
+if (machineLocal.length) {
+  console.log(`      ${machineLocal.length} machine-local reference(s) the repository deliberately excludes — not verifiable from a checkout:`);
+  for (const f of machineLocal) console.log(`        ${f.message}`);
+}
 console.log(`      ${WORKFLOW}: no path filter, runs the gate — live against a real remote since TASK 30/106 (T-10)`);
 
-if (findings.length === 0) {
+if (defects.length === 0) {
   console.log('PASS  check-docs');
   process.exit(0);
 }
-console.error(`FAIL  check-docs  ${findings.length} finding(s)`);
-for (const f of findings) console.error(`  ${f.message}`);
+console.error(`FAIL  check-docs  ${defects.length} finding(s)`);
+for (const f of defects) console.error(`  ${f.message}`);
 process.exit(1);

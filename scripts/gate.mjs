@@ -470,7 +470,17 @@ function main() {
       console.error(`\n  ${status}  ${step.name}${note ? ` (${note})` : ''}`);
       console.error(`    protects: ${step.protects}`);
     }
-    process.exit(exitCode);
+    // `process.exitCode` and a return, NEVER `process.exit()`. On POSIX, stdout to a pipe
+    // is asynchronous and `process.exit()` drops whatever is still queued - so the summary
+    // table and the deferral block, written last and to stdout, can be lost precisely when
+    // a run fails. That is what the first real CI run of this code showed: every stderr
+    // line present, every stdout line after the last child step absent, on a runner whose
+    // output goes through `tee`. NOT reproducible on this repository's Windows machine,
+    // where pipe writes behave differently, so it is recorded as the likely cause rather
+    // than a proven one (TASK 112) - but returning is correct regardless and costs nothing:
+    // the process exits once the loop drains, which is after stdout has flushed.
+    process.exitCode = exitCode;
+    return;
   }
 
   if (incomplete.length) {
@@ -493,7 +503,11 @@ function main() {
       console.error(`\n  SKIP  ${step.name}${note ? ` (${note})` : ''}`);
       console.error(`    protects: ${step.protects}`);
     }
-    process.exit(exitCode);
+    // Same reasoning as the failure branch above, and this is the branch CI takes on EVERY
+    // run - the confidentiality step's term list never reaches a runner (H-04) - so a
+    // truncated summary here is the normal case rather than the rare one.
+    process.exitCode = exitCode;
+    return;
   }
 
   // NEVER a bare "GATE PASSED" again. The profile is part of the verdict, because

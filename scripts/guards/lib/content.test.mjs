@@ -168,3 +168,35 @@ test('LIVENESS: the required-key sets describe content that actually exists', ()
     }
   }
 });
+
+// --- exemptions for deliberately-excluded paths (TASK 112) --------------------------------
+
+test('RED: an exemption for a path the repository deliberately excludes is not stale', () => {
+  // `resources/site/intake.md` is gitignored working notes, exempt for a real reason, and
+  // absent from every checkout by design. Reading that absence as a stale exemption made
+  // this guard structurally unable to pass in CI.
+  const config = { noFrontmatter: [{ path: 'resources/site/intake.md', reason: 'working notes, never published' }] };
+  const findings = validateExemptions([], config, (p) => p === 'resources/site/intake.md');
+  assert.deepEqual(findings, []);
+});
+
+test('RED: an exemption for an ordinary path that vanished is still stale', () => {
+  // The half this must not break: a stale exemption hides the next real gap, and that is
+  // the whole reason the check exists.
+  const config = { noFrontmatter: [{ path: 'resources/deleted.en.md', reason: 'was exempt once' }] };
+  const findings = validateExemptions([], config, () => false);
+  assert.equal(findings.length, 1);
+  assert.match(findings[0].message, /stale exemption/);
+});
+
+test('an exemption whose file is present is never stale, predicate or not', () => {
+  const config = { noFrontmatter: [{ path: 'resources/site/intake.md', reason: 'working notes' }] };
+  const files = [{ path: 'resources/site/intake.md' }];
+  assert.deepEqual(validateExemptions(files, config, () => false), []);
+});
+
+test('RED: with no predicate supplied, a missing exemption is stale exactly as before', () => {
+  const config = { noFrontmatter: [{ path: 'resources/site/intake.md', reason: 'working notes' }] };
+  const findings = validateExemptions([], config);
+  assert.equal(findings.length, 1);
+});

@@ -3032,7 +3032,7 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 
 | Serves | Items | Note |
 |---|---|---|
-| **Goal 1 — publish** | `TASK 110` · `TASK 111` · `TASK 30` · `TASK 32` · `TASK 28` · `TASK 29` | **71 items are closed and nobody can see any of it.** Goal 1 has no delivered value until this ships. **`TASK 110` and `TASK 111` are first as of 2026-09-01**: CI cannot go green at all until the e2e hang is fixed, and cannot finish in a sane budget until the heavy tiers leave the per-push path — and `TASK 30`'s own `Done` is a green run on the remote |
+| **Goal 1 — publish** | ~~`TASK 110`~~ **`DONE`** · `TASK 112` · `TASK 111` · `TASK 30` · `TASK 32` · `TASK 28` · `TASK 29` | **71 items are closed and nobody can see any of it.** Goal 1 has no delivered value until this ships. **`TASK 110` and `TASK 111` are first as of 2026-09-01**: CI cannot go green at all until the e2e hang is fixed, and cannot finish in a sane budget until the heavy tiers leave the per-push path — and `TASK 30`'s own `Done` is a green run on the remote |
 | **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 104` · `TASK 27` | The pages a reader actually judges |
 | **Goal 1 — credibility** | ~~`TASK 94`~~ **`DONE` 2026-08-31** · ~~`TASK 101`~~ **`DONE` 2026-09-01** | `TASK 94` **retired the bypass series** by stating the residual instead of chasing it — the cheapest high-leverage item on the board, and it closed without opening a single item in the surface it documents. `TASK 101` decided the exhibit is `README.md` only and rewrote it |
 | **Goal 2 — the deliverable** | `TASK 9` (blocked) · `TASK 100` (the unblocker) | `TASK 9`'s own trigger is *the first `EVAL` with a real, non-harness workload*, and nothing was advancing it. `TASK 100` is that workload |
@@ -3080,7 +3080,7 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 
 **Done:** when triggered — a goal marker in the heading grammar, `check-status-history` asserting it as a property rather than a roster (`P-13`), and `P-19`'s rung updated to 2 with the claim made honest (`G-11`).
 
-## TASK 110 — `e2e smoke` hangs in CI; the gate reports nothing while it does · `bugfix` · `TODO`
+## TASK 110 — `e2e smoke` hangs in CI; the gate reports nothing while it does · `bugfix` · `DONE`
 
 **Opened 2026-09-01**, after a third consecutive GitHub Actions run was cancelled at its timeout. Two sessions had already acted on this symptom — `TASK 107` added caching and a 90-minute bound on a root cause it stated as *"a compute-bound cost, not a hang"*, `TASK 108` cut the e2e tier from three browser engines to one — and **neither moved the wall time at all**. Both runs died at exactly 90 minutes. A 3× reduction that changes nothing was never fixing what was wrong, and that is the tell this item started from.
 
@@ -3091,6 +3091,10 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 **Deliverable:** `site/tests/e2e/preview-lifecycle.ts` asks for the daemon explicitly; every gate step carries a time bound and a hung step FAILS naming it; the gate writes a progress line per step to **stderr**, which is inherited rather than captured, so a cancelled run names the step it died in.
 
 **Proven in red before the fix and green after, with the CI condition reproduced locally** — `env -u CLAUDECODE node node_modules/@playwright/test/cli.js test`: killed at the 180s bound having run no test, failing at `preview-lifecycle.ts:16` inside `globalSetup`; after the fix, **171 passed in 51.7s** under the identical environment. The three new mechanisms were each neutered and their batteries re-run: the timeout branch, the progress lines and the malformed-bound check all fail red and pass restored (`P-14`).
+
+**CLOSED 2026-09-01 against run `33566729304`, read from the provider (`T-10`).** `e2e smoke` **PASS in 29.1s** on a real runner — the step that had consumed 90 minutes and verified nothing in each of the three previous runs. The whole job finished in **1m57s**, reached all 22 steps, and printed per-step timing for the first time (`> [5/22] e2e smoke (fast, bound 10m00s)` … `< [PASS] e2e smoke 29.1s`). The deferral mechanism behaved: steps 6 and 7 ran nowhere and cost nothing.
+
+**That run's gate is RED, and not for anything this item touched.** Reaching steps 16 and 18 for the first time exposed two guards that could never have passed on a runner — `TASK 112`, opened for it. Closing this item on a red run is deliberate: its `Done` is about the hang, the hang is gone, and folding an unrelated failure into it would make "done" mean four things again (`P-01`, `INC-01`).
 
 **Done:** a real `harness.yml` run on a push **passes `e2e smoke`** and reaches the end of the gate, with per-step timing visible in the Actions log. Read from `gh run view`, never inferred from a green local gate (`T-10`). A failure there for some other reason is a new finding, recorded rather than folded into this one.
 
@@ -3112,11 +3116,42 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 
 **The concern raised and accepted, once (`P-17`).** Making `fast` the default changes what "the gate passed" means, and the author chose that trade deliberately after being shown it. The residual is real and belongs in the record rather than in a footnote: between a push and the next nightly run, a mutation regression is not caught by CI.
 
+**Partially evidenced 2026-09-01 by run `33566729304`:** the profile was derived from the trigger (`GATE_PROFILE: fast`), both deep steps were deferred and cost nothing, and the headline read `GATE FAILED (profile: fast)` — the profile is in the verdict, as designed. What that run did NOT show is the deferral block, which `TASK 112` traces to output lost at `process.exit()`. So this item stays open on its own terms.
+
 **Done:** a push run reports `GATE PASSED (profile: fast)` with both deferrals named, **and** a manual `gh workflow run harness.yml -f profile=full` completes the full profile inside its bound. Two real runs read, neither inferred from the other. If the full run does not fit, the number is recorded and the decision is taken on it — a larger runner, a validated incremental cache, or a different cadence — never a lowered floor.
 
 **Constraints**
 - **One workflow file.** `check-docs` validates `.github/workflows/harness.yml` by name; a second file would carry no guard at all, which is `INC-08` arriving through a filename instead of a filter.
 - The deep tier runs on a `schedule`, and **GitHub disables scheduled workflows after 60 days of repository inactivity** — recorded so a silently-stopped nightly is recognized rather than discovered.
+
+---
+
+## TASK 112 — Two guards that could never pass on a runner · `bugfix` · `TODO`
+
+**Opened 2026-09-01, by the first CI run that got far enough to find them.** `TASK 110` fixed the hang; the gate then reached steps 16 and 18 for the first time in this repository's history and both failed — `check-docs` with eleven findings, `check-content` with one. Every one is the same shape:
+
+```text
+TASKS.md cites `private/glossary.md`, which does not exist
+.claude/rules/00-hard-rules.md cites `private/glossary.md`, which does not exist
+docs/harness/contracts.md cites `private/banned-terms.txt`, which does not exist
+guards.config.json  resources/site/intake.md is exempt but does not exist
+```
+
+Four files: `private/glossary.md`, `private/banned-terms.txt`, `reports/mutation/mutation.json`, `resources/site/intake.md`. All four exist on the author's machine. All four are **gitignored on purpose** — `private/` by `H-04`, `reports/` and the intake notes by explicit decisions recorded in `.gitignore` itself. None can ever reach a runner.
+
+**The citations are correct and stay.** `H-04`'s own rule row names `private/glossary.md`; deleting the reference to make a checker happy is the tail wagging the dog, and `C-07`'s instinct one level up. What was wrong is the question the guard asked. *"Does this file exist?"* is a question about a machine. The question a checkout can answer is *"does the repository claim to contain this?"* — and for a path git deliberately ignores, the answer is no, on every machine, by design.
+
+**Deliverable:** a missing reference is still a finding, **except** when git itself says the repository excludes it, in which case it is printed by name as a machine-local reference and does not fail the gate. Derived by asking `git check-ignore` — the same source of truth the checkout obeys — never from a list of paths kept in a config (`P-13`). The same predicate settles `check-content`'s stale-exemption check.
+
+**Verified against the real condition, not a fixture.** A tree containing exactly what a push carries (`git ls-files -co --exclude-standard`, 483 files, no `private/`, no `reports/`, no `intake.md`) reproduces CI locally. Before: `check-docs` FAIL 11, `check-content` FAIL 1. After: both PASS, with all eleven references printed by name. Three red paths on that same tree: neutering the oracle brings all eleven back as hard findings; a planted citation to a file that was never written is still caught; and a planted typo *inside* an ignored path is excused — the stated residual — but printed by name where a reader sees it.
+
+**A third defect, found by reading the CI log rather than by a test.** The summary table and the deferral block are absent from that run's log, while every stderr line survived. The likely cause is `process.exit()` dropping queued stdout on POSIX, where writes to a pipe are asynchronous — **not reproducible on this repository's Windows machine**, so it is recorded as likely rather than proven (`C-01` applies to a cause as much as to a number). The fix is `process.exitCode` and a return, which is correct regardless and costs nothing. **This matters more than it looks: CI takes the INCOMPLETE branch on every run** (`H-04` keeps the term list off the runner), so a truncated summary there is the normal case, and it would have silently swallowed the deferral list `TASK 111` exists to print. The next CI run is the test.
+
+**Done:** a push run reaches `GATE INCOMPLETE` with `confidentiality` as its only skip, the workflow accepts it, and the job is green — with the summary table and the deferral block both present in the Actions log. Read from `gh run view` (`T-10`).
+
+**Constraints**
+- **The guard must not go blind.** A dangling citation to an ordinary path stays a hard finding; that is the defect class this guard was built for (`architecture.md` cited two files thirteen times that had never been written), and it has its own red path on the runner-equivalent tree.
+- **The residual is stated, not engineered around** (`P-19`): a typo inside an ignored path is excused everywhere, because it is indistinguishable from a real machine-local citation without asking a human what that directory is supposed to hold. Every excused reference is printed by name on every run, which is the mitigation. A stricter design — parsing `git check-ignore -v`'s matched pattern and demanding the ignored directory be absent — was written out and declined: it buys one narrow case at the cost of a pattern parser nobody asked for.
 
 ---
 

@@ -8,6 +8,8 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseFrontmatter, checkParity, checkFrontmatter, validateExemptions } from '../lib/content.mjs';
+import { makeIgnoreOracle } from '../lib/repo-ignore.mjs';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const cfg = JSON.parse(readFileSync(join(ROOT, 'scripts/guards/guards.config.json'), 'utf8')).content;
@@ -34,8 +36,16 @@ if (files.length === 0) {
   process.exit(1);
 }
 
+// TASK 112. `git check-ignore` is the repository's own answer to "do you deliberately
+// exclude this path?", asked once per distinct reference and cached. It is the same source
+// of truth the checkout obeys, which is why it is asked rather than a list of paths kept
+// here (P-13). The `-q` form is silent and answers with its exit status alone.
+const ignoresPath = makeIgnoreOracle((ref) =>
+  spawnSync('git', ['check-ignore', '-q', '--', ref], { cwd: ROOT, encoding: 'utf8' }),
+);
+
 const findings = [
-  ...validateExemptions(files, cfg),
+  ...validateExemptions(files, cfg, ignoresPath),
   ...checkParity(files, cfg),
   ...checkFrontmatter(files, cfg),
 ];
