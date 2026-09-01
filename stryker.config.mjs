@@ -179,4 +179,30 @@ export default {
 
   coverageAnalysis: 'perTest',
   reporters: ['progress', 'clear-text', 'html', 'json'],
+
+  // Spike, 2026-09-01: the mutation step is the gate's single most expensive one (measured
+  // 74s-11min depending on scope — see gate.mjs's own comment on this step). Incremental mode
+  // is Stryker's own documented answer: it hashes each mutated file plus the tests that cover
+  // it and skips re-testing mutants whose file and covering tests are both unchanged since the
+  // last run recorded in incrementalFile, then reports the FULL aggregate score by merging the
+  // cached results back in — not a delta.
+  //
+  // incrementalFile is named explicitly, in .stryker-tmp alongside the sandbox this config
+  // already ignorePatterns out of the sandbox copy (see above) — same directory, different
+  // subpath, gitignored either way.
+  //
+  // Locally this needs no extra plumbing: the working directory survives between manual gate
+  // runs, so the cache just sits on disk. In CI every run is a fresh checkout, so the value
+  // here depends entirely on the workflow persisting incrementalFile between runs via
+  // actions/cache — that wiring is in harness.yml, and this line does nothing there on its own.
+  //
+  // NOT YET TRUSTED FOR THE RATCHET (T-03, break: 77.0). This repo has hit two cache-correctness
+  // bugs before (TASK 89: Vite/Vitest cache producing false positives; TASK 103: a config
+  // garbage-collecting a build cache), so before this floor is allowed to depend on incremental
+  // mode two things need to be proven, not assumed: an unchanged-code incremental run reports
+  // the SAME aggregate score as a full run (proves reconstruction, not just delta-scoring), and
+  // a real regression planted in a file that DID change since the last cache entry still fails
+  // the step. Recorded here so the next person re-measures rather than re-derives.
+  incremental: true,
+  incrementalFile: '.stryker-tmp/incremental.json',
 };

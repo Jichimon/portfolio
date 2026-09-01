@@ -1093,6 +1093,32 @@ This is `INC-15`'s family in a second place. `INC-15` was the same collision ins
 
 ---
 
+## TASK 107 — Gate speed: CI caching and a Stryker incremental spike · `harness` · `IN PROGRESS`
+
+**Opened 2026-09-01**, from a direct question about why `node scripts/gate.mjs` is slow. `runGate` (`scripts/guards/lib/gate.mjs`) runs its ~20 steps through a plain sequential loop; `mutation` (Stryker) dominates the cost by a wide margin (measured 74s–11min depending on scope). Three levers were identified — a parallel DAG scheduler for `runGate`, CI-only dependency caching, and Stryker's `incremental: true` — and the author scoped this item to the latter two, declining the scheduler explicitly: it touches the mutation-covered surface and would need spec-first (`P-02`, `T-01`), against two changes that touch only `.github/workflows/harness.yml` and `stryker.config.mjs`, neither in Stryker's own `mutate` glob.
+
+**Serves goal 2** — this is exactly the kind of harness-efficiency fact `TASK 9`'s eventual export needs to carry, and it reduces the wall-clock/cost every future item pays under either goal, adjacent to the cost-accounting thread `TASK 70`/`77`/`78` opened.
+
+**Deliverable:** `cache: 'npm'` (both lockfiles) and a keyed Playwright browser cache in `harness.yml`; `incremental: true` plus an explicit `incrementalFile` in `stryker.config.mjs`; `actions/cache/restore` + `actions/cache/save` wired around the gate step so the incremental cache survives CI's otherwise-ephemeral runs.
+
+**Measured, not assumed:** a cold Stryker run scored 78.58% in 10m31s; an immediate unchanged rerun scored 78.58% in 21s — same aggregate score, ~30x faster, confirming incremental mode reconstructs the full score from cache rather than only scoring the delta.
+
+**The "depends on `TASK 106`" constraint fired exactly as written, and badly.** `TASK 106`'s own push (`059a7e5`, before this item's caching/incremental changes existed) ran the workflow for the **full 6-hour GitHub Actions default and was cancelled — with an empty log.** `node scripts/gate.mjs > gate.log 2>&1` buffers everything until the process exits, so a run that never exits inside the timeout leaves nothing to read, live or after the fact — a real gap, found the expensive way rather than reviewed for it beforehand.
+
+**Root-caused, not guessed, before spending a second 6-hour run to find out.** Stryker's own source (`concurrency-token-provider.js`) defaults concurrency to `os.availableParallelism() - 1`. The author's machine: 12 cores → concurrency 11. GitHub's standard `ubuntu-latest` runner: 2 cores → concurrency 2 — a >5x drop in parallel test-runner processes, compounding with generally slower shared cloud cores. That gap alone plausibly turns a ~10–11min local cold mutation run into multiple hours, which is a **compute-bound cost**, not a hang. Two fixes landed on top of the caching work above, both required before another real CI run is worth spending:
+- **`run the gate` streams through `tee` instead of redirecting and `cat`-ing at the end.** `${PIPESTATUS[0]}` reads node's own exit code rather than `tee`'s (which always succeeds) — a plain `$?` after a pipe would read the wrong process. Verified: `bash -c '(exit 7) | tee /dev/null; echo ${PIPESTATUS[0]}'` reads `7`.
+- **The job gains `timeout-minutes: 90`**, stated in the workflow as provisional rather than measured — GitHub Actions has no default escape short of its own 6-hour ceiling, and hitting that ceiling blind is itself uninformative. 90 minutes is a bound to fail loud and fast on; the next real run's live-streamed timing is what should set this number honestly, not a second guess.
+
+**Done:** the CI caching and incremental config are in place and locally verified (see above); the workflow still carries no `paths:`/`paths-ignore:` filter and still runs `node scripts/gate.mjs` as its one command (`check-docs`, `T-09`); a real regression, in a file that changed since the last cache entry, still fails the mutation step — attempted this session, not completed (see Constraints); a real CI run (`T-10`) confirms the cache steps behave as designed, in particular that `if: always()` persists progress from a red run.
+
+**Constraints**
+- **Not yet trusted for the `break: 77.0` ratchet (`T-03`).** This repository has hit two cache-correctness bugs before (`TASK 89`, `TASK 103`), so incremental mode does not get to silently become the basis for the mutation gate — the regression-still-caught proof is required first, recorded as a residual in `stryker.config.mjs` itself and in `progress/2026-09-01-03-task107-gate-speed-ci-caching.md`, not assumed from the reconstruction result alone.
+- **The regression spike was attempted and blocked, not skipped.** A deliberately weakened assertion in `scripts/guards/lib/ci.test.mjs` was reverted immediately after a third Stryker run was denied by Claude Code's own auto-mode permission classifier (a session-level control, not one of this repository's own guards) — confirmed reverted via `node --test scripts/guards/lib/ci.test.mjs`, 11/11 passing against the real file.
+- **Depends on `TASK 106` landing first.** Both items edit the same workflow; this one's CI half cannot be observed as working until `TASK 106`'s own push confirms `harness.yml` runs green at all.
+- **The parallel-scheduler option stays a known, unbuilt alternative** — recorded here so it is not re-derived, not opened as a second item without a reason beyond "it would also help."
+
+---
+
 ## TASK 31 — Reconcile the brief and the decision docs with what was built · `content` · `DONE` · **ran first**
 
 **Closed 2026-08-23**, with the full `done` block and `iterations: 3` in `progress/2026-08-23-21-task31-design-docs-reconciled.md`. The status line here said `TODO` until 2026-08-24, when the session opening the site backlog checked it against the log rather than reading it (`P-04`). The work was finished; only the register was stale — which is exactly the half of `P-07` that gets skipped.

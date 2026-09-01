@@ -25,6 +25,22 @@ permissions:
 jobs:
   gate:
     runs-on: ubuntu-latest
+    # TASK 107: the first real push (commit 059a7e5) ran for the full GitHub Actions default
+    # of 6 hours and was cancelled with zero diagnostic output — the 'run the gate' step
+    # redirected all output to a file and only printed it after the process exited, so a run
+    # that never exits leaves nothing to read, live or after the fact (fixed below).
+    #
+    # Root cause, measured rather than guessed: Stryker's default concurrency is
+    # os.availableParallelism() - 1 (its own source, concurrency-token-provider.js in
+    # @stryker-mutator/core). The author's machine reports 12 cores -> concurrency 11;
+    # GitHub's standard ubuntu-latest runner reports 2 -> concurrency 2. A 5x drop in
+    # parallel test-runner processes, on generally slower shared cloud cores, plausibly turns
+    # a ~10-11min local cold mutation run into hours rather than minutes — not a hang.
+    #
+    # 90 is a provisional bound, not a measured one. This run is the first with output
+    # actually visible (see the streaming fix below); its real timing is what should set this
+    # number honestly on the next pass, instead of guessing twice.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,9 +50,18 @@ jobs:
           # register (T-10: read the real result, don't trust what a shallow clone implies).
           fetch-depth: 0
 
+      # cache: 'npm' caches npm's download cache (~/.npm on ubuntu-latest), keyed on a hash of
+      # both lockfiles below — not a workspace, so both need naming (S-07: site/ is its own
+      # package). This does not skip `npm ci` itself, only the network fetch inside it: a
+      # cache hit still reinstalls from the local cache, which is fast. Spike, 2026-09-01, CI
+      # cost only — nothing here changes what installs or what the gate verifies.
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
 
       # The mutation step (TASK 15) runs Stryker from the root node_modules. Without an install
       # here its skipIf fires and the step is skipped — and a SKIP still exits 0, which
@@ -53,12 +78,53 @@ jobs:
       - run: npm ci
         working-directory: site
 
+      # Cache the downloaded browser binaries, keyed on the installed @playwright/test version
+      # so a version bump invalidates it automatically rather than silently running stale
+      # browsers. Read AFTER `npm ci` in site/, because the version comes from the package
+      # actually installed, not a string copied from package.json that could drift from the
+      # lockfile. Spike, 2026-09-01 — same CI-cost-only scope as the npm cache above.
+      - name: read installed Playwright version
+        id: playwright-version
+        working-directory: site
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
       # e2e smoke drives three real browser engines against the built site (T-02). `npm ci`
       # installs the @playwright/test package, never the browser binaries themselves — those
       # are a separate download this repository's dev machine already has and a fresh runner
-      # does not.
-      - run: npx playwright install --with-deps
+      # does not. `--with-deps` also apt-get installs OS-level dependencies, which a browser
+      # cache hit does not need repeated — install-deps alone covers that path so a cache hit
+      # still gets the plain `playwright install` skipped without silently missing OS deps
+      # on a runner image that changed under it.
+      - name: install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
         working-directory: site
+
+      - name: install Playwright OS dependencies (browsers already cached)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
+        working-directory: site
+
+      # Spike, 2026-09-01: restores the mutation step's incremental cache (stryker.config.mjs)
+      # from the most recent prior run via the restore-keys prefix — CI has no working
+      # directory that survives between runs, so without this the incremental setting there
+      # does nothing here. Read-only: a miss just means the mutation step runs cold, same as
+      # today. NOT YET the basis for the ratchet (T-03) — see stryker.config.mjs's own note on
+      # what still needs proving before it is.
+      - name: restore Stryker incremental cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .stryker-tmp/incremental.json
+          key: stryker-incremental-${{ github.run_id }}
+          restore-keys: |
+            stryker-incremental-
 
       # One command, matching exactly what a human runs locally (T-09). CI must not re-list
       # the gate's steps: a step added to the gate would then be silently absent from CI,
@@ -72,13 +138,18 @@ jobs:
       # that is the single skip; any other skip, or a skip alongside a real failure, still
       # fails the job. A silently-accepted arbitrary skip is INC-08's exact shape, so this
       # gate is a property of the summary, not a blanket "exit code 2 is fine".
+      # STREAMED THROUGH `tee`, not redirected-then-`cat`-ed at the end (TASK 107, corrected
+      # after the first real run went 6 hours with an empty log). `node scripts/gate.mjs >
+      # gate.log 2>&1` buffers everything until the process exits, so a merely-slow run shows
+      # nothing in the live Actions log, and a cancelled or timed-out run leaves nothing to
+      # read post-mortem either. `${PIPESTATUS[0]}` reads node's own exit code rather than
+      # tee's, which always succeeds — a plain `$?` after a pipe would read the wrong process.
       - name: run the gate
         run: |
           set +e
-          node scripts/gate.mjs > gate.log 2>&1
-          code=$?
+          node scripts/gate.mjs 2>&1 | tee gate.log
+          code=${PIPESTATUS[0]}
           set -e
-          cat gate.log
           if [ "$code" -eq 2 ]; then
             # The count comes from the "GATE INCOMPLETE — N of 20..." header line, not from
             # counting SKIP lines directly: gate.mjs prints each skipped step TWICE — once in
@@ -95,3 +166,14 @@ jobs:
             echo "::error::GATE INCOMPLETE with an unexpected skip set — see the summary above. Only 'confidentiality' may be skipped in CI."
           fi
           exit $code
+
+      # Saved unconditionally (`if: always()`), keyed on the run id so every run writes a new
+      # entry rather than fighting the immutable-key restriction on an existing one — a red
+      # gate still keeps whatever mutants that run resolved, so the next run's restore step
+      # starts from THIS run's progress rather than the last green one's. Spike, 2026-09-01.
+      - name: save Stryker incremental cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .stryker-tmp/incremental.json
+          key: stryker-incremental-${{ github.run_id }}
