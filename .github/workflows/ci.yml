@@ -309,9 +309,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: site
-          packageManager: npm
-          command: deploy
+          command: pages deploy site --project-name=nextup-panel --branch=main
 
       # A deploy step's exit code says a command succeeded; it does not say the site is
       # there. This walks every route the content collection derives — one derivation,
