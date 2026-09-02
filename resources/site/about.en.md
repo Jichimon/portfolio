@@ -4,7 +4,7 @@ lang: en
 type: page
 title: "Luis Octavio Antelo · About"
 confidentiality: sanitized
-h1: "Understand the essence of a person and you can love them. Understand the essence of a system and you can improve it."
+h1: "Understand the essence of a person and you can love them. Understand the essence of a system and you can improve it"
 lead: ""
 since: "2021 in software"
 reads_as: "INTJ-A"

@@ -17,6 +17,7 @@ function requireOrder(entry) {
   }
 }
 
+
 function assertNoDuplicateOrder(matchingEntries) {
   const slugByOrder = new Map();
   for (const entry of matchingEntries) {
@@ -27,22 +28,6 @@ function assertNoDuplicateOrder(matchingEntries) {
     }
     slugByOrder.set(order, slug);
   }
-}
-
-export function listCaseStudyStackForLang(entries, lang) {
-  const matchingEntries = entries.filter(
-    (entry) => entry.data.lang === lang && CATALOG_ENTRY_TYPES.includes(entry.data.type),
-  );
-
-  const stackValuesSeen = new Set();
-  for (const entry of matchingEntries) {
-    const stackValues = entry.data.stack ?? [];
-    for (const stackValue of stackValues) {
-      stackValuesSeen.add(stackValue);
-    }
-  }
-
-  return [...stackValuesSeen];
 }
 
 // The bento's three tile shapes, derived from the content rather than assigned by a

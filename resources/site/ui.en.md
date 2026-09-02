@@ -42,6 +42,10 @@ home:
   contact_email: "luis.antm@hotmail.com"
   seam_legacy: "Legacy, dense"
   seam_modern: "Modern, open"
+  testimonial_translated_from_en: "Translated from English"   # ES: "Traducido del inglés"
+  testimonial_translated_from_es: "Translated from Spanish"   # ES: "Traducido del español"
+  testimonial_link: "LinkedIn"
+
 
 article:
   toc_heading: "On this page"

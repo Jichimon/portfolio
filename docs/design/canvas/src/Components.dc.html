@@ -573,19 +573,20 @@
       <h2>10 &middot; Content</h2>
       <div class="name">Testimonial &mdash; <code>.testimonial</code></div>
       <p class="why">Real LinkedIn recommendations, never paraphrased. The card is deliberately quiet: an oversized quote mark and a name carry it, because a testimonial that shouts is a testimonial nobody believes.</p>
-      <p class="props"><span class="k">takes</span> &nbsp;<code>quote</code>, <code>name</code>, <code>title</code>, <code>company</code>, <code>permalink</code>, <code>size: default | tall</code>.<br><span class="k">blocked</span> &nbsp;<b>the text below is a placeholder and is marked as one.</b> The real recommendations, both locales, are TASK 19 &mdash; nothing here is written on the author&rsquo;s behalf (C-01, C-04).</p>
+      <p class="props"><span class="k">takes</span> &nbsp;<code>quote</code>, <code>name</code>, <code>title</code>, <code>company</code>, <code>permalink</code>, <code>translationNote?</code>.<br><span class="k">note</span> &nbsp;a long recommendation is excerpted, verbatim, with every cut marked <code>[&hellip;]</code>; the build refuses an excerpt whose words are not in the quote it came from. A card whose original language is not the page&rsquo;s says so. The last card runs full width when the count is odd, so no row is left half empty.</p>
       <div class="row">
         <div class="testimonial">
           <div class="quote-mark">&ldquo;</div>
-          <p>[NEEDS INPUT] Paste the real LinkedIn recommendation text here &mdash; not invented.</p>
-          <div class="t-name">[NEEDS INPUT] Name</div>
-          <div class="t-title">[NEEDS INPUT] Title &middot; Company</div>
+          <p>Although he joined as a backend developer, he quickly proved himself highly capable in frontend tasks as well [&hellip;] building and using tailored agents to improve his workflows and productivity.</p>
+          <div class="t-name">Tariq Khawaja</div>
+          <div class="t-title">Director of Engineering &middot; NICE</div>
         </div>
         <div class="testimonial t-dark" style="border-color:var(--border);">
           <div class="quote-mark">&ldquo;</div>
-          <p>[NEEDS INPUT] Paste the real LinkedIn recommendation text here.</p>
-          <div class="t-name">[NEEDS INPUT] Name</div>
-          <div class="t-title">[NEEDS INPUT] Title &middot; Company</div>
+          <p>[&hellip;] he demonstrated commitment, strong technical judgment, and a great willingness to collaborate, understand the product&rsquo;s needs [&hellip;] where technology, business needs, and priorities are constantly evolving.</p>
+          <div class="t-name">Gabriel Horacio Vega Simons</div>
+          <div class="t-title">Product Owner &middot; Banco Solidario S.A.</div>
+          <div class="t-source">Translated from Spanish &middot; LinkedIn</div>
         </div>
       </div>
     </section>

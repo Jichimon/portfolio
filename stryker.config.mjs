@@ -161,7 +161,7 @@ export default {
   // rather than a roster, so it satisfies P-13 — declined because it discards the 49 mutants
   // renderLedger already kills, every section guard and every data row among them. It would
   // have RAISED this number, to 76.69, by deleting the evidence rather than the defect.
-  thresholds: { high: 100, low: 100, break: 77.0 },
+  thresholds: { high: 100, low: 100, break: 79.0 },
 
 
   // The sandbox is a COPY of the working tree, and it is not limited to what git tracks —
@@ -211,7 +211,7 @@ export default {
   // warmed by a nightly or on-demand run, so consecutive deep runs get the benefit and a
   // one-off dispatch after a quiet week starts cold.
   //
-  // NOT YET TRUSTED FOR THE RATCHET (T-03, break: 77.0). This repo has hit two cache-correctness
+  // NOT YET TRUSTED FOR THE RATCHET (T-03, break: 79.0). This repo has hit two cache-correctness
   // bugs before (TASK 89: Vite/Vitest cache producing false positives; TASK 103: a config
   // garbage-collecting a build cache), so before this floor is allowed to depend on incremental
   // mode two things need to be proven, not assumed: an unchanged-code incremental run reports

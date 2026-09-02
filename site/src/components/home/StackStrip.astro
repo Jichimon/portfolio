@@ -1,7 +1,9 @@
 ---
+import type { StackChip } from '../../gateway/content-queries.ts';
+
 interface Props {
   heading: string;
-  technologies: string[];
+  technologies: StackChip[];
 }
 
 const { heading, technologies } = Astro.props;
@@ -21,8 +23,12 @@ const trackPasses = [0, 1];
       <div class="stack-strip__track">
         {trackPasses.map((pass) => technologies.map((technology) => (
           <div class="stack-strip__chip" aria-hidden={pass === 1 ? 'true' : undefined}>
-            <span class="stack-strip__mark" />
-            <span class="stack-strip__name">{technology}</span>
+            {technology.markSvg === undefined ? (
+              <span class="stack-strip__mark" />
+            ) : (
+              <span class="stack-strip__mark stack-strip__mark--logo" aria-hidden="true" set:html={technology.markSvg} />
+            )}
+            <span class="stack-strip__name">{technology.name}</span>
           </div>
         )))}
       </div>
@@ -64,13 +70,35 @@ const trackPasses = [0, 1];
 
   /* The dot is the mark slot in its no-logo state — a designed fallback, not a
      gap. A placeholder box reads as breakage in a moving strip, where the same
-     placeholder is legible in a short static list. */
+     placeholder is legible in a short static list. It is also the only correct
+     render for a technology whose owner permits its name in plain text and not
+     its logo, which is why two of the loudest names here carry one. */
   .stack-strip__mark {
     width: 4px;
     height: 4px;
     border-radius: 50%;
     background: var(--color-ink-faint);
     flex: 0 0 auto;
+  }
+
+  /* The same slot, holding a mark. The box is fixed rather than sized by the
+     artwork: marks have no common aspect ratio, and a row of them at their
+     natural widths has no optical baseline for the eye to follow. */
+  .stack-strip__mark--logo {
+    width: 18px;
+    height: 18px;
+    border-radius: 0;
+    background: none;
+    color: var(--color-ink-muted);
+  }
+
+  /* The mark inherits rather than declares, which is what makes one asset cover
+     both themes and keeps every colour value in the stylesheet that owns them. */
+  .stack-strip__mark--logo :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
   }
 
   /* Not --type-mono: the artboard sets this at 500/13px against that step's

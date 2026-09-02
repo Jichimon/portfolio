@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { readFrontmatterEntry, readLocalizedMarkdownEntries } from './route-source.mjs';
+import { readFrontmatterEntry, readLocalizedMarkdownEntries, readPageEntries } from './route-source.mjs';
 
 // A real directory rather than a mocked fs: these two functions exist to read the content
 // tree, and a test that stubs the reading proves the parsing and nothing else. The tree is
@@ -104,5 +104,41 @@ test('an empty content directory yields no entries rather than throwing', () => 
   // on disk. deploy-verify.mjs is the one that treats an empty set as a finding.
   withContentDir({}, (dir) => {
     assert.deepEqual(readLocalizedMarkdownEntries(dir), []);
+  });
+});
+
+// The page loader's exclusion was a stem roster carrying one name, `ui`. A second data file
+// in the same directory made it wrong without making it fail, which is the failure a roster
+// always has: item two is waved through. These pin the property instead.
+test('readPageEntries keeps every entry declaring type page', () => {
+  withContentDir(
+    { 'home.en.md': page('home', 'en'), 'about.en.md': page('about', 'en') },
+    (dir) => {
+      assert.deepEqual(readPageEntries(dir).map((e) => e.data.slug).sort(), ['about', 'home']);
+    },
+  );
+});
+
+test('readPageEntries drops the interface-strings file without being told its name', () => {
+  withContentDir(
+    { 'home.en.md': page('home', 'en'), 'ui.en.md': page('ui', 'en', 'ui') },
+    (dir) => {
+      assert.deepEqual(readPageEntries(dir).map((e) => e.data.slug), ['home']);
+    },
+  );
+});
+
+test('readPageEntries drops a data file whose type nobody has seen before', () => {
+  withContentDir(
+    { 'home.en.md': page('home', 'en'), 'testimonials.en.md': page('testimonials', 'en', 'testimonials') },
+    (dir) => {
+      assert.deepEqual(readPageEntries(dir).map((e) => e.data.slug), ['home']);
+    },
+  );
+});
+
+test('readPageEntries returns nothing when the directory holds no page at all', () => {
+  withContentDir({ 'ui.en.md': page('ui', 'en', 'ui') }, (dir) => {
+    assert.deepEqual(readPageEntries(dir), []);
   });
 });

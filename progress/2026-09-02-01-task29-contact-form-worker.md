@@ -79,16 +79,38 @@ Worth writing down because the mistake is repeatable: **`wrangler dev` respawns 
 
 `T-06` says a flake is a finding. The finding here is about the session, not the repository: nothing was retried until green — the cause was identified, removed, and the run repeated on a machine with no node processes left alive.
 
+### The first real deploy, and the defect it found in this item's own check
+
+**The site is live and the deploy landed whole**: 16 derived routes checked at the deployed origin, all 200. The contact probe reported a finding, which is the probe working — and the finding's *message* was wrong, which is a defect this item shipped.
+
+The endpoint answered **500 `{"error":"not_configured"}`** because the Worker secret had not been set yet. The probe said *"either the route never reached the handler, or the handler accepts anything"*. **Both halves were false**, and a 500 carrying a JSON error body is itself proof that the handler ran. Checked against the deployment rather than reasoned about:
+
+```text
+POST /api/contact  ->  500  {"error":"not_configured"}     the handler ran
+GET  /api/contact  ->  405  {"error":"method_not_allowed"} the Worker owns the route
+GET  /nope         ->  404  text/html                      the 404 page is untouched
+```
+
+So `run_worker_first` is confirmed **in production**, which no local run could establish — the one thing the whole arrangement rested on, and the reason it was declared rather than inferred.
+
+**Fixed test-first, as a bugfix** (`T-01`: the failing test must reproduce the bug before the fix). Four cases added, exactly one red: a 500 naming a missing key must report the missing secret and must NOT blame the route. `probeContactEndpoint` now diagnoses from the evidence rather than listing possibilities — 404 is the only status that means the asset router kept the path, 200 the only one that means validation did not run, and a self-describing error body is quoted rather than guessed at. An unreadable body falls through to a generic line instead of turning a wrong status into an exception.
+
+**A check that fails correctly and explains wrongly costs more than one that stays quiet**, because it spends the reader's time in the wrong file. That is the finding worth keeping from this deploy, not the forgotten secret.
+
+**One cross-item consequence, stated rather than left to be discovered:** the deploy job exits 1 on this finding, so `TASK 32`'s own outstanding clause — a green `ci` run end to end — cannot close until the secret is set either. Both items clear on the same action.
+
 **Any brief names this item descriptively — *"the contact form item"* — never by its id.** `extractWorkItems` scans the whole brief text for `TASK <n>`, including inside a quoted error message, and this item is `feature`-typed.
 
 ## Verification
 
-- [ ] `node scripts/gate.mjs --profile full` — `GATE PASSED`, mutation at or above the 77.0 floor
-- [ ] `node --test "site/lib/**/*.test.mjs"` — the pure core
-- [ ] `npx vitest run` from `site/` — the state machine
-- [ ] `npx wrangler dev` from `site/`: invalid payload → 400, valid payload → a real email
-- [ ] `gh run view` on the push's own `ci` run: `gate` green, `deploy` green (`T-10`)
-- [ ] the probe's line in `verify-deploy`'s own output at the deployed URL
+- [x] `node scripts/gate.mjs --profile full` — **`GATE PASSED`, 22/22, mutation 79.84** vs the 77.0 floor
+- [x] `node --test "site/lib/**/*.test.mjs"` — 271 pass, the pure core among them
+- [x] `npx vitest run` from `site/` — 28 pass, the state machine among them
+- [x] `npx wrangler dev` from `site/`: invalid payload → 400 with three findings, honeypot → 200 sending nothing, `GET` → 405, `/nope` → the 404 page
+- [x] **the deploy landed and the site is live** — 16 derived routes, all 200, at the deployed origin
+- [x] **`run_worker_first` confirmed in production** — `POST` reaches the handler, `GET` answers 405, `/nope` still serves the 404 page. The one claim no local run could establish
+- [ ] `gh run view` on a **green** `ci` run: `gate` green, `deploy` green (`T-10`) — the deploy job currently exits 1 on the probe below
+- [ ] the probe answering `400` at the deployed URL — **blocked on `RESEND_API_KEY` being set against the deployed Worker**
 - [ ] a submission from the published home arrives, and Reply goes to the visitor
 
 ## Done
@@ -96,18 +118,18 @@ Worth writing down because the mistake is repeatable: **`wrangler dev` respawns 
 ```yaml
 done:
   tests:      { status: passed, evidence: ["node --test \"site/lib/**/*.test.mjs\" — 271 pass, 0 fail (28 new under site/lib/contact/)", "npx vitest run — 28 pass across 3 files (13 new in contact-form.component.test.ts)", "node --test \"scripts/guards/**/*.test.mjs\" — 1134 pass, 0 fail (9 new in deploy-verify.test.mjs)", "npx playwright test — 71 pass (69 before: HOME-008 inverted, HOME-008b added, both locales)"] }
-  gate:       { status: passed, evidence: ["node scripts/gate.mjs --profile full — GATE PASSED (profile: full), 22/22", "type check 0 errors 20 hints; e2e smoke 71; e2e visual capture PASS; mutation at or above the 77.0 floor"] }
+  gate:       { status: passed, evidence: ["node scripts/gate.mjs --profile full — GATE PASSED (profile: full), 22 of 22, exit:0, re-run green after the post-deploy bugfix", "mutation 79.84 vs the 77.0 floor (79.83 before the bugfix — the four new cases cover the function it added)", "type check 0 errors 20 hints; e2e smoke 71; e2e visual capture PASS", "one earlier full run went red on e2e smoke and its cause was a live wrangler dev process this session left watching site/ — identified and removed, not retried past (T-06)"] }
   security:   { status: passed, evidence: ["the key's 51-byte .dev.vars value is absent from site/dist, from the wrangler bundle, and from every git-tracked file — grepped by value, never printed", "git status --untracked-files=all reports site/.dev.vars invisible; .gitignore:56 was written BEFORE the file existed", "wrangler dev: POST with a filled honeypot answers 200 {\"replyTo\":null} and sends nothing; GET answers 405", "the handler returns a generic 502 and logs only a status — the provider's response body, which can quote the Authorization header, is never returned or logged"] }
   ci:         { status: blocked, evidence: ["the deploy job and the contact probe cannot run until the author pushes; the item's own Done is read from the provider (T-10), so it stays open"] }
   docs:       { status: passed, evidence: ["docs/specs/SPEC-TASK-29-contact-form-worker.spec.md active at 1.0, approved 2026-09-02", "TASKS.md TASK 29 TODO -> IN PROGRESS with the deferral trigger recorded as fired", "check-docs, check-content, check-templates, check-rules-registry, check-status-history all PASS"] }
   loose_ends: { status: passed, evidence: ["the S-01 script-blanking gap is reported with a stated trigger rather than fixed inside this item", "the Worker handler's own wiring is declared an uncovered gap in the spec, with the third runner named as its price"] }
   scope:      { status: passed, evidence: ["the contact endpoint and the states it drives. No second Worker, no new dependency, no new test runner, no ADR amended", "the nav test repair is the author's own mid-session edit completed, recorded above as a separate strand rather than folded in silently"] }
   content:    { status: passed, evidence: ["resources/site/ui.{en,es}.md gained sending/sent/error — written by the author, H-02 keeps every agent out of resources/**", "check-content PASS: locale parity holds, three keys in both files"] }
-  iterations:      { status: passed, evidence: ["3"] }
-  iteration_split: { status: passed, evidence: ["checkpoint=1", "verify=2"] }
+  iterations:      { status: passed, evidence: ["4"] }
+  iteration_split: { status: passed, evidence: ["checkpoint=1", "verify=3"] }
 ```
 
-`iterations` accounting: **checkpoint=1** — the spec was approved at `1.0` with no revision. **verify=2** — two corrective loops after a failed verification, neither of them a design change: the first was a real type error (`querySelectorAll` yields `Element`, which has no `dataset`), the second was this block being empty, which `check-procedures` and the guard suite both refuse.
+`iterations` accounting: **checkpoint=1** — the spec was approved at `1.0` with no revision. **verify=3** — three corrective loops after a failed verification, none of them a design change: a real type error (`querySelectorAll` yields `Element`, which has no `dataset`); this block being empty, which `check-procedures` and the guard suite both refuse; and the post-deploy bugfix in the probe's own diagnosis, which is the only one that came from outside this machine.
 
 ## Open questions
 

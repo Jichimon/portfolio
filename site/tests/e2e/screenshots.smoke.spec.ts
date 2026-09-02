@@ -49,15 +49,13 @@ function readFrontmatterEntry(filePath: string): FrontmatterEntry {
   return { data };
 }
 
-// Mirrors the two loaders content.config.ts declares: locale-suffixed markdown,
-// with the interface-strings file excluded from the page loader by name.
-function readLocalizedMarkdownEntries(dir: string, excludeStem?: string): FrontmatterEntry[] {
+// Mirrors the two loaders content.config.ts declares: every locale-suffixed markdown file
+// in a directory. Which of them is a page is the caller's filter, on the declared type.
+function readLocalizedMarkdownEntries(dir: string): FrontmatterEntry[] {
   const entries: FrontmatterEntry[] = [];
   for (const fileName of readdirSync(dir)) {
     const match = fileName.match(/^(.+)\.(en|es)\.md$/);
     if (!match) continue;
-    const [, stem] = match;
-    if (excludeStem && stem === excludeStem) continue;
     entries.push(readFrontmatterEntry(path.join(dir, fileName)));
   }
   return entries;
@@ -70,7 +68,9 @@ interface DerivedRoute {
 }
 
 function deriveRoutes(): DerivedRoute[] {
-  const pageEntries = readLocalizedMarkdownEntries(pagesContentDir, 'ui');
+  // Pages only, read off the declared type: the same directory holds data files that are
+  // not pages and must never become a route.
+  const pageEntries = readLocalizedMarkdownEntries(pagesContentDir).filter((entry) => entry.data.type === 'page');
   const caseStudyEntries = readLocalizedMarkdownEntries(caseStudiesContentDir);
   return deriveRouteSetFromEntries([...pageEntries, ...caseStudyEntries], ROUTED_PAGE_SLUGS, INDEX_PAGE_SLUG) as DerivedRoute[];
 }

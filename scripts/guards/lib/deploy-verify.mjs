@@ -183,9 +183,46 @@ export async function probeContactEndpoint({ baseUrl, fetchImpl, endpointPath = 
   if (response.status !== CONTACT_EXPECTED_STATUS) {
     return finding(
       `${label} answered ${response.status} to a deliberately invalid submission, not ` +
-        `${CONTACT_EXPECTED_STATUS} — either the route never reached the handler, or the handler accepts anything`,
+        `${CONTACT_EXPECTED_STATUS} — ${await diagnose(response)}`,
     );
   }
 
   return null;
+}
+
+/**
+ * Why the wrong status happened, in the reader's terms.
+ *
+ * Added after the first real deploy answered 500 with `not_configured` and the probe blamed
+ * the routing. Both of the causes it named were false, and a 500 carrying a JSON error body
+ * is itself proof that the handler ran — the check failed correctly and explained wrongly,
+ * which sent the reader to the wrong file. A verdict without a diagnosis is cheaper to write
+ * and more expensive to act on.
+ *
+ * The status is the evidence, not a guess: 404 is the only one that means the asset router
+ * kept the path, and 200 is the only one that means validation did not run.
+ */
+async function diagnose(response) {
+  if (response.status === 404) {
+    return 'the asset router answered instead, so the route never reached the handler — check that the contact path is named in the assets run_worker_first list';
+  }
+  if (response.status === 200) {
+    return 'the handler accepts anything, so validation is not running on a payload that must be refused';
+  }
+
+  // Read rather than inferred. A handler that names its own fault is worth quoting; one that
+  // cannot is not worth crashing over, so an unreadable body falls through to the generic
+  // line instead of turning a wrong status into an exception.
+  let body = null;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+
+  if (body?.error === 'not_configured') {
+    return 'the Worker is deployed and running, and has no RESEND_API_KEY secret — it refused to send rather than sending unauthenticated. Set the secret against the deployed Worker; nothing in the repository needs to change';
+  }
+
+  return `the handler ran and answered something neither expected nor self-describing${body?.error ? ` (error "${body.error}")` : ''}`;
 }

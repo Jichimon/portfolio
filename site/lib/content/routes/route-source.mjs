@@ -16,6 +16,7 @@ import { parse as parseFrontmatter } from 'yaml';
 // any prefix, so the anchored and unanchored forms accept exactly the same set of filenames.
 // The TRAILING $ is not equivalent and is killed by the `.md.bak` test.
 const LOCALIZED_MARKDOWN = /^(.+)\.(en|es)\.md$/;
+const PAGE_TYPE = 'page';
 const FRONTMATTER_BLOCK = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/;
 
 /**
@@ -41,9 +42,9 @@ export function readFrontmatterEntry(filePath) {
  * Every locale-suffixed markdown file in one directory, mirroring the two loaders
  * `content.config.ts` declares over the content roots.
  *
- * `excludeStem` is how the page loader drops the interface-strings file: both loaders read
- * the same directory, and only one of them treats `ui.{en,es}.md` as a page. Without it a
- * consumer would derive a `/ui` route that does not and must not exist.
+ * `excludeStem` drops one file by name. It is the raw reader: prefer `readPageEntries`
+ * below for anything that wants pages, because a name is a roster and a roster is wrong the
+ * day somebody adds the second file it does not know about.
  *
  * @param {string} dir
  * @param {string} [excludeStem]
@@ -59,4 +60,21 @@ export function readLocalizedMarkdownEntries(dir, excludeStem) {
     entries.push(readFrontmatterEntry(join(dir, fileName)));
   }
   return entries;
+}
+
+/**
+ * The pages in one directory, and only the pages.
+ *
+ * The content root holds page files beside data files that share its shape and its locale
+ * suffix but are not pages and must never become routes — the interface strings, the
+ * testimonial pair. What separates them is not their filename, it is the `type` they
+ * declare, so that is what this reads. The previous form excluded one stem by name, which
+ * was correct while exactly one such file existed and silently wrong the moment a second
+ * one landed: it went on being a page as far as every consumer could tell.
+ *
+ * @param {string} dir
+ * @returns {Array<{ data: { slug: string, lang: string, type: string } }>}
+ */
+export function readPageEntries(dir) {
+  return readLocalizedMarkdownEntries(dir).filter((entry) => entry.data.type === PAGE_TYPE);
 }

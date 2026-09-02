@@ -8,7 +8,6 @@ import {
 } from '../../lib/content/entries/locale-pair.mjs';
 import {
   listCaseStudyEntriesForLang,
-  listCaseStudyStackForLang,
   deriveHomeTiles,
 } from '../../lib/content/entries/case-study-catalog.mjs';
 import {
@@ -28,6 +27,17 @@ import { NAV_ITEMS, resolveNavItemHref } from '../../lib/nav/nav-structure.mjs';
 import { readAboutMasthead, readPhotoFigures } from '../../lib/content/pages/about-article.mjs';
 import { buildEmploymentRecord } from '../../lib/content/pages/employment-record.mjs';
 import { assertEveryAssetIsReferenced } from '../../lib/content/assets/published-photos.mjs';
+import {
+  assertTestimonialIdsAgreeAcrossLocales,
+  assertTranslationsCarryTheirOriginal,
+  assertExcerptsAreVerbatim,
+  buildTestimonialCards,
+} from '../../lib/content/testimonials/testimonials.mjs';
+import {
+  assertStackIdsAgreeAcrossLocales,
+  assertMarkIsRenderable,
+  buildStackItems,
+} from '../../lib/content/stack/stack.mjs';
 
 export type Locale = 'en' | 'es';
 
@@ -74,6 +84,9 @@ interface HomeStrings {
   contact_email: string;
   seam_legacy: string;
   seam_modern: string;
+  testimonial_translated_from_en: string;
+  testimonial_translated_from_es: string;
+  testimonial_link: string;
 }
 
 interface ArticleStrings {
@@ -220,8 +233,57 @@ export async function getAlternateHref(slug: string, lang: Locale) {
   return alternateRoute.path;
 }
 
-export async function listStack(lang: Locale) {
-  return listCaseStudyStackForLang(await loadCaseStudyEntries(), lang);
+// The marks sit outside this package, beside the markdown that names them, and are read-only
+// input — pulled in as build-time text exactly like the diagram sources below, and for the same
+// reason: the paths resolve against THIS file rather than against whatever directory the bundled
+// output ends up in. Inlined rather than linked because a mark has to inherit the chip's colour
+// to survive both themes, and an <img> cannot.
+//
+// The glob is a PUBLICATION BOUNDARY, the same one the photographs carry: every file it matches
+// is emitted whether or not anything renders it. It is scoped to the stack's own folder, so the
+// employers' marks sit outside it by folder rather than by a roster.
+const MARK_SOURCES = import.meta.glob('../../../resources/logos/stack/*.svg', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+const MARK_SOURCE_BY_FILE_NAME = new Map(
+  Object.entries(MARK_SOURCES).map(([sourcePath, text]) => [fileNameFromSourcePath(sourcePath), text]),
+);
+
+export interface StackChip {
+  name: string;
+  markSvg?: string;
+}
+
+// An empty collection is the legitimate "not curated yet" state and yields no chips, so the site
+// builds before the list exists. One locale present without the other is NOT that state — it is a
+// strip that would be silently different in one language — and the core refuses it by name.
+export async function listStack(lang: Locale): Promise<StackChip[]> {
+  const entries = await getCollection('stack');
+  if (entries.length === 0) {
+    return [];
+  }
+  assertStackIdsAgreeAcrossLocales(entries);
+
+  for (const [fileName, svgText] of MARK_SOURCE_BY_FILE_NAME) {
+    assertMarkIsRenderable(svgText, fileName);
+  }
+  const markNames = new Set(MARK_SOURCE_BY_FILE_NAME.keys());
+  assertEveryAssetIsReferenced(
+    [...markNames],
+    entries.map((entry) => (entry.data.stack ?? []) as { file: string }[]),
+  );
+
+  const entry = findEntryBySlugAndLang(entries, 'stack', lang);
+  // The core is framework-free .mjs and carries no types, so the single cast lands here, at the
+  // boundary that knows what it called — the same place and reason as the home tiles above.
+  const items = buildStackItems(entry.data, markNames) as { name: string; markFile?: string }[];
+
+  return items.map(({ name, markFile }) =>
+    markFile === undefined ? { name } : { name, markSvg: MARK_SOURCE_BY_FILE_NAME.get(markFile) as string },
+  );
 }
 
 // The core derives a tile's shape and its copy; it cannot derive the tile's href,
@@ -268,6 +330,70 @@ export async function listHomeTiles(
   };
 
   return { featured: featured.map(withHref), standalone: standalone.map(withHref) };
+}
+
+export interface TestimonialCard {
+  id: string;
+  quote: string;
+  name: string;
+  title: string;
+  company: string;
+  url: string;
+  linkLabel: string;
+  translationNote?: string;
+}
+
+type BuiltTestimonial = Omit<TestimonialCard, 'linkLabel' | 'translationNote'> & { translatedFrom?: string };
+
+// The core decides which recommendations render, in what order, and which of them is a
+// translation; only the join from a source language to the sentence that names it lands
+// here, because that sentence is chrome copy and the core has no view of the strings
+// collection. A missing string throws rather than rendering an empty note: a translated
+// quote that does not say it is one is the thing this whole path exists to prevent.
+function translationNoteFor(translatedFrom: string, home: HomeStrings): string {
+  const noteByLanguage: Record<string, string | undefined> = {
+    en: home.testimonial_translated_from_en,
+    es: home.testimonial_translated_from_es,
+  };
+  const note = noteByLanguage[translatedFrom];
+  if (!note) {
+    throw new Error(`the interface strings carry no testimonial_translated_from_${translatedFrom}, so a quote translated from "${translatedFrom}" has no way to say so`);
+  }
+  return note;
+}
+
+// An empty collection is the legitimate "not transcribed yet" state and yields no cards, so
+// the site builds before the recommendations exist. One locale present without the other is
+// NOT that state — it is a column that would be silently shorter in one language — and the
+// core refuses it by name.
+export async function listTestimonialCards(lang: Locale): Promise<TestimonialCard[]> {
+  const entries = await getCollection('testimonials');
+  if (entries.length === 0) {
+    return [];
+  }
+  assertTestimonialIdsAgreeAcrossLocales(entries);
+
+  for (const entry of entries) {
+    const sourceName = `testimonials.${entry.data.lang}.md`;
+    assertTranslationsCarryTheirOriginal(entry.data, sourceName);
+    assertExcerptsAreVerbatim(entry.data, sourceName);
+  }
+
+  const entry = findEntryBySlugAndLang(entries, 'testimonials', lang);
+  const home = (await getUiStrings(lang)).data.home;
+
+  // The core is framework-free .mjs and carries no types, so the single cast lands here, at
+  // the boundary that knows what it called — the same place and the same reason as the home
+  // tiles above.
+  const builtCards = buildTestimonialCards(entry.data) as BuiltTestimonial[];
+
+  return builtCards.map(({ translatedFrom, ...card }) => {
+    const rendered: TestimonialCard = { ...card, linkLabel: home.testimonial_link };
+    if (translatedFrom !== undefined) {
+      rendered.translationNote = translationNoteFor(translatedFrom, home);
+    }
+    return rendered;
+  });
 }
 
 export async function getUiStrings(lang: Locale): Promise<UiStringsEntry> {

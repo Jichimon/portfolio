@@ -356,3 +356,58 @@ test('LIVENESS: the deploy verifier actually calls the probe, so it cannot run z
 
   assert.match(cliSource, /probeContactEndpoint/);
 });
+
+// --- the probe's diagnosis, not just its verdict -----------------------------
+//
+// Reproducing the first real deploy (2026-09-02): the endpoint answered 500
+// {"error":"not_configured"} because the Worker secret had not been set yet, and the probe
+// reported "either the route never reached the handler, or the handler accepts anything".
+// Both halves were false — a 500 carrying that body is proof the handler DID run — and the
+// message sent the reader to diagnose routing. A check that fails correctly and explains
+// wrongly costs more than one that stays quiet.
+
+/** As recordingFetcher, but carrying a JSON body the probe can read. */
+function fetcherAnswering(status, body) {
+  return async () => ({
+    status,
+    headers: { get: () => null },
+    json: async () => body,
+  });
+}
+
+test('RED: a 500 naming a missing key reports the missing secret, and does not blame the route', async () => {
+  const result = await probe({ fetchImpl: fetcherAnswering(500, { error: 'not_configured' }) });
+
+  assert.notEqual(result, null);
+  assert.match(result.message, /secret/i);
+  assert.doesNotMatch(result.message, /never reached the handler/);
+});
+
+test('a 404 DOES blame the route, because that is the one status where the asset router kept it', async () => {
+  const result = await probe({ fetchImpl: fetcherAnswering(404, null) });
+
+  assert.notEqual(result, null);
+  assert.match(result.message, /never reached the handler/);
+});
+
+test('a 200 says the handler accepts anything, which is the only status that means that', async () => {
+  const result = await probe({ fetchImpl: fetcherAnswering(200, { replyTo: null }) });
+
+  assert.notEqual(result, null);
+  assert.match(result.message, /accepts anything/);
+});
+
+test('an unreadable body does not turn a wrong status into a crash', async () => {
+  const result = await probe({
+    fetchImpl: async () => ({
+      status: 502,
+      headers: { get: () => null },
+      json: async () => {
+        throw new Error('not JSON');
+      },
+    }),
+  });
+
+  assert.notEqual(result, null);
+  assert.match(result.message, /502/);
+});

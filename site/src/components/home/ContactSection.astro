@@ -44,6 +44,7 @@ const {
 ---
 
 <section class="contact-section" id="contact">
+  <div class="contact-section__layout">
   <div class="contact-section__main">
     <h2 class="contact-section__heading">{heading}</h2>
     <p class="contact-section__invite">{invite}</p>
@@ -171,6 +172,14 @@ const {
       </ul>
     </div>
   </div>
+
+  <!--
+    The recommendations column, passed in rather than fetched here: this component knows
+    the shape of the page, not where its content comes from. Nothing is rendered when the
+    slot is empty, and the grid's first column keeps its own measure either way.
+  -->
+  <slot />
+  </div>
 </section>
 
 <style>
@@ -179,11 +188,26 @@ const {
     padding-bottom: 60px;
   }
 
-  /* The design gives this column a measure of its own, beside a testimonials column
-     that has no content to render yet. Dropping the second column is right; letting
-     the first one grow into the space it left is not — a text input the full width
-     of the page is nobody's idea of a form. The measure stays whether or not
-     anything ever sits next to it. */
+  /* Two columns: the form at its own measure, the recommendations beside it. The measure
+     is declared on the track rather than on the form, so it holds whether or not anything
+     sits next to it — a text input the full width of the page is nobody's idea of a form,
+     and that was true while this column stood alone and stays true now. */
+  .contact-section__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 520px) 1fr;
+    gap: 64px;
+    align-items: start;
+  }
+
+  /* Below the medium breakpoint there is no room for two readable columns, so they stack
+     and the recommendations follow the form rather than crowding it. */
+  @media (max-width: 1180px) {
+    .contact-section__layout {
+      grid-template-columns: 1fr;
+      gap: 44px;
+    }
+  }
+
   .contact-section__main {
     max-width: 520px;
   }

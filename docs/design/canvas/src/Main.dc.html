@@ -332,10 +332,12 @@
     .contact-links-bottom { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-muted); }
     .contact-links-bottom a:hover { color: var(--accent); }
 
-    /* ---------- testimonials — real LinkedIn recommendations; text below is a placeholder, not copy ---------- */
+    /* ---------- testimonials — the real LinkedIn recommendations, excerpted verbatim.
+         An odd number of cards makes the last one full width, so no row is left half empty. ---------- */
     .testimonials { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: min-content; gap: 14px; }
     .testimonial { padding: 24px 22px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-elevated); }
-    .testimonial.tall { grid-row: span 2; }
+    .testimonial.wide { grid-column: span 2; }
+    .testimonial .t-source { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-faint); margin-top: 10px; }
     .testimonial .quote-mark { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 32px; color: var(--accent); line-height: 1; margin: 0 0 12px; }
     .testimonial p { font-size: 13.5px; line-height: 1.6; color: var(--ink-muted); margin: 0 0 18px; }
     .testimonial .t-name { font-family: "IBM Plex Sans", sans-serif; font-weight: 700; font-size: 13.5px; color: var(--ink); }
@@ -410,7 +412,7 @@
       .tile-anchor .foot { flex-direction: column; align-items: flex-start; gap: 14px; }
       .tile-anchor .roles { text-align: left; }
       .testimonials { grid-template-columns: 1fr; }
-      .testimonials .tall { grid-row: auto; }
+      .testimonials .wide { grid-column: auto; }
     }
     @media (max-width: 560px) {
       .hero-title { font-size: 25px; }
@@ -655,8 +657,8 @@
       <h2>Technologies I&rsquo;ve worked with</h2>
       <div class="marquee-frame">
       <div class="marquee-track">
-        <div class="chip"><span class="mark"></span><span>.NET</span></div><div class="chip"><span class="mark"></span><span>AWS Fargate</span></div><div class="chip"><span class="mark"></span><span>AWS Lambda</span></div><div class="chip"><span class="mark"></span><span>DynamoDB</span></div><div class="chip"><span class="mark"></span><span>Aurora</span></div><div class="chip"><span class="mark"></span><span>SNS/SQS</span></div><div class="chip"><span class="mark"></span><span>MassTransit</span></div><div class="chip"><span class="mark"></span><span>Polly</span></div><div class="chip"><span class="mark"></span><span>SQL Server</span></div><div class="chip"><span class="mark"></span><span>BIAN</span></div><div class="chip"><span class="mark"></span><span>BFF</span></div><div class="chip"><span class="mark"></span><span>Entity Framework</span></div><div class="chip"><span class="mark"></span><span>Angular</span></div><div class="chip"><span class="mark"></span><span>C4 model</span></div><div class="chip"><span class="mark"></span><span>T-SQL</span></div>
-        <div class="chip"><span class="mark"></span><span>.NET</span></div><div class="chip"><span class="mark"></span><span>AWS Fargate</span></div><div class="chip"><span class="mark"></span><span>AWS Lambda</span></div><div class="chip"><span class="mark"></span><span>DynamoDB</span></div><div class="chip"><span class="mark"></span><span>Aurora</span></div><div class="chip"><span class="mark"></span><span>SNS/SQS</span></div><div class="chip"><span class="mark"></span><span>MassTransit</span></div><div class="chip"><span class="mark"></span><span>Polly</span></div><div class="chip"><span class="mark"></span><span>SQL Server</span></div><div class="chip"><span class="mark"></span><span>BIAN</span></div><div class="chip"><span class="mark"></span><span>BFF</span></div><div class="chip"><span class="mark"></span><span>Entity Framework</span></div><div class="chip"><span class="mark"></span><span>Angular</span></div><div class="chip"><span class="mark"></span><span>C4 model</span></div><div class="chip"><span class="mark"></span><span>T-SQL</span></div>
+        <div class="chip"><span class="mark"></span><span>.NET</span></div><div class="chip"><span class="mark has-logo"></span><span>JavaScript</span></div><div class="chip"><span class="mark has-logo"></span><span>TypeScript</span></div><div class="chip"><span class="mark has-logo"></span><span>Node.js</span></div><div class="chip"><span class="mark has-logo"></span><span>Java</span></div><div class="chip"><span class="mark has-logo"></span><span>Kotlin</span></div><div class="chip"><span class="mark has-logo"></span><span>Angular</span></div><div class="chip"><span class="mark has-logo"></span><span>Flutter</span></div><div class="chip"><span class="mark has-logo"></span><span>Android</span></div><div class="chip"><span class="mark"></span><span>iOS</span></div><div class="chip"><span class="mark"></span><span>SQL Server</span></div><div class="chip"><span class="mark has-logo"></span><span>Postgres</span></div><div class="chip"><span class="mark has-logo"></span><span>MongoDB</span></div><div class="chip"><span class="mark has-logo"></span><span>MySQL</span></div><div class="chip"><span class="mark has-logo"></span><span>Firebase</span></div><div class="chip"><span class="mark"></span><span>AWS</span></div><div class="chip"><span class="mark has-logo"></span><span>Kubernetes</span></div><div class="chip"><span class="mark has-logo"></span><span>RabbitMQ</span></div>
+        <div class="chip"><span class="mark"></span><span>.NET</span></div><div class="chip"><span class="mark has-logo"></span><span>JavaScript</span></div><div class="chip"><span class="mark has-logo"></span><span>TypeScript</span></div><div class="chip"><span class="mark has-logo"></span><span>Node.js</span></div><div class="chip"><span class="mark has-logo"></span><span>Java</span></div><div class="chip"><span class="mark has-logo"></span><span>Kotlin</span></div><div class="chip"><span class="mark has-logo"></span><span>Angular</span></div><div class="chip"><span class="mark has-logo"></span><span>Flutter</span></div><div class="chip"><span class="mark has-logo"></span><span>Android</span></div><div class="chip"><span class="mark"></span><span>iOS</span></div><div class="chip"><span class="mark"></span><span>SQL Server</span></div><div class="chip"><span class="mark has-logo"></span><span>Postgres</span></div><div class="chip"><span class="mark has-logo"></span><span>MongoDB</span></div><div class="chip"><span class="mark has-logo"></span><span>MySQL</span></div><div class="chip"><span class="mark has-logo"></span><span>Firebase</span></div><div class="chip"><span class="mark"></span><span>AWS</span></div><div class="chip"><span class="mark has-logo"></span><span>Kubernetes</span></div><div class="chip"><span class="mark has-logo"></span><span>RabbitMQ</span></div>
       </div>
       </div>
     </section>
@@ -690,23 +692,24 @@
         </div>
 
         <div class="testimonials">
-          <div class="testimonial tall">
+          <div class="testimonial">
             <div class="quote-mark">&ldquo;</div>
-            <p>[NEEDS INPUT] Paste the real LinkedIn recommendation text here &mdash; not invented.</p>
-            <div class="t-name">[NEEDS INPUT] Name</div>
-            <div class="t-title">[NEEDS INPUT] Title &middot; Company</div>
+            <p>Although he joined as a backend developer, he quickly proved himself highly capable in frontend tasks as well […] building and using tailored agents to improve his workflows and productivity.</p>
+            <div class="t-name">Tariq Khawaja</div>
+            <div class="t-title">Director of Engineering &middot; NICE</div>
           </div>
           <div class="testimonial">
             <div class="quote-mark">&ldquo;</div>
-            <p>[NEEDS INPUT] Paste the real LinkedIn recommendation text here.</p>
-            <div class="t-name">[NEEDS INPUT] Name</div>
-            <div class="t-title">[NEEDS INPUT] Title &middot; Company</div>
+            <p>[…] he demonstrated commitment, strong technical judgment, and a great willingness to collaborate, understand the product’s needs […] He has strong technical skills to successfully take on software projects, particularly in backend development […] where technology, business needs, and priorities are constantly evolving.</p>
+            <div class="t-name">Gabriel Horacio Vega Simons</div>
+            <div class="t-title">Product Owner &middot; Banco Solidario S.A.</div>
+            <div class="t-source">Translated from Spanish &middot; LinkedIn</div>
           </div>
-          <div class="testimonial">
+          <div class="testimonial wide">
             <div class="quote-mark">&ldquo;</div>
-            <p>[NEEDS INPUT] Paste the real LinkedIn recommendation text here.</p>
-            <div class="t-name">[NEEDS INPUT] Name</div>
-            <div class="t-title">[NEEDS INPUT] Title &middot; Company</div>
+            <p>I had the opportunity to work closely with Octavio and consistently observed a strong combination of leadership, accountability, and strategic thinking […] a clear focus on delivering meaningful results for both the team and the organization.</p>
+            <div class="t-name">Hugo Arias</div>
+            <div class="t-title">Principal Software Engineer &middot; NICE</div>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ lang: es
 type: page
 title: "Luis Octavio Antelo · Senior Software Engineer"
 confidentiality: sanitized
-thesis: "Si necesitás que tus sistemas hagan algo nuevo, se hablen entre ellos o resolver algo específico... ahí entro yo."
+thesis: "Si necesitás que tus sistemas hagan algo nuevo, se hablen entre si o resolver algo específico... ahí entro yo."
 ---
 
 Este archivo se lee por su frontmatter. La home renderiza `title` y `thesis`; el cuerpo no lo renderiza nada, y eso es una decisión, no un descuido.

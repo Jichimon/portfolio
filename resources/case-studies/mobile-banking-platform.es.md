@@ -70,7 +70,7 @@ servicios. La objeción obvia es que se trata de un solo bounded context y que u
 único deployable sería más simple.
 
 Los perfiles de carga son completamente distintos. La verificación corre en cada
-login y cada refresco de sesión: alto volumen y crítica en latencia. La gestión de
+login y cada refresh de sesión: alto volumen y crítica en latencia. La gestión de
 credenciales corre en el alta, el reset y la recuperación: bajo volumen y tolerante
 a latencia. Acoplarlas significa que un incidente en gestión de credenciales puede
 tumbar el login de todos los canales a la vez.

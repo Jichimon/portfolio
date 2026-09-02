@@ -17,8 +17,8 @@ confidentiality: sanitized
 
 ## Contexto
 
-En Bolivia, ocurre que conseguir una solución de control de cobros necesita un proceso burocrático de mínimo 30 días con un banco. Y muchas veces acuerdos directos con el banco.
-Entonces se da que los pequeños comercios cobran mediante códigos QR generados en la app móvil del banco. Generan un QR y comparten por whatsapp el código QR a sus empleados. El empleado no tiene como confirmar la venta más que preguntarle directamente al dueño de la cuenta. Y el tiempo que se come el cliente es mala imagen a fin de cuentas para ese negocio.
+En Bolivia, Pasa y acontece que conseguir una solución de control de cobros necesita un proceso burocrático con un banco, de mínimo 30 días. Y muchas veces acuerdos directos con el banco.
+Entonces se da que los pequeños comercios cobran mediante códigos QR generados en la app móvil del banco. Generan un QR y comparten por whatsapp el QR a sus empleados. El empleado confirma la venta preguntándole directamente al dueño. Eso toma un tiempo considerable que daña la experiencia del cliente en ese negocio.
 
 El workaround que aparecía en la calle era peor que el problema: los dueños les
 entregaban sus credenciales bancarias a los empleados.
@@ -63,7 +63,7 @@ los microservicios BIAN actuales, no introducir un stack paralelo.
 
 ### Un servicio separado para el dominio de comercios
 
-Se diseña un nuevo servicio de dominio que se dueño, amo y señor de todo lo relativo a la solución: negocios, delegados y las relaciones entre ellos. En este servicio nunca se toca saldos ni datos de la cuenta, se le pide a los servicios de QR un qr de cobro y se registra todo el contexto del negocio alrededor. al trabajar con BIAN, todo esto fue más sencillo de lo que parece.
+Se diseña un nuevo servicio de dominio que sea dueño, amo y señor de todo lo relativo a la solución: negocios, delegados y las relaciones entre ellos. En este servicio nunca se toca saldos ni datos de la cuenta, se le pide a los servicios de QR un qr de cobro y se registra todo el contexto del negocio alrededor. al trabajar con BIAN, todo esto fue más sencillo de lo que parece.
 
 :::diagram{id="qr-c4-container" type="c4-container"}
 Vista de contenedores: app móvil → BFF → servicio de dominio de comercios, y el camino hacia el core on-premise para la emisión del QR.

@@ -42,6 +42,9 @@ home:
   contact_email: "luis.antm@hotmail.com"
   seam_legacy: "Legacy, denso"
   seam_modern: "Moderno, abierto"
+  testimonial_translated_from_en: "Traducido del inglés"
+  testimonial_translated_from_es: "Traducido del español"
+  testimonial_link: "LinkedIn"
 
 article:
   toc_heading: "En esta página"
@@ -168,8 +171,6 @@ Ningún artboard tiene la mitad española de las páginas de artículo, About ni
 
 - **`article.deep_dives`, se dejó en inglés.** *Deep dives* es término de oficio y la traducción literal (*En profundidad*, *A fondo*) pierde el sentido de "los hijos de esta plataforma". Si preferís traducirlo, el candidato es **En profundidad**.
 - **`article.platform_tag`, se dejó mezclado:** *Plataforma · raíz de los deep dives*. Arrastra el mismo término dentro de una frase en español. La alternativa consistente es *Plataforma · de la que cuelgan los casos en profundidad*, más larga y sin el término de oficio.
-
-`article.stack` se dejó como **Stack**: es la palabra que la industria usa en español y traducirla a *Tecnologías* chocaría con `home.stack_heading`, que ya dice *Tecnologías que manejo*.
 
 ## Un detalle tipográfico
 

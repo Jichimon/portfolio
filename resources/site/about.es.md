@@ -4,7 +4,7 @@ lang: es
 type: page
 title: "Luis Octavio Antelo · Sobre mí"
 confidentiality: sanitized
-h1: "Entender la esencia de las personas te permite amarlas, entender la esencia de un sistema, te permite mejorarlo."
+h1: "Entender la esencia de las personas te permite amarlas, entender la esencia de un sistema, te permite mejorarlo"
 lead: ""
 since: "2021 en software"
 reads_as: "INTJ-A"

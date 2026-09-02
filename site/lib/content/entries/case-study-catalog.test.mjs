@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   listCaseStudyEntriesForLang,
-  listCaseStudyStackForLang,
   deriveHomeTiles,
 } from './case-study-catalog.mjs';
 
@@ -126,52 +125,6 @@ test('orders independently per locale', () => {
   const esListing = listCaseStudyEntriesForLang(entries, 'es').map((e) => e.data.slug);
   assert.deepEqual(enListing, ['beta-sample', 'alpha-sample']);
   assert.deepEqual(esListing, ['alpha-sample', 'beta-sample']);
-});
-
-test('unions stack values across entries', () => {
-  const entries = [
-    catalogEntry('first-sample', 'en', 'case-study', { order: 1, stack: ['Node.js', 'PostgreSQL'] }),
-    catalogEntry('second-sample', 'en', 'case-study', { order: 2, stack: ['Oracle EBS', 'AWS'] }),
-    catalogEntry('third-sample', 'en', 'case-study', { order: 3, stack: ['Kafka'] }),
-  ];
-  const stack = listCaseStudyStackForLang(entries, 'en');
-  assert.deepEqual(
-    [...stack].sort(),
-    ['AWS', 'Kafka', 'Node.js', 'Oracle EBS', 'PostgreSQL'].sort(),
-  );
-});
-
-test('deduplicates by exact string', () => {
-  const entries = [
-    catalogEntry('first-sample', 'en', 'case-study', { order: 1, stack: ['AWS', 'AWS Fargate'] }),
-    catalogEntry('second-sample', 'en', 'case-study', { order: 2, stack: ['AWS'] }),
-  ];
-  const stack = listCaseStudyStackForLang(entries, 'en');
-  const awsOccurrences = stack.filter((value) => value === 'AWS');
-  assert.equal(awsOccurrences.length, 1);
-  assert.ok(stack.includes('AWS Fargate'));
-  assert.equal(stack.length, 2);
-});
-
-test('tolerates an entry with no stack', () => {
-  const entries = [
-    catalogEntry('absent-stack-sample', 'en', 'case-study', { order: 1 }),
-    catalogEntry('empty-stack-sample', 'en', 'case-study', { order: 2, stack: [] }),
-    catalogEntry('has-stack-sample', 'en', 'case-study', { order: 3, stack: ['Terraform'] }),
-  ];
-  const stack = listCaseStudyStackForLang(entries, 'en');
-  assert.deepEqual(stack, ['Terraform']);
-});
-
-test('returns a stable order', () => {
-  const entries = [
-    catalogEntry('first-sample', 'en', 'case-study', { order: 1, stack: ['Node.js', 'AWS', 'Kafka'] }),
-    catalogEntry('second-sample', 'en', 'case-study', { order: 2, stack: ['PostgreSQL', 'AWS'] }),
-    catalogEntry('third-sample', 'en', 'case-study', { order: 3, stack: ['Terraform', 'Node.js'] }),
-  ];
-  const first = listCaseStudyStackForLang(entries, 'en');
-  const second = listCaseStudyStackForLang(entries, 'en');
-  assert.deepEqual(first, second);
 });
 
 // --- home tiles ---------------------------------------------------------------

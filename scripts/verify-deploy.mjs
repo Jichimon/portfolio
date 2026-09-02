@@ -22,7 +22,7 @@ import {
   ROUTED_PAGE_SLUGS,
   INDEX_PAGE_SLUG,
 } from '../site/lib/content/routes/route-set.mjs';
-import { readLocalizedMarkdownEntries } from '../site/lib/content/routes/route-source.mjs';
+import { readLocalizedMarkdownEntries, readPageEntries } from '../site/lib/content/routes/route-source.mjs';
 import { verifyDeployment, probeContactEndpoint, CONTACT_ENDPOINT_PATH } from './guards/lib/deploy-verify.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,10 +30,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 // The same two content roots and the same derivation the e2e suite uses, through the same
 // module — one derivation, two consumers. A verifier enumerating routes differently from the
 // suite would be verifying something else (criterion 4).
-const INTERFACE_STRINGS_STEM = 'ui';
 
 function deriveRoutes() {
-  const pageEntries = readLocalizedMarkdownEntries(join(ROOT, 'resources', 'site'), INTERFACE_STRINGS_STEM);
+  const pageEntries = readPageEntries(join(ROOT, 'resources', 'site'));
   const caseStudyEntries = readLocalizedMarkdownEntries(join(ROOT, 'resources', 'case-studies'));
   return deriveRouteSetFromEntries(
     [...pageEntries, ...caseStudyEntries],

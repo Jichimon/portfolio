@@ -2018,13 +2018,21 @@ Replaces `mailto:` with a real submission, which is what makes the form's four d
 
 ---
 
-## TASK 19 — LinkedIn recommendations as content · `content` · `TODO`
+## TASK 19 — LinkedIn recommendations as content · `content` · `DONE`
 
 The home page's contact section carries three testimonial cards, currently `[NEEDS INPUT]` placeholders in the design canvas. They cannot be filled from the design task: the quotes are real words written by real people about the author, so they are content, they belong in `resources/`, and `H-02` puts that outside any agent's reach.
 
 Three recommendations exist on the author's LinkedIn profile: a manager at NICE, a Product Owner at Banco Solidario, and a second manager at NICE.
 
-**Done:** `resources/testimonials.en.md` and `resources/testimonials.es.md` exist, both locales, each carrying for all three recommendations: the quote verbatim, the recommender's name, their title and company at the time of writing, and the permalink to the recommendation on LinkedIn. `check-terms` and `check-content` pass.
+**Done:** `resources/site/testimonials.en.md` and `resources/site/testimonials.es.md` exist, both locales, each carrying for all three recommendations: a stable `id`, the quote verbatim, the language it was written in, the recommender's name, their title and company at the time of writing, and the permalink to the recommendation on LinkedIn. `check-terms` and `check-content` pass.
+
+**Closed 2026-09-02.** All three recommendations are transcribed in both locales, each carrying a stable `id`, the quote verbatim, the language it was written in, the recommender's name, their title and company, and a link to the recommendations on LinkedIn. Each also carries an `excerpt` — the card copy, verbatim with every cut marked `[…]`, which `TASK 113` proves against the full quote at build time.
+
+**Two stated residuals, neither of which reaches a reader** (`P-19`). `title: "Recomendations"` in the English file is misspelled, in a key nothing renders. And the first NICE recommendation reads `Al-assisted` where LinkedIn has `AI-assisted` — a transcription slip inside a verbatim quote, in the archived full text rather than in the excerpt, so no page shows it. Both are the author's to fix and neither justifies an open item.
+
+**A third residual is a design preference, not a defect:** the author asked for the two short cards side by side above the long one. The layout gives the full width to the LAST card, and the long recommendation is currently declared second. Moving `solidario-po` after `nice-manager-b` — in both locale files, which the build checks — produces that arrangement.
+
+**The path was corrected on 2026-09-02, from `resources/` to `resources/site/`.** The shape this file copies is `ui.{en,es}.md` — a data file with no route of its own — and that lives with the rest of the site's content rather than beside the `case-studies/`, `diagrams/` and `photos/` directories. The exact frontmatter, key by key, is in `SPEC-TASK-113`; `TASK 113` renders what this produces.
 
 **Constraints**
 
@@ -2032,6 +2040,59 @@ Three recommendations exist on the author's LinkedIn profile: a manager at NICE,
 - **The recommenders are third parties.** Their names and public professional titles are fine; anything beyond that — contact details, anything they said privately — is not (`C-06`).
 - **Both locales in the same change** (`C-09`). The quotes were written in one language; the other locale carries a translation clearly marked as such, with the original preserved, rather than a silent restatement.
 - The design canvas's placeholder cards are updated to the real text once this lands — the canvas is downstream of the content, not the other way round.
+- **Four files, not two.** The three interface strings the cards need — the two translation notes and the link label — are chrome and live in `ui.{en,es}.md` under the existing `home:` group (`S-01`). They are in `resources/**` too, so they are this item's to write and not `TASK 113`'s.
+
+---
+
+## TASK 113 — Testimonials column on the home page · `feature` · `DONE`
+
+`TASK 24` shipped the home page with the contact section's second column deliberately empty, because its content did not exist: the comment in `ContactSection.astro` says so, `HOME-006` asserts the block is absent, and the design canvas still carries three `[NEEDS INPUT]` cards. `TASK 19` produces that content. This item renders it.
+
+**Closed 2026-09-02**, `node scripts/gate.mjs --profile full` — **GATE PASSED, 22 of 22 steps**, mutation and the visual-capture matrix included. `SPEC-TASK-113` at `version` 1.1, `approved_version` 1.1, `status: shipped`.
+
+**A stated residual, not a work item** (`P-19`). The `pages` loader glob in `site/src/content.config.ts` excludes non-page data files **by name** — it now reads `!(ui|testimonials|stack)`, a third name added by `TASK 114` four hours after the second. It is the roster-versus-property shape (`P-13`), and this item fixed the half it could: the readers now derive pages from the declared `type` via `readPageEntries`. The loader half cannot be fixed the same way, because Astro's `glob()` matches filenames and never sees frontmatter. What is left is a one-line edit each time a data file joins that directory, paid by whoever adds it, and the failure is loud and immediate — the build names the file. No reader is affected and nobody's throughput is. Opening an item for it would be ratchet upkeep serving neither project goal; recording it is the honest form.
+
+**Goal served (`P-19`):** goal 1, publication. Three recommendations written by other people are the one kind of evidence on this site the author cannot write himself, and today a reader sees none of them. The reader is who notices if this stays open.
+
+**Done:** `/` and `/es/` render one card per testimonial the content declares — quote, name, title, company, a link to the recommendation on LinkedIn, and, on a card whose original language is not the page's, a note naming the language it was translated from. `HOME-006` is inverted to assert exactly that, `node scripts/gate.mjs --profile full` passes, and the canvas placeholders are replaced with the real text.
+
+**Constraints**
+
+- **Blocked on `TASK 19` for the content, and on nothing else.** The collection, the core module, the component and the inverted test are all writable before a single quote exists; only the visual diff and the canvas replacement need the real words.
+- **A section is omitted when its content is absent.** Zero renderable testimonials means no column and no empty grid cell — the form keeps its own measure. An entry whose quote is still `[NEEDS INPUT]` is one of the absent ones: it is skipped, and the marker never reaches a page.
+- **The cross-locale join is the `id`.** Both locale files declare the same ids in the same order, and a translated entry carries its original verbatim — asserted in `site/lib/content/`, not in the collection schema, so the rule sits on the surface `node:test` runs and Stryker mutates (`T-01`).
+- **Nothing invents a string.** The translation notes and the link label come from `ui.{en,es}.md` (`S-01`); the separator between title and company is drawn by CSS, the way `.contact-section__link` already draws its own.
+- **`site/lib/content/entries/` and `pages/` are both at 6 of 6 files** (`S-03`), so the core module opens `site/lib/content/testimonials/`. That is a context, not an overflow folder.
+
+---
+
+## TASK 114 — The home stack strip as a curated list, with marks · `feature` · `DONE`
+
+The strip renders `listStack(lang)`, which is the deduplicated union of every case study's `stack:` frontmatter. That array is not a technology list — it is what a reader of *that article* needs to know about *that project*, so it legitimately carries standards (`BIAN`), notations (`C4 model`), practices (`batched stored procedures`) and hardware categories (`biometric terminals`). Aggregated under a heading that says **Technologies I've worked with**, half the strip contradicts its own title. The design had already decided otherwise on both counts: `Main.dc.html:230-232` declares a `.mark.has-logo` box the live page never fills, and the artboard's own chip list was curated rather than derived — 15 items including `Polly` and `BFF`, which appear in no case study at all.
+
+**Goal served (`P-19`):** goal 1, publication. The strip is the second thing a reader's eye lands on below the hero and the one place the site states its technical range at a glance. Today it states it wrongly, in a section whose own title contradicts a third of its contents. A reader skimming for a stack match is who notices.
+
+**Done:** `/` and `/es/` render the strip from `resources/site/stack.{en,es}.md` and nothing else — one chip per declared entry, in declared order, each with an inlined monochrome mark following the theme where the entry declares one and the designed dot where it does not. `listCaseStudyStackForLang` is deleted rather than orphaned, the case-study mastheads still carry the standards and practices that left the home page, `STACK-001` asserts the count from the content files, and `node scripts/gate.mjs --profile full` passes.
+
+**CLOSED 2026-09-02.** `node scripts/gate.mjs --profile full` — `GATE PASSED (profile: full)`, 22 of 22. Both index routes render 13 chips from the pair and nothing from any case study; `listCaseStudyStackForLang` and its four tests are gone.
+
+**The anti-regression assertion was proven in red rather than assumed.** Planting one undeclared chip named `BIAN` — the exact shape of the old aggregate leaking back — failed `STACK-001` in both locales at `Expected: 13, Received: 14`. Reverted, green again.
+
+**Two decisions came from measurement, not from judgement, and both were the opposite of what was assumed at planning.** The Simple Icons index holds **no Amazon or AWS mark at all** while `.NET` survives — checked against the real 3,457-slug index after an unverified claim in the plan said roughly the reverse. And `.NET` and `iOS` are **wordmarks**, measured with `getBBox()` at 24x8.94 and 24x11.9, which is 6.7px and 8.9px tall inside the 18px box beside a 13px name saying the same word. Independently, AWS permits its marks *"in plain text only (no logos)"* and forbids recolouring, and Microsoft forbids third-party logo use *"in any manner"* — so the dot is the correct render for those entries rather than a missing asset, and the spec says so where a later session will read it.
+
+**The mutation gaps were the real finding.** `stack.mjs` first scored 81% with 15 survivors, and every one named a test that proved less than it looked like it proved — two assertions passing because their regex matched a *different* finding, one direction of the cross-locale check untested, four of five paint keywords never asserted. Now 100%: 102 killed, zero survivors, zero uncovered, one suppression carrying its reason. The repository re-measured **80.11%** and the floor is ratcheted 77.0 -> 79.0 (`T-03`, `G-11`).
+
+**The content landed and the item has no residual.** The author curated twice — first dropping the two wordmarks, then adding JavaScript, TypeScript, Node.js, MongoDB and MySQL, all five measured as symbols before being handed over. **18 chips, 14 marks, 4 dots**, and the four dots are exactly the four whose owners publish plain-text-only terms: `.NET`, `iOS`, `SQL Server`, `AWS`. Each round cost one edit in a file the author owns, with the build refusing every way of getting it wrong — a `file:` with no asset behind it, an asset nothing references, a locale that disagrees. That property, not the strip, is what this item was for. The three home artboards are regenerated from the content file rather than retyped, so the design record cannot drift from the page by hand (`P-07`).
+
+**Constraints**
+
+- **Blocked on the author for the content, and on nothing else.** `resources/site/stack.{en,es}.md` and every SVG under `resources/logos/stack/` are in `resources/**` (`H-02`). The collection, the core module, the gateway and the component are all writable before a single entry exists; only the visual diff needs the real list. Same shape as `TASK 113`'s block on `TASK 19`.
+- **The heading is not reworded.** `home.stack_heading` stays as both locales carry it today; the fix is the list becoming true, not the title becoming vague enough to cover it.
+- **`resources/logos/stack/`, not `resources/logos/`.** A second logo consumer already exists, built and empty: `EmploymentEntry.astro:36-37` renders an employer logo from the `logo` key of each role. The two families differ in consumer, render mechanism, colour rule and namespace, and the publication-boundary check runs asset → reference — so one flat folder would force it to carry a roster to tell them apart (`P-13`). `employers/` is created empty and named now, so the first employer logo does not land in the stack folder because that is where logos went.
+- **The cross-locale join is the `id`.** Both locale files declare the same ids in the same order, asserted in `site/lib/content/stack/` rather than in the collection schema, so the rule sits on the surface `node:test` runs and Stryker mutates (`T-01`). Most `name` values are identical in both locales; the pair exists because `C-09` is a hard rule and `singleLocale` is deliberately empty.
+- **A mark is decorative, never a string.** The technology's name is rendered beside it, so the mark carries `aria-hidden` and no `alt` — nothing here needs a string outside `resources/**` (`S-01`).
+- **`C-06` carries forward from the artboard verbatim:** no named security vendor gets a mark here. No identity provider, no liveness or fraud tooling, no OTP provider. Not as a logo and not as a label.
+- **`site/src/components/home/` is at 6 of 6 files** (`S-03`), so this item adds none there — the mark is a variant of the existing `.stack-strip__mark` span, not a new component. The core module opens `site/lib/content/stack/`.
 
 ---
 
@@ -3082,7 +3143,7 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 | Serves | Items | Note |
 |---|---|---|
 | **Goal 1 — publish** | ~~`TASK 110`~~ · ~~`TASK 111`~~ · ~~`TASK 112`~~ · ~~`TASK 30`~~ **all `DONE` 2026-09-01** · `TASK 32` **built 2026-09-01, unpushed** · `TASK 28` · `TASK 29` | ~~**71 items are closed and nobody can see any of it.**~~ **Shipped 2026-09-01:** the repository is public and its CI is green, so the harness half of goal 1 is visible to a reader for the first time. What remains here is the deploy (`TASK 32`) and the two content items. **`TASK 110` and `TASK 111` are first as of 2026-09-01**: CI cannot go green at all until the e2e hang is fixed, and cannot finish in a sane budget until the heavy tiers leave the per-push path — and `TASK 30`'s own `Done` is a green run on the remote |
-| **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 104` · `TASK 27` | The pages a reader actually judges |
+| **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 104` · `TASK 27` · `TASK 113` · `TASK 114` | The pages a reader actually judges. **The last two were opened after this triage and are added here rather than left off it** (`P-07`): both are `feature` items whose whole deliverable is a home-page surface a reader reads — the recommendations column, and the stack strip. Each carries its own `Goal served` line as `P-19` requires; this row is the summary |
 | **Goal 1 — credibility** | ~~`TASK 94`~~ **`DONE` 2026-08-31** · ~~`TASK 101`~~ **`DONE` 2026-09-01** | `TASK 94` **retired the bypass series** by stating the residual instead of chasing it — the cheapest high-leverage item on the board, and it closed without opening a single item in the surface it documents. `TASK 101` decided the exhibit is `README.md` only and rewrote it |
 | **Goal 2 — the deliverable** | `TASK 9` (blocked) · `TASK 100` (the unblocker) | `TASK 9`'s own trigger is *the first `EVAL` with a real, non-harness workload*, and nothing was advancing it. `TASK 100` is that workload |
 | **Goal 2 — efficiency & trust** | `TASK 89` · `TASK 78` · `TASK 81` · `TASK 73` · `TASK 102` | **This note was wrong and is corrected 2026-08-31.** `TASK 39` already closed the silent-pass class: the step **FAILS**, loudly, and nothing is quietly unverified. What it costs is a gate that intermittently cannot be trusted to have run — `T-06` shaped, one tier over from `TASK 69`/`TASK 85`. `TASK 89`'s own hand-off had already retracted this premise, and it survived here for a day (`P-07`) |

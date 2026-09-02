@@ -7,7 +7,7 @@ import {
   ROUTED_PAGE_SLUGS,
   INDEX_PAGE_SLUG,
 } from '../../lib/content/routes/route-set.mjs';
-import { readLocalizedMarkdownEntries } from '../../lib/content/routes/route-source.mjs';
+import { readLocalizedMarkdownEntries, readPageEntries } from '../../lib/content/routes/route-source.mjs';
 
 // Playwright runs specs under plain Node, not Astro's Vite pipeline, so importing
 // the gateway directly fails: it imports astro:content, a virtual module only
@@ -32,7 +32,7 @@ interface DerivedRoute {
 }
 
 function deriveRoutes(): DerivedRoute[] {
-  const pageEntries = readLocalizedMarkdownEntries(pagesContentDir, 'ui');
+  const pageEntries = readPageEntries(pagesContentDir);
   const caseStudyEntries = readLocalizedMarkdownEntries(caseStudiesContentDir);
   return deriveRouteSetFromEntries([...pageEntries, ...caseStudyEntries], ROUTED_PAGE_SLUGS, INDEX_PAGE_SLUG) as DerivedRoute[];
 }

@@ -131,13 +131,50 @@ const ES = [
   [`<p class="contact-note">Open to remote or hybrid/relocation.</p>`,
    `<p class="contact-note">Abierto a remoto o h&iacute;brido/relocation.</p>`],
 
-  [`<p>[NEEDS INPUT] Paste the real LinkedIn recommendation text here &mdash; not invented.</p>`,
-   `<p>[NEEDS INPUT] Pegar ac&aacute; el texto real de la recomendaci&oacute;n de LinkedIn &mdash; no inventado.</p>`],
-  [`<div class="t-name">[NEEDS INPUT] Name</div>`, `<div class="t-name">[NEEDS INPUT] Nombre</div>`, "all"],
-  [`<div class="t-title">[NEEDS INPUT] Title &middot; Company</div>`,
-   `<div class="t-title">[NEEDS INPUT] Cargo &middot; Empresa</div>`, "all"],
-  [`<p>[NEEDS INPUT] Paste the real LinkedIn recommendation text here.</p>`,
-   `<p>[NEEDS INPUT] Pegar ac&aacute; el texto real de la recomendaci&oacute;n de LinkedIn.</p>`, "all"],
+  // --- testimonials: one entry per CARD, not per string. A card translated from the
+  //     other locale carries a source line the native one does not, so the two sides
+  //     differ in STRUCTURE and no per-string pair could express that.
+  //     Regenerate after editing the recommendations: the copy here is derived from
+  //     resources/site/testimonials.{en,es}.md and must stay identical to it.
+  [`          <div class="testimonial">
+            <div class="quote-mark">&ldquo;</div>
+            <p>Although he joined as a backend developer, he quickly proved himself highly capable in frontend tasks as well […] building and using tailored agents to improve his workflows and productivity.</p>
+            <div class="t-name">Tariq Khawaja</div>
+            <div class="t-title">Director of Engineering &middot; NICE</div>
+          </div>`,
+   `          <div class="testimonial">
+            <div class="quote-mark">&ldquo;</div>
+            <p>Aunque se incorporó como desarrollador backend, rápidamente demostró ser altamente competente también en tareas de frontend […] creando y utilizando agentes personalizados para mejorar sus flujos de trabajo y productividad.</p>
+            <div class="t-name">Tariq Khawaja</div>
+            <div class="t-title">Director of Engineering &middot; NICE</div>
+            <div class="t-source">Traducido del ingl&eacute;s &middot; LinkedIn</div>
+          </div>`],
+  [`          <div class="testimonial">
+            <div class="quote-mark">&ldquo;</div>
+            <p>[…] he demonstrated commitment, strong technical judgment, and a great willingness to collaborate, understand the product’s needs […] He has strong technical skills to successfully take on software projects, particularly in backend development […] where technology, business needs, and priorities are constantly evolving.</p>
+            <div class="t-name">Gabriel Horacio Vega Simons</div>
+            <div class="t-title">Product Owner &middot; Banco Solidario S.A.</div>
+            <div class="t-source">Translated from Spanish &middot; LinkedIn</div>
+          </div>`,
+   `          <div class="testimonial">
+            <div class="quote-mark">&ldquo;</div>
+            <p>[…] demostró compromiso, criterio técnico y una muy buena disposición para colaborar, entender las necesidades del producto […] Cuenta con conocimientos fuertes para llevar adelante proyectos de software, especialmente en el desarrollo backend […] donde la tecnología, el negocio y las prioridades cambian constantemente.</p>
+            <div class="t-name">Gabriel Horacio Vega Simons</div>
+            <div class="t-title">Product Owner &middot; Banco Solidario S.A.</div>
+          </div>`],
+  [`          <div class="testimonial wide">
+            <div class="quote-mark">&ldquo;</div>
+            <p>I had the opportunity to work closely with Octavio and consistently observed a strong combination of leadership, accountability, and strategic thinking […] a clear focus on delivering meaningful results for both the team and the organization.</p>
+            <div class="t-name">Hugo Arias</div>
+            <div class="t-title">Principal Software Engineer &middot; NICE</div>
+          </div>`,
+   `          <div class="testimonial wide">
+            <div class="quote-mark">&ldquo;</div>
+            <p>Tuve la oportunidad de trabajar estrechamente con Octavio y pude observar de manera constante una sólida combinación de liderazgo, responsabilidad y pensamiento estratégico […] un claro enfoque en generar resultados significativos tanto para el equipo como para la organización.</p>
+            <div class="t-name">Hugo Arias</div>
+            <div class="t-title">Principal Software Engineer &middot; NICE</div>
+            <div class="t-source">Traducido del ingl&eacute;s &middot; LinkedIn</div>
+          </div>`],
 
   // --- footer + theme label ------------------------------------------------------
   [`<div class="footer-links">Visitor metrics &mdash; reserved slot, not built yet</div>`,

@@ -362,9 +362,15 @@
         "contact_form",
         "footer",
         "not_found"
+      ],
+      "testimonials": [
+        "testimonials"
+      ],
+      "stack": [
+        "stack"
       ]
     },
-    "_byTypeRationale": "Required keys are keyed on the declared type, and an UNKNOWN type is a finding rather than a pass - it is either a typo or a content shape nobody has specified the keys for, and both need a human (P-13). Note outcome is NOT required: mobile-banking-platform carries none in either locale, and resources/ is read-only input, so demanding it would fail the gate on frozen content that cannot be edited. The `ui` entry is the chrome file: its nine required keys are GROUPS, one per template, and check-content asserts only that each group is present - parseFrontmatter is a key scanner rather than a YAML parser, deliberately. Leaf-by-leaf validation belongs to the collection schema at build time, so each level claims exactly what it covers (G-11).",
+    "_byTypeRationale": "Required keys are keyed on the declared type, and an UNKNOWN type is a finding rather than a pass - it is either a typo or a content shape nobody has specified the keys for, and both need a human (P-13). Note outcome is NOT required: mobile-banking-platform carries none in either locale, and resources/ is read-only input, so demanding it would fail the gate on frozen content that cannot be edited. The `ui` entry is the chrome file: its nine required keys are GROUPS, one per template, and check-content asserts only that each group is present - parseFrontmatter is a key scanner rather than a YAML parser, deliberately. Leaf-by-leaf validation belongs to the collection schema at build time, so each level claims exactly what it covers (G-11). The `testimonials` entry requires only the list itself, for the same reason and with the same split: a key scanner cannot see inside it, so the shape of one recommendation is the collection schema's claim and the rules that span two levels of the document — a translation carries its original, and the two locales declare the same ids in the same order — are site/lib/content/testimonials/'s, asserted at build time. The `stack` entry is that same split once more: the scanner asserts the list is present, the collection schema owns the shape of one technology, and the rules spanning two files - the locales declaring the same ids in the same order, a declared mark having an asset behind it, and no asset going unreferenced - belong to site/lib/content/stack/.",
     "noFrontmatter": [
       {
         "path": "resources/github/profile-README.md",
