@@ -61,3 +61,5 @@ const ui = defineCollection({
 });
 
 export const collections = { pages, caseStudies, ui };
+
+//deploy test
