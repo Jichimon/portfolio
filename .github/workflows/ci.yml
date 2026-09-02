@@ -309,7 +309,21 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site --project-name=portfolio --branch=main
+          workingDirectory: site
+          packageManager: npm
+          # `deploy`, NOT `pages deploy`, and the difference is a decision rather than a
+          # spelling. ADR-004 compared the two and chose Workers static assets over Pages:
+          # a Pages Direct-Upload project is documented as unable to switch to git
+          # integration later — a one-way door — and Astro's own @astrojs/cloudflare adapter
+          # dropped Pages support in v13.
+          #
+          # It is also the only form that reads site/wrangler.jsonc. `assets.directory` and
+          # `not_found_handling` are Workers fields; the Pages path reads
+          # `pages_build_output_dir` instead and would ignore both.
+          #
+          # No directory argument: wrangler.jsonc names ./dist relative to itself, so the
+          # upload is the 134-file build and never the 21,568-file source tree.
+          command: deploy
 
       # A deploy step's exit code says a command succeeded; it does not say the site is
       # there. This walks every route the content collection derives — one derivation,
