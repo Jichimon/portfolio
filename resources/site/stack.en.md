@@ -45,6 +45,8 @@ stack:
   - id: mysql
     name: "MySQL"
     file: mysql.svg
+  - id: plsql
+    name: "PL/SQL"
   - id: firebase
     name: "Firebase"
     file: firebase.svg
@@ -56,6 +58,8 @@ stack:
   - id: rabbitmq
     name: "RabbitMQ"
     file: rabbitmq.svg
+  - id: oracleebs
+    name: "Oracle EBS"
 ---
 
 This file is read for its frontmatter. The home page renders the `stack` list; nothing renders this body.
