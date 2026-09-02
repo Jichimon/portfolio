@@ -35,7 +35,7 @@ home:
   standalone_label: "Not part of the platform: a different employer, a different system"
   employers_heading: "Where I've worked"
   work_heading: "What I've done"
-  stack_heading: "Technologies I work with"
+  stack_heading: "Technologies I've worked with"
   contact_heading: "Get in touch"
   contact_invite: "Got a system that's hard to explain? Need something built and don't know how? An idea you can't quite land yet? Or just a technical question? Let's work it out together."
   contact_note: "Open to remote or hybrid/relocation opportunities."
@@ -93,6 +93,9 @@ contact_form:
   message_label: "Description"
   message_placeholder: "What's the problem?"
   submit: "Send"
+  sending: "Sending…"
+  sent: "Sent. I'll reply to"
+  error: "Couldn't send. Your message is still here. Write to"
 
 footer:
   metrics_slot: "Visitor metrics: reserved slot, not built yet"

@@ -136,3 +136,56 @@ export async function verifyDeployment({
   }
   return findings;
 }
+
+/** The path the site's Worker answers, and the only one on the origin that is not a file. */
+export const CONTACT_ENDPOINT_PATH = '/api/contact';
+
+/**
+ * A submission the handler must refuse.
+ *
+ * Every field present and empty, rather than a body with fields missing: this exercises the
+ * validator's own path rather than the "not a form at all" shortcut, so the probe fails if
+ * validation is skipped as well as if it is absent. The honeypot is deliberately NOT set —
+ * a sprung trap answers 200 by design, which the probe would have to read as a failure.
+ *
+ * A colocated test asserts this payload is rejected by the site's real parser, so the probe
+ * is provably incapable of sending an email however often it runs.
+ */
+export const CONTACT_PROBE_PAYLOAD = { email: '', about: '', message: '' };
+
+const CONTACT_EXPECTED_STATUS = 400;
+
+/**
+ * The forced failure, run against the deployment rather than a stand-in.
+ *
+ * One request proves three things nothing else here can: the route reaches a request
+ * handler, the handler's validation runs, and the asset router was configured to hand this
+ * path over rather than answering it with the 404 page. That last one is the failure mode
+ * with no other symptom — every page still works, and the form silently stops working.
+ *
+ * Returns null when the endpoint behaves, a finding otherwise. Never throws, for the same
+ * reason checkRoute does not: fetch rejects on connection failure, and an unhandled
+ * rejection would crash the run instead of reporting an unreachable endpoint.
+ */
+export async function probeContactEndpoint({ baseUrl, fetchImpl, endpointPath = CONTACT_ENDPOINT_PATH }) {
+  const label = `the contact endpoint ${endpointPath}`;
+  let response;
+  try {
+    response = await fetchImpl(urlFor(baseUrl, endpointPath), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(CONTACT_PROBE_PAYLOAD),
+    });
+  } catch (error) {
+    return finding(`${label} could not be reached: ${error.message}`);
+  }
+
+  if (response.status !== CONTACT_EXPECTED_STATUS) {
+    return finding(
+      `${label} answered ${response.status} to a deliberately invalid submission, not ` +
+        `${CONTACT_EXPECTED_STATUS} — either the route never reached the handler, or the handler accepts anything`,
+    );
+  }
+
+  return null;
+}

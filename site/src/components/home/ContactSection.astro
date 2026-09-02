@@ -1,4 +1,6 @@
 ---
+import { HONEYPOT_FIELD_NAME } from '../../../lib/contact/submission.mjs';
+
 interface ContactLink {
   name: string;
   url: string;
@@ -16,6 +18,9 @@ interface Props {
   messageLabel: string;
   messagePlaceholder: string;
   submitLabel: string;
+  sendingLabel: string;
+  sentLabel: string;
+  errorLabel: string;
   links: ContactLink[];
 }
 
@@ -31,6 +36,9 @@ const {
   messageLabel,
   messagePlaceholder,
   submitLabel,
+  sendingLabel,
+  sentLabel,
+  errorLabel,
   links,
 } = Astro.props;
 ---
@@ -41,12 +49,24 @@ const {
     <p class="contact-section__invite">{invite}</p>
 
     <!--
-      The mailto action is the whole submission path: nothing here can know
-      whether the visitor's mail client ever sent the message, so no sending,
-      sent or error state is rendered. That state arrives once a real backend
-      does.
+      The mailto action STAYS, and it is the fallback rather than the path. The submit
+      listener intercepts and posts to the endpoint instead, so a visitor whose browser
+      never ran the script still submits exactly as they did before any of this existed.
+      An enhancement that replaces the action would turn a script failure into a dead form.
+
+      The three result strings ride on data attributes because a bundled script cannot read
+      this component's props. They are content and come from the strings collection; nothing
+      here invents one.
     -->
-    <form class="contact-section__form" action={`mailto:${mailtoAddress}`} method="post">
+    <form
+      class="contact-section__form"
+      action={`mailto:${mailtoAddress}`}
+      method="post"
+      data-sending={sendingLabel}
+      data-sent={sentLabel}
+      data-error={errorLabel}
+      data-contact-address={mailtoAddress}
+    >
       <div class="contact-section__field">
         <label class="contact-section__label" for="contact-section-email">{emailLabel}</label>
         <input
@@ -76,8 +96,69 @@ const {
           placeholder={messagePlaceholder}
         ></textarea>
       </div>
+      <!--
+        The trap. Off-screen rather than display:none, because a bot that skips hidden
+        fields is exactly the one worth catching; hidden from assistive technology and from
+        the tab order, so nobody using either is ever offered it; and named nothing an
+        autofill recognises, which is what stops a browser filling it in for a real person.
+      -->
+      <input
+        class="contact-section__trap"
+        name={HONEYPOT_FIELD_NAME}
+        type="text"
+        tabindex="-1"
+        autocomplete="off"
+        aria-hidden="true"
+      />
+
       <button class="contact-section__submit" type="submit">{submitLabel}</button>
+
+      <!--
+        Empty until something happens, and announced when it does. role="status" is the
+        polite channel: it reaches a screen reader without stealing focus from the form the
+        visitor is still standing in.
+      -->
+      <p class="contact-section__status" role="status" aria-live="polite"></p>
     </form>
+
+    <!--
+      Runs after paint, and only on the page that carries this section — a component script
+      ships with the component rather than with every route. The shape matches the one the
+      layout already uses for the theme and the scroll tracking: a braced block around a
+      dynamic import, so the module is fetched without blocking anything drawn above.
+    -->
+    <script>
+      {
+        import('../../behaviour/contact-form.mjs').then(function (contactForm) {
+          var forms = document.querySelectorAll('.contact-section__form');
+
+          forms.forEach(function (form) {
+            // instanceof rather than a cast, and not only to narrow the type: a selector
+            // that stops matching a form is a template change this would otherwise carry
+            // into a runtime error on a page nobody was testing.
+            if (!(form instanceof HTMLFormElement)) return;
+
+            var statusElement = form.querySelector('.contact-section__status');
+            if (!(statusElement instanceof HTMLElement)) return;
+
+            form.addEventListener('submit', function (event) {
+              event.preventDefault();
+              contactForm.runContactSubmission({
+                form: form,
+                statusElement: statusElement,
+                strings: {
+                  sending: form.dataset.sending,
+                  sent: form.dataset.sent,
+                  error: form.dataset.error,
+                },
+                contactAddress: form.dataset.contactAddress,
+                fetchImpl: window.fetch.bind(window),
+              });
+            });
+          });
+        });
+      }
+    </script>
 
     <div class="contact-section__footer">
       <p class="contact-section__note">{note}</p>
@@ -190,6 +271,51 @@ const {
 
   .contact-section__submit:hover {
     background: var(--color-accent);
+  }
+
+  .contact-section__submit:disabled {
+    cursor: progress;
+    opacity: 0.55;
+  }
+
+  /* Off-screen rather than hidden: a field with display:none or hidden is one a bot can
+     cheaply learn to skip, and the whole value of the trap is that it gets filled. */
+  .contact-section__trap {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* No height until it says something, so the layout below does not shift when it does. */
+  .contact-section__status {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin: -4px 0 0;
+    color: var(--color-ink-muted);
+    overflow-wrap: anywhere;
+  }
+
+  .contact-section__status:empty {
+    display: none;
+  }
+
+  /* Three states, three weights of the SAME palette — no colour is introduced for this.
+     Quiet while it is happening, plain once it worked, and the site's own accent when it
+     did not, which is the one thing on the page that already means "look here". */
+  .contact-section__status[data-state='sending'] {
+    color: var(--color-ink-faint);
+  }
+
+  .contact-section__status[data-state='sent'] {
+    color: var(--color-ink);
+  }
+
+  .contact-section__status[data-state='error'] {
+    color: var(--color-accent);
   }
 
   .contact-section__footer {

@@ -899,7 +899,7 @@ Nineteen items run in the sequence below (`TASK 38`, opened by item 6 on 2026-08
 | 16 | `TASK 32` — CI deploy pipeline, GitHub Actions → Cloudflare | `feature` | yes | Proves the whole path — push → build → live — and switches on `TASK 27`'s third comparison |
 | 17 | `TASK 27`, prod leg — the third comparison | `harness` | no | **Moved behind the milestone 2026-08-24**, split from `TASK 41`; **narrowed to the prod leg only 2026-08-27**, when the local and design legs moved above the milestone to make it reachable. Needs a deploy to exist, which is the item directly above |
 | 18 | `TASK 28` — custom domain | `feature` | yes | Blocked on the domain existing; deliberately off the critical path |
-| 19 | `TASK 29` — contact form Worker | `feature` | yes | Deferred with a stated trigger |
+| 19 | `TASK 29` — contact form Worker | `feature` | yes | **Trigger fired 2026-09-02** — resumed, spec awaiting approval |
 
 ## The localhost milestone
 
@@ -1934,21 +1934,27 @@ Two `ui` strings are still owed by the author — `article.part_of` and `article
 
 ---
 
-## TASK 28 — Custom domain · `feature` · `TODO` (blocked: the domain does not exist yet)
+## TASK 28 — Custom domain · `feature` · `DONE`
 
-**Deliverable:** the site served from the author's own domain over HTTPS, with `*.workers.dev` redirecting to it.
+**Domain and redirect configured directly by the author, outside this repo — no agent touched DNS or Cloudflare routes, per this item's own constraint below.** Verified 2026-09-02 rather than taken on the author's word alone (`P-04`): `https://luis-antm.com/` and `https://www.luis-antm.com/` both resolve at HTTP 200 over a validly-certificated HTTPS connection, and a spot-check of `/`, `/about`, `/experience`, `/es/`, `/es/about` all return 200 while `/nope` returns a real 404 — no route regressed against what `*.workers.dev` served.
 
-**Done:** the apex and `www` both resolve; the certificate is valid; no route 404s that worked on the previous host.
+**One repo-side loose end followed from this: the live URL had nowhere published yet.** `TASK 4` recorded exactly this trigger on 2026-08-16 — the GitHub profile README shipped with email + LinkedIn only because there was no live site to link at the time, with an explicit note to revisit once one existed. That trigger has now fired: `H-02` denies any agent write to `resources/**`, including the orchestrator's, so this was the **author's** edit to make — applied 2026-09-02, verified in the file at `resources/github/profile-README.md`:23, now reading `[Portfolio](https://luis-antm.com/) · [Email me](...) · [LinkedIn](...)`. No new item opened for it (`P-19`) — it is `TASK 4`'s own follow-up, now closed.
 
-**Constraints**
-- **The author buys the domain and owns the Cloudflare account.** An agent prepares the DNS and route config; it does not purchase, authenticate or transfer anything.
+**Deliverable (met):** the site served from the author's own domain over HTTPS, with `*.workers.dev` redirecting to it.
+
+**Done (met):** the apex and `www` both resolve; the certificate is valid; no route 404s that worked on the previous host.
+
+**Constraints — kept for the trail**
+- **The author buys the domain and owns the Cloudflare account.** An agent prepares the DNS and route config; it does not purchase, authenticate or transfer anything. **Held to exactly as written: this closing note involved no DNS or route configuration, only verification and a one-line content addition.**
 - A portfolio sent to recruiters wants a real domain, so this should not sit open long — but it was correctly kept off the critical path for the first deploy.
 
 ---
 
-## TASK 29 — Contact form Worker · `feature` · `TODO` (deferred — trigger stated)
+## TASK 29 — Contact form Worker · `feature` · `IN PROGRESS`
 
 Replaces `mailto:` with a real submission, which is what makes the form's four designed states real.
+
+**The deferral trigger fired 2026-09-02.** The author asked for submissions without a mail client opening, which is the condition this item was holding for — so it is resumed rather than reopened, and no new item was created for it (`P-19`). Spec: `docs/specs/SPEC-TASK-29-contact-form-worker.spec.md`, awaiting the author's `approved_version`. Log: `progress/2026-09-02-01-task29-contact-form-worker.md`.
 
 **Deliverable:** a Cloudflare Worker accepting the form POST and sending mail, with the `sending` / `sent` / `error` states wired to it.
 

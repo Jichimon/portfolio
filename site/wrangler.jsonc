@@ -23,12 +23,16 @@
   // nothing in this file to explain why.
   "workers_dev": true,
 
-  // NO `main`. This is an assets-only Worker: there is no script, no request handler and no
-  // adapter: the site is Astro with static output. Cloudflare serves dist/ directly, which is why
-  // the site ships zero bytes of server-side anything.
+  // ONE script, for ONE route. The site is still Astro with static output and still ships zero
+  // bytes of server-side rendering: every page under assets.directory is served as a file. What
+  // this entrypoint adds is the contact form's submission endpoint, which needs a server because
+  // it holds an API credential that must never reach a browser.
   //
-  // No `binding` either. A binding exists so a Worker script can read the assets
-  // programmatically, and there is no script to read them.
+  // A SEPARATE Worker was the obvious shape and was declined. It would have meant a second
+  // wrangler config, a second deploy step, a second secret store and cross-origin negotiation on
+  // a form posting to its own site — all to avoid adding one file here.
+  "main": "./worker/index.mjs",
+
   "assets": {
     // Relative to this file, which sits at the site/ package root — so this is site/dist,
     // the artifact `astro build` writes and the one the e2e tier already proves.
@@ -43,6 +47,48 @@
     // marking neither locale as current, because it answers requests for routes that failed to
     // match and therefore belong to no locale. So "nearest" resolving to the root file for a
     // miss under /es/ is the design working, not a locale-parity gap.
-    "not_found_handling": "404-page"
-  }
+    "not_found_handling": "404-page",
+
+    // The binding the entrypoint calls to serve every path that is not the contact route. It
+    // exists so that widening run_worker_first below cannot turn the rest of the site into
+    // 404s: without it the script has no way to hand a request back to the asset router.
+    "binding": "ASSETS",
+
+    // DECLARED, NOT INFERRED — and this is the one line the whole arrangement rests on.
+    //
+    // Cloudflare documents both that a request matching no asset reaches the Worker script AND
+    // that "404-page" answers a request matching no asset with the 404 page. Those two
+    // sentences do not settle which one wins for a POST to a path that is not a file. Naming
+    // the route costs one line and removes the question; inferring it would mean finding out
+    // from a deploy.
+    //
+    // An ARRAY, not `true`: every other path keeps being served straight from the asset router,
+    // which is what keeps static requests free and the site's whole traffic profile unchanged.
+    "run_worker_first": ["/api/contact"]
+  },
+
+  // PUBLIC BY CONSTRUCTION, and correct here. This file is committed to a public repository, so
+  // nothing secret may appear in it — and neither of these is secret: both addresses travel in
+  // the header of every message the endpoint sends. The API key is NOT here. It is a Worker
+  // secret, set once against the deployed Worker, held encrypted by the platform and injected
+  // into env at runtime, so it exists in no file, in no build artifact and in no CI environment.
+  "vars": {
+    "CONTACT_FROM_ADDRESS": "Portfolio <contact@luis-antm.com>",
+    "CONTACT_TO_ADDRESS": "luis.antm@hotmail.com"
+  },
+
+  // The spam answer, and the cheaper of the two the work item allowed. A challenge widget would
+  // have cost a dashboard resource, two more keys, a third-party script on the home page and a
+  // label in both languages; this costs four lines and no request to anyone else.
+  //
+  // BEST EFFORT, said out loud rather than sold as protection: the limiter counts per location
+  // rather than globally, so it multiplies the cost of abuse and does not cap it. `period` takes
+  // only 10 or 60 — it is not a free-form number.
+  "ratelimits": [
+    {
+      "name": "CONTACT_RATE_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 3, "period": 60 }
+    }
+  ]
 }

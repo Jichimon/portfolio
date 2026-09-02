@@ -11,7 +11,7 @@ outcome: "Millones de registros migrados, cero incidentes en producción"
 stack: ["SQL Server 2012 → 2022", "T-SQL", "stored procedures por lotes"]
 skills: [ingenieria-inversa, migracion-de-datos, documentacion-tecnica, gobernanza, gestion-de-riesgo]
 featured: true
-order: 4
+order: 3
 confidentiality: sanitized
 ---
 

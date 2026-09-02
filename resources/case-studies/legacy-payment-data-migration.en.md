@@ -11,7 +11,7 @@ outcome: "Millions of records migrated, zero production incidents"
 stack: ["SQL Server 2012 → 2022", "T-SQL", "batched stored procedures"]
 skills: [reverse-engineering, data-migration, technical-writing, governance, risk-management]
 featured: true
-order: 4
+order: 3
 confidentiality: sanitized
 ---
 

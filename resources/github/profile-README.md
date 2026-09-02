@@ -20,4 +20,4 @@ Also building, on my own time: a small game engine on OpenTK/.NET, mostly to und
 
 Cochabamba, Bolivia (GMT-4, full overlap with US business hours). Open to remote or hybrid/relocation.
 
-Got a problem like the ones above? [Email me](mailto:luis.antm@hotmail.com) · [LinkedIn](https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/)
+Got a problem like the ones above? [Portfolio](https://luis-antm.com/) · [Email me](mailto:luis.antm@hotmail.com) · [LinkedIn](https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/)

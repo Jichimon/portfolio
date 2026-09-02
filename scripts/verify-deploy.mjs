@@ -23,7 +23,7 @@ import {
   INDEX_PAGE_SLUG,
 } from '../site/lib/content/routes/route-set.mjs';
 import { readLocalizedMarkdownEntries } from '../site/lib/content/routes/route-source.mjs';
-import { verifyDeployment } from './guards/lib/deploy-verify.mjs';
+import { verifyDeployment, probeContactEndpoint, CONTACT_ENDPOINT_PATH } from './guards/lib/deploy-verify.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -66,10 +66,21 @@ const routes = deriveRoutes().filter((route) => !pendingSlugs.has(route.slug));
 
 const findings = await verifyDeployment({ baseUrl, routes, fetchImpl: fetch });
 
+// The one path on this origin that is not a file. Run AFTER the route walk, so a deployment
+// that did not land at all is reported as that rather than as a broken endpoint — and run
+// unconditionally, because a probe that only runs when the pages are fine would go quiet in
+// exactly the deploy worth examining.
+const contactFinding = await probeContactEndpoint({ baseUrl, fetchImpl: fetch });
+if (contactFinding) findings.push(contactFinding);
+
 const target = baseUrl ? baseUrl.replace(/\/$/, '') : '(unset)';
 console.log(
   `      ${routes.length} derived route(s) checked at ${target}` +
     (pendingSlugs.size ? ` · ${pendingSlugs.size} pending slug(s) skipped` : ''),
+);
+console.log(
+  `      ${CONTACT_ENDPOINT_PATH} probed with a deliberately invalid submission — ` +
+    `${contactFinding ? 'FINDING' : 'refused, as it must be'}`,
 );
 
 if (findings.length > 0) {

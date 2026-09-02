@@ -125,6 +125,12 @@ interface ContactFormStrings {
   message_label: string;
   message_placeholder: string;
   submit: string;
+  // The three result states. Each is read as a label with the address rendered after it,
+  // which is why none of them ends in punctuation and why none carries a placeholder: a
+  // sentence template would be a formatting convention no other string here uses.
+  sending: string;
+  sent: string;
+  error: string;
 }
 
 interface FooterStrings {

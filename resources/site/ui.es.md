@@ -35,7 +35,7 @@ home:
   standalone_label: "Fuera de la plataforma: otro empleador, otro sistema"
   employers_heading: "Acá ya trabajé"
   work_heading: "Lo que hice"
-  stack_heading: "Tecnologías que manejo"
+  stack_heading: "Tecnologías que he usado"
   contact_heading: "Hablemos"
   contact_invite: "¿Tenés un sistema complicado? ¿Necesitás que haga algo pero no sabés cómo? ¿Capaz tenés una idea que todavía no sabés aterrizarla? ¿O tal vez tuvieras alguna duda técnica? Veámoslo juntos."
   contact_note: "Abierto a oportunidades en remoto o híbrido/relocation."
@@ -93,6 +93,9 @@ contact_form:
   message_label: "Descripción"
   message_placeholder: "¿Cuál es el problema?"
   submit: "Enviar"
+  sending: "Enviando…"
+  sent: "Enviado. Te respondo a"
+  error: "No se pudo enviar. Tu mensaje sigue acá. Escribime directo a"
 
 footer:
   metrics_slot: "Métricas de visitas: lugar reservado, todavía sin construir"

@@ -4,7 +4,7 @@ lang: en
 type: page
 title: "Luis Octavio Antelo · Senior Software Engineer"
 confidentiality: sanitized
-thesis: "When a system is too critical to touch and too old to ignore, that's my problem to solve."
+thesis: "If you need your systems to do something new, talk to each other, or solve something specific... that's where I come in."
 ---
 
 This file is read for its frontmatter. The home page renders `title` and `thesis`; nothing renders this body, and that is the decision rather than an oversight.

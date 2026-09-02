@@ -11,9 +11,15 @@ export const NAV_ITEMS = [
   { key: 'work', kind: 'anchor', target: '#work' },
   { key: 'about', kind: 'route', slug: 'about' },
   { key: 'experience', kind: 'route', slug: 'experience' },
-  { key: 'writing', kind: 'reserved' },
-  { key: 'architectures', kind: 'reserved' },
-  { key: 'search', kind: 'reserved' },
+  // WITHHELD, not deleted. These three sections are designed and not built, and a nav slot
+  // for a section that does not exist reads as a dead link however it is tagged — so they
+  // stay out of the published nav until there is something behind them. The `reserved` kind
+  // below is still supported and still tested, and restoring a line here is the whole of
+  // what bringing one back costs. The colocated test knows these keys are withheld and says
+  // so when one returns.
+  //{ key: 'writing', kind: 'reserved' },
+  //{ key: 'architectures', kind: 'reserved' },
+  //{ key: 'search', kind: 'reserved' },
   { key: 'contact', kind: 'anchor', target: '#contact' },
 ];
 

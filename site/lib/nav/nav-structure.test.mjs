@@ -114,13 +114,44 @@ test('data: every anchor item carries a fragment target, never a bare identifier
   }
 });
 
-test('data: every reserved item carries neither a slug nor a target', () => {
+// The slots the design reserves for sections that are not built yet. They are withheld from
+// NAV_ITEMS so they do not render on the published site, which leaves the two assertions
+// below — shape, and where the block sits — with no data to read.
+//
+// SELF-STALING, and that is what makes this a decision rather than a skip. Restoring one to
+// the data fails the first assertion, which sends the reader to the checks underneath it
+// instead of letting them lapse in silence. The `reserved` KIND is untouched by any of this
+// and stays covered by the synthetic item above: what changed is the data, not the resolver.
+const RESERVED_KEYS_WITHHELD_FROM_THE_NAV = ['writing', 'architectures', 'search'];
+
+test('data: the withheld reserved slots are absent, and restoring one restores the checks below it', () => {
+  const presentKeys = new Set(NAV_ITEMS.map((item) => item.key));
+  for (const withheldKey of RESERVED_KEYS_WITHHELD_FROM_THE_NAV) {
+    assert.ok(
+      !presentKeys.has(withheldKey),
+      `"${withheldKey}" is back in the nav: take it out of the withheld list, and everything below covers it again`,
+    );
+  }
+
   const reservedItems = NAV_ITEMS.filter((item) => item.kind === 'reserved');
-  assert.ok(reservedItems.length > 0);
+  if (reservedItems.length === 0) return;
+
   for (const item of reservedItems) {
     assert.equal(item.slug, undefined);
     assert.equal(item.target, undefined);
   }
+
+  // One contiguous block, and neither first nor last: the reserved slots sit between the
+  // real destinations rather than opening or closing the nav with something unreachable.
+  const reservedIndices = NAV_ITEMS
+    .map((item, index) => (item.kind === 'reserved' ? index : -1))
+    .filter((index) => index !== -1);
+
+  for (let position = 1; position < reservedIndices.length; position += 1) {
+    assert.equal(reservedIndices[position], reservedIndices[position - 1] + 1);
+  }
+  assert.notEqual(reservedIndices[0], 0);
+  assert.notEqual(reservedIndices[reservedIndices.length - 1], NAV_ITEMS.length - 1);
 });
 
 test('data: every real item resolves without throwing, in both locales and both page positions', () => {
@@ -145,19 +176,6 @@ test('data: the nav leads with the work anchor, because the work is the whole ar
 
 test('data: the nav ends with contact', () => {
   assert.equal(NAV_ITEMS[NAV_ITEMS.length - 1].key, 'contact');
-});
-
-test('data: the reserved slots form one contiguous block, and that block is neither first nor last', () => {
-  const reservedIndices = NAV_ITEMS
-    .map((item, index) => (item.kind === 'reserved' ? index : -1))
-    .filter((index) => index !== -1);
-
-  assert.ok(reservedIndices.length > 0);
-  for (let position = 1; position < reservedIndices.length; position += 1) {
-    assert.equal(reservedIndices[position], reservedIndices[position - 1] + 1);
-  }
-  assert.notEqual(reservedIndices[0], 0);
-  assert.notEqual(reservedIndices[reservedIndices.length - 1], NAV_ITEMS.length - 1);
 });
 
 test('data: the section an article belongs under names a real nav item', () => {

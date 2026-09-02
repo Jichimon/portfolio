@@ -121,10 +121,16 @@ for (const lang of LOCALES) {
   });
 }
 
-// HOME-008 — the form opens a mail client and claims nothing about what happened
-// afterwards, because nothing here can know.
+// HOME-008 — the form now submits to an endpoint and CAN say what happened, so it renders
+// the announcement channel it previously had to do without. The mail action stays as the
+// fallback for a browser that never ran the script.
+//
+// THIS TEST WAS INVERTED, not repaired. Until the endpoint existed it asserted that no
+// result state was rendered anywhere, because a form that cannot observe an outcome must
+// not claim one. That assertion was correct then and is the wrong way round now; it was
+// written to fail on exactly this change.
 for (const lang of LOCALES) {
-  test(`contact form targets mailto and renders no result state in "${lang}"`, async ({ page }) => {
+  test(`contact form keeps the mail fallback and renders a result channel in "${lang}"`, async ({ page }) => {
     const contactEmail = uiStringsFor(lang).home?.contact_email as string | undefined;
     expect(
       contactEmail,
@@ -135,13 +141,35 @@ for (const lang of LOCALES) {
 
     const form = page.locator('.contact-section__form');
     await expect(form).toHaveCount(1);
+    // Still mailto in the served HTML. The submit listener intercepts it; nothing rewrites
+    // the attribute, so a browser that ran no script submits exactly as it always did.
     await expect(form).toHaveAttribute('action', `mailto:${contactEmail}`);
 
     // A result state announces an outcome. Whatever it is called, it either speaks to
     // assistive technology or it is invisible — so the assertion is on the announcement
     // channel, not on a list of class names somebody might rename.
-    await expect(page.locator('.contact-section [aria-live]')).toHaveCount(0);
-    await expect(page.locator('.contact-section [role="status"], .contact-section [role="alert"]')).toHaveCount(0);
+    await expect(page.locator('.contact-section [role="status"][aria-live]')).toHaveCount(1);
+
+    // Empty on arrival. A region that already says something is a page claiming an outcome
+    // for a submission nobody made.
+    await expect(page.locator('.contact-section [role="status"]')).toBeEmpty();
+  });
+}
+
+// HOME-008b — the trap is present, reachable by nothing a person uses, and named nothing a
+// browser would fill in on their behalf.
+for (const lang of LOCALES) {
+  test(`contact form carries a honeypot hidden from people in "${lang}"`, async ({ page }) => {
+    await visitHome(page, lang);
+
+    const trap = page.locator('.contact-section__form .contact-section__trap');
+    await expect(trap).toHaveCount(1);
+    await expect(trap).toHaveAttribute('aria-hidden', 'true');
+    await expect(trap).toHaveAttribute('tabindex', '-1');
+    await expect(trap).toHaveAttribute('autocomplete', 'off');
+    // Off-screen, never display:none — a bot that skips hidden fields is the one worth
+    // catching, so the field has to be in the layout while being invisible in it.
+    await expect(trap).not.toBeInViewport();
   });
 }
 

@@ -1,7 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { verifyDeployment } from './deploy-verify.mjs';
+import {
+  verifyDeployment,
+  probeContactEndpoint,
+  CONTACT_ENDPOINT_PATH,
+  CONTACT_PROBE_PAYLOAD,
+} from './deploy-verify.mjs';
 
 const HTML = { status: 200, headers: new Map([['content-type', 'text/html; charset=utf-8']]) };
 
@@ -269,4 +274,85 @@ test('RED: a per-route 404 is NOT retried away', async () => {
   const findings = await run({ fetchImpl, readinessAttempts: 5 });
   assert.equal(findings.length, 1);
   assert.equal(aboutCalls, 1, 'a 404 route is requested once, never retried');
+});
+
+// --- the contact endpoint probe ---------------------------------------------
+//
+// The forced failure the contact work item's Done asks for, run against the real
+// deployment rather than a stand-in. It proves three things at once that nothing else in
+// this suite can: that the route reaches a request handler at all, that the handler's
+// validation runs, and that the asset router was configured to hand the path over. A
+// deploy where the last of those is wrong answers the 404 page and looks fine everywhere
+// else.
+
+/** A fetch stand-in that records how it was called, which the route walk never needs. */
+function recordingFetcher(response) {
+  const calls = [];
+  const impl = async (url, init) => {
+    calls.push({ url, init });
+    if (response instanceof Error) throw response;
+    return { status: response.status, headers: { get: () => null } };
+  };
+  impl.calls = calls;
+  return impl;
+}
+
+const probe = (opts) =>
+  probeContactEndpoint({ baseUrl: 'https://example.workers.dev', ...opts });
+
+test('green path: the endpoint answering 400 to an invalid payload yields no finding', async () => {
+  assert.equal(await probe({ fetchImpl: recordingFetcher({ status: 400 }) }), null);
+});
+
+test('RED: the endpoint answering 200 to an invalid payload is a finding', async () => {
+  // The worst outcome of the three: a handler that accepts anything is one that will send
+  // whatever a bot posts to it.
+  const result = await probe({ fetchImpl: recordingFetcher({ status: 200 }) });
+  assert.notEqual(result, null);
+  assert.match(result.message, /200/);
+});
+
+test('RED: the endpoint answering 404 is a finding, which is the asset router keeping the route', async () => {
+  const result = await probe({ fetchImpl: recordingFetcher({ status: 404 }) });
+  assert.notEqual(result, null);
+  assert.match(result.message, /404/);
+});
+
+test('RED: the endpoint answering 500 is a finding rather than "not a 200, so fine"', async () => {
+  const result = await probe({ fetchImpl: recordingFetcher({ status: 500 }) });
+  assert.notEqual(result, null);
+});
+
+test('RED: an unreachable endpoint is a finding, never a vacuous pass', async () => {
+  const result = await probe({ fetchImpl: recordingFetcher(new Error('connection refused')) });
+  assert.notEqual(result, null);
+  assert.match(result.message, /connection refused/);
+});
+
+test('the probe POSTs JSON to the contact path, so it exercises the handler and not the asset router', async () => {
+  const fetchImpl = recordingFetcher({ status: 400 });
+  await probe({ fetchImpl });
+
+  assert.equal(fetchImpl.calls.length, 1);
+  assert.equal(new URL(fetchImpl.calls[0].url).pathname, CONTACT_ENDPOINT_PATH);
+  assert.equal(fetchImpl.calls[0].init.method, 'POST');
+});
+
+test('the probe payload is one the real parser refuses, so this can never send an email', async () => {
+  // Asserted against the SITE's own validator rather than against a copy of its rules. If
+  // the payload ever became acceptable, this fails here instead of in somebody's inbox.
+  const { parseSubmission } = await import('../../../site/lib/contact/submission.mjs');
+
+  assert.equal(parseSubmission(CONTACT_PROBE_PAYLOAD).outcome, 'rejected');
+});
+
+test('LIVENESS: the deploy verifier actually calls the probe, so it cannot run zero times', async () => {
+  // A check nobody wired reports nothing forever, and the local suite stays green while it
+  // does. Read from the real CLI source rather than assumed.
+  const { readFileSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  const cliPath = fileURLToPath(new URL('../../verify-deploy.mjs', import.meta.url));
+  const cliSource = readFileSync(cliPath, 'utf8');
+
+  assert.match(cliSource, /probeContactEndpoint/);
 });
