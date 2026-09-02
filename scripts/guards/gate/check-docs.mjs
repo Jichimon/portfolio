@@ -19,7 +19,7 @@ import { makeIgnoreOracle } from '../lib/repo-ignore.mjs';
 import { spawnSync } from 'node:child_process';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const WORKFLOW = '.github/workflows/harness.yml';
+const WORKFLOW = '.github/workflows/ci.yml';
 
 const cfg = JSON.parse(readFileSync(join(ROOT, 'scripts/guards/guards.config.json'), 'utf8')).docs ?? {};
 const findings = [];

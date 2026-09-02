@@ -7,7 +7,7 @@ import { validateWorkflow } from './ci.mjs';
 const ROOT = join(import.meta.dirname, '..', '..', '..');
 const OPTS = { gateCommand: 'node scripts/gate.mjs' };
 
-const good = `name: harness
+const good = `name: ci
 on:
   push:
   pull_request:
@@ -78,15 +78,15 @@ test('an empty workflow file fails rather than passing vacuously', () => {
 // --- liveness ---------------------------------------------------------------
 
 test('LIVENESS: the real workflow exists and validates', () => {
-  const p = join(ROOT, '.github/workflows/harness.yml');
-  assert.ok(existsSync(p), '.github/workflows/harness.yml does not exist');
+  const p = join(ROOT, '.github/workflows/ci.yml');
+  assert.ok(existsSync(p), '.github/workflows/ci.yml does not exist');
   assert.deepEqual(validateWorkflow(readFileSync(p, 'utf8'), { gateCommand: 'node scripts/gate.mjs', minNode: 24 }), []);
 });
 
 test('LIVENESS: the workflow runs the same command a human runs locally', () => {
   // T-09: the gate is one command and is CI parity. A CI that runs a different set of steps
   // means the local run verifies less than CI does, and nobody notices until CI is red.
-  const text = readFileSync(join(ROOT, '.github/workflows/harness.yml'), 'utf8');
+  const text = readFileSync(join(ROOT, '.github/workflows/ci.yml'), 'utf8');
   assert.match(text, /node scripts\/gate\.mjs/);
   assert.equal(/npm (run )?test|node --test/.test(text), false,
     'CI re-lists a step the gate already delegates to — a step added to the gate would then be absent from CI');

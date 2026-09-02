@@ -489,7 +489,7 @@ function main() {
     // A distinct headline and a distinct exit code (2) let a human — and CI — tell
     // "broken" apart from "incomplete" without reading the summary above.
     //
-    // THIS HEADLINE DELIBERATELY CARRIES NO PROFILE, unlike the other two. harness.yml
+    // THIS HEADLINE DELIBERATELY CARRIES NO PROFILE, unlike the other two. ci.yml
     // parses it with a sed expression anchored on the text ending at `did not run:`, to
     // read the skip count — and sed's `s///p` prints the rest of the line, so anything
     // appended here comes back as part of the count and the comparison against "1" fails.

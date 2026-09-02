@@ -1,7 +1,7 @@
 # 2026-09-01 · Session 07 — TASK 112: two guards that could never pass on a runner
 
 **Task:** `TASK 112` — `check-docs` and `check-content` assert file existence against a working tree, and CI does not have one
-**Status:** code complete and verified against a runner-equivalent tree; closes against a real CI run, not against this log (`T-10`).
+**Status:** `DONE`. Closed against run `33570798170` — success, 2m30s — read from the provider (`T-10`), not from this log.
 
 ## What produced this item
 
@@ -146,7 +146,7 @@ done:
   tests:      { status: passed, evidence: ["node --test \"scripts/guards/**/*.test.mjs\" — 1108 pass, 0 fail (1092 before this item)", "repo-ignore.test.mjs 7 new, doc-links.test.mjs +5, content.test.mjs +4"] }
   gate:       { status: passed, evidence: ["node scripts/gate.mjs --profile full — GATE PASSED, 22/22, exit:0, mutation 79.51 vs the 77.0 floor", "on the runner-equivalent tree: check-docs PASS, check-content PASS (both FAIL before), and every other dependency-free step PASS", "the workflow's exit-2 acceptance path run end to end against a real forced-skip gate log: skips=1, conf=1, job GREEN"] }
   security:   { status: passed, evidence: ["oracle neutered -> 11 findings return; planted dangling ref -> still caught; both lib branches neutered -> batteries fail red, pass restored (P-14)", "fails closed: an unanswerable git call reads as not-ignored, so the reference stays a finding (G-13)"] }
-  ci:         { status: blocked, reason: "the deliverable is a green run on the remote and only the author can push (H-01). Reproduced locally against a tree containing exactly what a push carries; T-10 forbids reading that as evidence CI fired" }
+  ci:         { status: passed, evidence: ["gh run view 33570798170 — success, 2m30s: GATE INCOMPLETE with SKIP confidentiality as the only skip, accepted by the workflow, job green", "the summary table and the deferral block are both present in that log — the exit-handling fix, on the branch CI takes every run", "11 machine-local references printed by name under check-docs; every other guard PASS"] }
   docs:       { status: passed, evidence: ["TASK 112 in TASKS.md with the residual stated; TASK 110 closed against run 33566729304; TASK 111 updated with what that run did and did not show", "check-docs, check-content, check-rules-registry, check-procedures, check-status-history all PASS"] }
   loose_ends: { status: passed, evidence: ["the process.exit() cause is recorded as likely-not-proven rather than asserted, with the next CI run named as its test"] }
   scope:      { status: passed, evidence: ["the two failing guards and the output-truncation fix they exposed. No citation was deleted, no exemption widened, no other guard touched"] }
@@ -165,12 +165,32 @@ design — parse `git check-ignore -v`'s matched pattern, and excuse a path unde
 *directory* only when that directory is absent — was written out and declined: it buys one
 narrow case at the cost of a pattern parser, on a repository with one operator.
 
+## Outcome
+
+Run `33570798170`, **success in 2m30s**, carries every clause:
+
+```text
+GATE INCOMPLETE — 1 of 22 step(s) did not run:
+  SKIP  confidentiality (private/banned-terms.txt is absent — ... never on a runner)
+::warning::GATE INCOMPLETE — 'confidentiality' skipped ... Every other step ran.
+2 step(s) deferred by profile "fast": e2e visual capture, mutation
+```
+
+**The exit-handling fix has support now, not proof.** The summary table and the deferral block
+came back on the next Linux run, which is evidence for the `process.exit()` explanation — not a
+demonstration of it, since nobody re-ran the old code on a runner to watch the output vanish
+again. Recorded at that strength on purpose.
+
+**First real per-step timing on a 2-core runner**, which no run had ever produced: `guard
+tests` 2.0s, `e2e smoke` 31.1s, `type check` 7.9s, `component tests` 2.2s, every remaining
+guard under a quarter of a second. The 25-minute job bound is generous by roughly an order of
+magnitude; left as it is rather than tightened on one sample.
+
 ## Next
 
-Author reviews and pushes. `TASK 112` closes when a push run reaches `GATE INCOMPLETE` with
-`confidentiality` as its only skip, the workflow accepts that and the job goes **green**, and
-the Actions log shows the summary table and the deferral block. `TASK 111` closes on the same
-run plus one manual `gh workflow run harness.yml -f profile=full`.
+Nothing for this item. `TASK 111` closes on the same run plus the manual full-profile run, and
+`TASK 30` closed on this one — its own `Done` had been waiting on a green `harness` run since
+the day it was opened.
 
 ## Files changed
 

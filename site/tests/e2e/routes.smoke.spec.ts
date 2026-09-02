@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parse as parseFrontmatter } from 'yaml';
 import {
   deriveRouteSetFromEntries,
   ROUTED_PAGE_SLUGS,
   INDEX_PAGE_SLUG,
 } from '../../lib/content/routes/route-set.mjs';
+import { readLocalizedMarkdownEntries } from '../../lib/content/routes/route-source.mjs';
 
 // Playwright runs specs under plain Node, not Astro's Vite pipeline, so importing
 // the gateway directly fails: it imports astro:content, a virtual module only
@@ -15,39 +15,15 @@ import {
 // files the content collection reads and feeds them through the same
 // route-derivation function the gateway calls, so a route added to the content
 // source is picked up here without anyone editing this file.
+//
+// The reading half moved into lib/content/routes/route-source.mjs: the
+// post-deploy route verifier needs the SAME set against a live URL, and two
+// derivations that could disagree would mean it verifies something else.
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..', '..', '..');
 const pagesContentDir = path.join(repoRoot, 'resources', 'site');
 const caseStudiesContentDir = path.join(repoRoot, 'resources', 'case-studies');
 const guardsConfigPath = path.join(repoRoot, 'scripts', 'guards', 'guards.config.json');
-
-interface FrontmatterEntry {
-  data: { slug: string; lang: string; type: string };
-}
-
-function readFrontmatterEntry(filePath: string): FrontmatterEntry {
-  const raw = readFileSync(filePath, 'utf8');
-  const frontmatterMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
-  if (!frontmatterMatch) {
-    throw new Error(`no frontmatter block found in ${filePath}`);
-  }
-  const data = parseFrontmatter(frontmatterMatch[1]) as FrontmatterEntry['data'];
-  return { data };
-}
-
-// Mirrors the two loaders content.config.ts declares: locale-suffixed markdown,
-// with the interface-strings file excluded from the page loader by name.
-function readLocalizedMarkdownEntries(dir: string, excludeStem?: string): FrontmatterEntry[] {
-  const entries: FrontmatterEntry[] = [];
-  for (const fileName of readdirSync(dir)) {
-    const match = fileName.match(/^(.+)\.(en|es)\.md$/);
-    if (!match) continue;
-    const [, stem] = match;
-    if (excludeStem && stem === excludeStem) continue;
-    entries.push(readFrontmatterEntry(path.join(dir, fileName)));
-  }
-  return entries;
-}
 
 interface DerivedRoute {
   slug: string;

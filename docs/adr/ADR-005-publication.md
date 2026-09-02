@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-08-19
-**Context:** TASK 7 decision 6 (tackled 5th, per the agreed order). This repository currently has no remote at all — confirmed directly against `.git/config`. `.github/workflows/harness.yml` exists and is unfiltered (`INC-08`'s fix) but is inert until a remote exists. ADR-004 already made this decision non-blocking for deploy (`wrangler deploy` works without a GitHub remote), so this is genuinely about the **source repository's** visibility — the harness, `.claude/`, `progress/` session logs, `TASKS.md`, everything — not about whether the deployed site is public (it will be, per ADR-004, regardless of this decision).
+**Context:** TASK 7 decision 6 (tackled 5th, per the agreed order). This repository currently has no remote at all — confirmed directly against `.git/config`. `.github/workflows/ci.yml` — then named `harness.yml` — exists and is unfiltered (`INC-08`'s fix) but is inert until a remote exists. ADR-004 already made this decision non-blocking for deploy (`wrangler deploy` works without a GitHub remote), so this is genuinely about the **source repository's** visibility — the harness, `.claude/`, `progress/` session logs, `TASKS.md`, everything — not about whether the deployed site is public (it will be, per ADR-004, regardless of this decision).
 
 ## Options considered
 

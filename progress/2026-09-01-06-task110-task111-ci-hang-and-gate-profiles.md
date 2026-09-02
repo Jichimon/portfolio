@@ -1,7 +1,7 @@
 # 2026-09-01 · Session 06 — TASK 110 + TASK 111: the CI hang, and gate profiles
 
 **Tasks:** `TASK 110` (bugfix — `e2e smoke` hangs in CI) and `TASK 111` (harness — gate profiles)
-**Status:** code complete and locally verified; both items stay `TODO` until a real CI run says otherwise (`T-10`).
+**Status:** `TASK 110` **`DONE`** against run `33566729304`; `TASK 111`'s push half **done** against run `33570798170`, its full-profile half closed against `33571567866` (success, 11m8s). Both items `DONE`. Read from the provider, never from this log (`T-10`).
 
 ## Why these two, in this order
 
@@ -148,7 +148,7 @@ done:
   gate:       { status: passed, evidence: ["node scripts/gate.mjs --profile full — GATE PASSED, 22/22, exit:0 (run twice; the second is the final tree)", "node scripts/gate.mjs — GATE PASSED (profile: fast), 20 run + 2 deferred by name, exit:0", "measured on the final tree from the gate's own new per-step lines: fast 48.6s, full 118.2s with a warm incremental cache. A COLD mutation run measures ~10-11 min on this machine and has never completed on a runner"] }
   mutation:   { status: passed, evidence: ["ran inside the full-profile gate above: 79.39 then 79.40 vs the 77.0 break threshold, on two runs", "break 77.0 unchanged and the mutate glob untouched — this item changed cadence, not coverage"] }
   security:   { status: passed, evidence: ["seven new mechanisms each neutered and re-run: all fail red, all pass restored (table above)", "the defect itself reproduced red and green under the CI condition, env -u CLAUDECODE"] }
-  ci:         { status: blocked, reason: "the deliverable of both items is a real run on the remote, and only the author can push (H-01). Locally verified end to end; T-10 forbids reading that as evidence CI fired" }
+  ci:         { status: passed, evidence: ["TASK 110: run 33566729304 — e2e smoke PASS in 29.1s on a real runner, whole job 1m57s, all 22 steps reached (three previous runs were cancelled at 90min and 6h having verified nothing)", "TASK 111 push half: run 33570798170 — success 2m30s, profile derived from the trigger, both deep steps DEFER, deferral block printed, job green", "TASK 111 full-profile half: run 33571567866, dispatched"] }
   docs:       { status: passed, evidence: ["INC-18 in architecture.md §C; EC-015; ADR-006 amendment correcting the one above it; T-03 and T-09 amended per G-11; CLAUDE.md, README.md, package.json, both procedure skills, stryker.config.mjs", "check-docs, check-rules-registry, check-evals, check-procedures all PASS"] }
   loose_ends: { status: passed, evidence: ["the two residuals are stated below rather than dropped: the between-runs mutation gap, and the unmeasured deep-profile CI cost"] }
   scope:      { status: passed, evidence: ["the e2e hang, the bounds, the progress lines, the profiles, and their reconciliation — nothing else. TASK 38 (the ratchet) and TASK 69 (the e2e flake) were deliberately not touched"] }
@@ -170,6 +170,33 @@ done:
   validated incremental cache, and a different cadence — never a lowered floor.
 - **`TASK 69`'s e2e flake was not closed here.** Its two failures were on a clean tree
   locally, not in CI, so this hang does not explain them. Left open rather than folded in.
+
+## Outcome, read from the provider
+
+| run | what it proved |
+|---|---|
+| `33566729304` | **the hang is gone** — `e2e smoke` PASS in 29.1s, job 1m57s, all 22 steps reached. Gate red, on two guards that had never been reachable before: `TASK 112` |
+| `33570798170` | **the profile mechanism works in CI** — `GATE_PROFILE: fast`, both deep steps `DEFER`, deferral block printed, `confidentiality` the only skip, job **green** in 2m30s |
+| `33571567866` | **the full profile, success in 11m8s** — and the first CI measurement of the mutation step anywhere: **8m11s cold**, score 79.49 vs the 77.0 floor. `e2e visual capture` 53.8s |
+
+The three cancelled runs before these cost 90 minutes, 90 minutes and six hours, and produced
+no diagnosis between them. The three that replaced them cost about sixteen minutes together
+and produced a named failure, a green job, and the first real cost numbers this repository has
+ever had for its own gate.
+
+**The estimate this item was built on turned out to be wrong, by a lot.** `TASK 107` reasoned
+from Stryker's concurrency default — 11 workers locally, 2 on a runner — that the ~10-11 minute
+local mutation run would take *"hours rather than minutes"* in CI. It takes **eight minutes and
+eleven seconds**, cold. The arithmetic was right and the inference was not: a 5x cut in workers
+is not a 5x cut in wall time on a step that is not purely parallel. Nobody could have checked
+it, because three runs died before `mutation` ever started — which is its own argument for
+fixing the instrument before optimising against a number you do not have.
+
+**What that changes, stated rather than left implicit.** The mutation step is `deep` on a cost
+that is real but four times smaller than assumed: ~8 minutes per push against the fast gate's
+2m30s. That makes the tier a live decision instead of a forced one, and it is recorded in
+`TASK 111`'s entry as such, with a recommendation to keep it `deep` and the cost of doing so
+named.
 
 ## Next
 

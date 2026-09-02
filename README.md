@@ -1,5 +1,7 @@
 # Luis Octavio Antelo Mansilla — Portfolio
 
+[![ci](https://github.com/Jichimon/portfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/Jichimon/portfolio/actions/workflows/ci.yml)
+
 A Senior Software Engineer portfolio: bilingual, sanitized case studies, built by an Astro
 site, developed under an agent harness whose guards are enforced rather than asserted.
 

@@ -194,7 +194,15 @@ export default {
   // Locally this needs no extra plumbing: the working directory survives between manual gate
   // runs, so the cache just sits on disk. In CI every run is a fresh checkout, so the value
   // here depends entirely on the workflow persisting incrementalFile between runs via
-  // actions/cache — that wiring is in harness.yml, and this line does nothing there on its own.
+  // actions/cache — that wiring is in ci.yml, and this line does nothing there on its own.
+  //
+  // MEASURED IN CI 2026-09-01, first time ever (TASK 111, run 33571567866): this step takes
+  // 8m11s COLD on GitHub's 2-core standard runner, scoring 79.49. That is four times cheaper
+  // than TASK 107 projected from the concurrency drop alone (11 workers local, 2 on a runner
+  // -> "hours rather than minutes"), and the difference is worth keeping written down: a step
+  // that is not purely parallel does not lose wall time in proportion to its workers. The
+  // projection was never checkable before, because three CI runs died in `e2e smoke` before
+  // this step started.
   //
   // AND THAT WIRING NOW RUNS ONLY IN THE `full` PROFILE (TASK 111). The mutation step is
   // `deep`: a push defers it, so there is no incremental file to save and nothing worth

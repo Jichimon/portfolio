@@ -1,0 +1,48 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+
+  // Cloudflare Workers with static assets, chosen over Pages, GitHub Pages, Netlify and
+  // Vercel. The deciding property was that it needed no git remote to exist first, back when
+  // this repository had none — and the one that matters now is that static-asset requests are
+  // free and unlimited, so a portfolio's traffic never meets the 100k/day request quota.
+  //
+  // The `name` is the public address until a real domain is attached: it resolves to
+  // <name>.<account subdomain>.workers.dev. The subdomain half is NOT written down anywhere in
+  // this repository — the deploy job reads the live URL from the deploy step's own output, so
+  // there is one declaration site and it is Cloudflare's answer rather than a string somebody
+  // typed.
+  "name": "portfolio",
+
+  // Within 30 days of the deploy that first used it, per Cloudflare's own guidance. Bumping it
+  // opts into newer runtime behaviour; there is no Worker script here for that to affect, so
+  // this moves when someone has a reason rather than on a schedule.
+  "compatibility_date": "2026-09-01",
+
+  // Explicit rather than relying on the default, because this is the site's whole address until
+  // a custom domain exists. A default that changes under us would take the site offline with
+  // nothing in this file to explain why.
+  "workers_dev": true,
+
+  // NO `main`. This is an assets-only Worker: there is no script, no request handler and no
+  // adapter: the site is Astro with static output. Cloudflare serves dist/ directly, which is why
+  // the site ships zero bytes of server-side anything.
+  //
+  // No `binding` either. A binding exists so a Worker script can read the assets
+  // programmatically, and there is no script to read them.
+  "assets": {
+    // Relative to this file, which sits at the site/ package root — so this is site/dist,
+    // the artifact `astro build` writes and the one the e2e tier already proves.
+    "directory": "./dist",
+
+    // "404-page" serves the nearest 404.html; the alternative, "single-page-application",
+    // would answer every unmatched path with index.html at HTTP 200 and is wrong for a static
+    // multi-page site — a mistyped URL would render the home page and report success.
+    //
+    // There is exactly one 404.html, at the root, and that is DELIBERATE rather than a missing
+    // Spanish one: src/pages/404.astro is a single bilingual page carrying both languages,
+    // marking neither locale as current, because it answers requests for routes that failed to
+    // match and therefore belong to no locale. So "nearest" resolving to the root file for a
+    // miss under /es/ is the design working, not a locale-parity gap.
+    "not_found_handling": "404-page"
+  }
+}

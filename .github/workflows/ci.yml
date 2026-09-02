@@ -1,5 +1,14 @@
-name: harness
+name: ci
 
+# RENAMED FROM `harness.yml` ON 2026-09-01 (TASK 32), when the deploy job below landed.
+# Until then this file only gated; now it gates on EVERY trigger and deploys on ONE, so a
+# pull_request run, a nightly `full` run and a push to any branch but main all verify and
+# ship nothing. `ci` describes that; `harness` described the file before the deploy job, and
+# `deploy` would have misdescribed the majority of its runs. Two costs, recorded rather than
+# discovered: GitHub opened a NEW entry in the Actions tab, so runs 33570798170 (TASK 30's
+# green push) and 33571567866 (TASK 111's full-profile dispatch) stay reachable only under
+# the old workflow name; and the README badge was dead until this file's first run.
+#
 # NO `paths:` FILTER, DELIBERATELY.
 #
 # INC-08: two workflows filtered on `paths:` for their own directories, so a guard added at
@@ -10,10 +19,16 @@ name: harness
 # `check-ci` fails this file if a filter is ever added back.
 #
 # ONE WORKFLOW FILE, DELIBERATELY, and it is the same reasoning one level up: `check-docs`
-# validates `.github/workflows/harness.yml` BY NAME. A second workflow file would carry no
+# validates `.github/workflows/ci.yml` BY NAME. A second workflow file would carry no
 # guard at all — no path-filter check, no gate-parity check, no Node floor — which is
 # INC-08's shape arriving through a filename instead of through a filter. The deep tier is
 # therefore a trigger of this workflow, never a workflow of its own.
+#
+# TASK 32 tested that reasoning and kept it: the DEPLOY is a JOB in this file, not a
+# `deploy.yml`. Two files were priced and declined. A separate deploy workflow would have
+# carried no guard, and — because the item requires the gate to run before a deploy — it
+# would have run the whole gate a SECOND time on every push to main. `needs: gate` gets the
+# same guarantee from the run that already happened.
 #
 # TASK 106: this workflow runs against a real remote and reports a real result — the
 # INERT-UNTIL-A-REMOTE comment this file carried until 2026-09-01 stopped being true the
@@ -233,3 +248,83 @@ jobs:
         with:
           path: .stryker-tmp/incremental.json
           key: stryker-incremental-${{ github.run_id }}
+
+  # TASK 32. The site reaches the internet through this job and through nothing else — no
+  # manual `wrangler deploy` exists or ever ran. That is deliberate and it is the item's first
+  # constraint: a manual path that keeps working is the reason nobody notices when the
+  # automated one breaks.
+  #
+  # A JOB, NOT A SECOND WORKFLOW FILE. See the header — `check-docs` validates this file by
+  # name, so a `deploy.yml` would carry no path-filter check, no gate-parity check and no Node
+  # floor. It would also have run the whole gate a second time on every push to main, because
+  # the item requires the gate to pass before a deploy and a separate workflow cannot see this
+  # one's result. `needs: gate` gets that guarantee from the run that already happened.
+  deploy:
+    # THIS is how "the workflow runs the gate before deploying" is met. `needs` is a hard
+    # dependency: a red or cancelled gate leaves this job unrun, with no `if:` reading an
+    # outcome and no chance of the two disagreeing.
+    needs: gate
+    # Every OTHER trigger reaches `gate` and stops there. A pull_request run, the nightly
+    # schedule and a manual dispatch all verify and ship nothing — correct in each case,
+    # since none of them represents a change landing on the published branch. Secrets are
+    # unavailable to fork pull_requests anyway, but that is a second line, not the reason.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Two pushes in quick succession deploy IN ORDER rather than racing. cancel-in-progress
+    # is false on purpose: cancelling the first would leave the live site on whichever
+    # upload happened to finish last, which is the one outcome worse than a slow deploy.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+          # Only site/'s lockfile: this job never installs the root package, which carries
+          # Stryker and nothing this job needs.
+          cache-dependency-path: site/package-lock.json
+
+      - run: npm ci
+        working-directory: site
+
+      # THE DEPLOY JOB BUILDS EXPLICITLY, and does not consume an artifact from `gate`.
+      # Passing site/dist between jobs was considered and declined: the gate's dist/ exists
+      # only as a side effect of `e2e smoke`'s globalSetup building it, so depending on it
+      # would mean a skipped or restructured test step silently ships stale bytes or none at
+      # all. This is deterministic from the same commit and owns its own failure.
+      - run: npm run build
+        working-directory: site
+
+      # `wranglerVersion` is DELIBERATELY not pinned here. The action uses the wrangler already
+      # installed in the working directory, and `npm ci` above installs the version
+      # site/package-lock.json pins — so the lockfile is the single declaration site for it. A
+      # version written here as well would be a second one, free to drift from the first.
+      - name: deploy to Cloudflare Workers
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: site
+          packageManager: npm
+          command: deploy
+
+      # A deploy step's exit code says a command succeeded; it does not say the site is
+      # there. This walks every route the content collection derives — one derivation,
+      # shared with the e2e suite (site/lib/content/routes/route-source.mjs) — against the
+      # URL that was just deployed, and fails the job naming anything that is not a served
+      # HTML page. INC-03 is this repository's own record of a build that looked fine and
+      # was not; TASK 39 is its record of a step reporting PASS having run nothing.
+      #
+      # PROD_BASE_URL is read from the deploy step's OWN output rather than typed. That is
+      # the single declaration site for the live address, and it is why the account's
+      # workers.dev subdomain appears in no file in this repository (C-06). TASK 27's prod
+      # fidelity leg reads the same variable name.
+      - name: verify every derived route is live
+        run: node scripts/verify-deploy.mjs
+        env:
+          PROD_BASE_URL: ${{ steps.deploy.outputs.deployment-url }}
