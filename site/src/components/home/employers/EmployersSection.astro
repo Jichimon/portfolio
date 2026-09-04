@@ -1,0 +1,80 @@
+---
+import EmployerCard from './EmployerCard.astro';
+
+interface EmployerEntry {
+  company: string;
+  period: string;
+  anchor?: string;
+  logo?: string;
+  logoDark?: string;
+}
+
+interface Props {
+  heading: string;
+  href: string;
+  entries: EmployerEntry[];
+}
+
+const { heading, href, entries } = Astro.props;
+---
+
+{entries.length > 0 && (
+  <section class="employers-section" id="employers">
+    <h2 class="employers-section__heading">{heading}</h2>
+    <div class="employers-section__row">
+      {entries.map((entry) => (
+        // The caller (getExperienceRecord) hands back the full employment record entry;
+        // only company/period/anchor/logo/logoDark cross into EmployerCard, named rather
+        // than spread, so a field this strip has no use for (paragraphs, stack,
+        // caseStudyRows) never leaks into a child component that does not declare it.
+        // `anchor`, `logo` and `logoDark` are conditionally spread rather than always
+        // named, so an absent one leaves no key on the child's props at all — the same
+        // Object.hasOwn convention EmploymentEntry.astro already relies on for `logo`.
+        // `href` still carries the plain experience route; EmployerCard is the one that
+        // knows how to fold an anchor into it, so every card that has no anchor still
+        // links to the page rather than to a broken fragment.
+        <EmployerCard
+          company={entry.company}
+          period={entry.period}
+          href={href}
+          {...(entry.anchor === undefined ? {} : { anchor: entry.anchor })}
+          {...(entry.logo === undefined ? {} : { logo: entry.logo })}
+          {...(entry.logoDark === undefined ? {} : { logoDark: entry.logoDark })}
+        />
+      ))}
+    </div>
+  </section>
+)}
+
+<style>
+  .employers-section {
+    padding-top: 52px;
+    padding-bottom: 52px;
+  }
+
+  .employers-section__heading {
+    font: var(--type-section-label);
+    letter-spacing: var(--type-section-label-tracking);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0 0 28px;
+  }
+
+  .employers-section__row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  @media (max-width: 1180px) {
+    .employers-section__row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .employers-section__row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

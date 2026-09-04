@@ -1,0 +1,154 @@
+---
+interface Props {
+  company: string;
+  period: string;
+  href: string;
+  anchor?: string;
+  logo?: string;
+  logoDark?: string;
+}
+
+const { company, period, href } = Astro.props;
+
+// A key the caller omitted must render nothing, so presence is read off the props
+// object itself rather than off the value — the same convention EmploymentEntry.astro
+// already uses for this exact field. A role with no logo renders the wordmark (the
+// company name) alone; there is no placeholder box standing in for the missing mark.
+const hasLogo = Object.hasOwn(Astro.props, 'logo');
+const logo = hasLogo ? (Astro.props.logo as string) : undefined;
+
+// A role whose company name yields no derivable anchor still links somewhere useful —
+// the plain experience page — rather than to a fragment nobody built a target for.
+const hasAnchor = Object.hasOwn(Astro.props, 'anchor');
+const anchor = hasAnchor ? (Astro.props.anchor as string) : undefined;
+const cardHref = hasAnchor ? `${href}#${anchor}` : href;
+
+// A dark variant is an enhancement layered onto a logo that already renders, never a
+// second, independent slot — so it can only exist alongside a base logo, and its own
+// presence is read the identical, value-blind way. A full-colour <img> loaded from a
+// separate SVG document does not inherit this page's CSS colour, so a mark painted dark
+// for readability on a light card stays dark when the card itself goes dark — the only
+// way to keep it legible in both themes is to swap the whole image, not recolour one.
+const hasLogoDark = hasLogo && Object.hasOwn(Astro.props, 'logoDark');
+const logoDark = hasLogoDark ? (Astro.props.logoDark as string) : undefined;
+---
+
+<a class="employer-card" href={cardHref}>
+  {hasLogo && (
+    <span class="employer-card__logo" class:list={{ 'employer-card__logo--themed': hasLogoDark }}>
+      <img class="employer-card__logo-img employer-card__logo-img--light" src={logo} alt="" />
+      {hasLogoDark && (
+        <img class="employer-card__logo-img employer-card__logo-img--dark" src={logoDark} alt="" />
+      )}
+    </span>
+  )}
+  <span class="employer-card__name" class:list={{ 'employer-card__name--standalone': !hasLogo }}>{company}</span>
+  <div class="employer-card__period">{period}</div>
+</a>
+
+<style>
+  .employer-card {
+    display: block;
+    /* A grid item's default min-width is its content's own min-content size, which
+       for an un-shrinkable image would push the column wider than its 1fr share
+       rather than letting max-width: 100% on the logo mark engage. Zeroing it is
+       what lets the card actually shrink to its track at the narrowest widths. */
+    min-width: 0;
+    padding: 22px 20px 20px;
+    border-top: 3px solid var(--color-accent);
+    border-radius: 0 0 3px 3px;
+    background: var(--color-bg-elevated);
+    transition: transform 0.15s ease;
+  }
+
+  .employer-card:hover {
+    transform: translateY(-3px);
+  }
+
+  /* The artboard cycles three border colours across the row rather than repeating one,
+     written as a period-3 pattern instead of one rule per position so a fifth employer
+     keeps cycling instead of falling back to the block's own default forever. */
+  .employer-card:nth-child(3n + 2) {
+    border-top-color: var(--color-ink);
+  }
+
+  .employer-card:nth-child(3n) {
+    border-top-color: var(--color-border-strong);
+  }
+
+  /* The logo leads and the name captions it, so the slot reads well past the name
+     below it — a reader is meant to recognize the mark before reading who it belongs
+     to. HEIGHT is what is fixed, not a square box: the four marks span a 1.4:1 to a
+     3.6:1 aspect ratio, and a fixed WIDTH box scales each to its own limiting
+     dimension — the widest mark (Mamaya Tech) would render at less than half the cap
+     height of the squarest one, which is the opposite of the common optical baseline
+     a logo row needs. A shared height is what four differently-shaped marks can
+     actually share; width is left to fall out of it. inline-flex, so the box shrinks
+     to the rendered mark's own width instead of stretching the card's full measure —
+     the row reads left-aligned, matching the name and period beneath it. */
+  .employer-card__logo {
+    display: inline-flex;
+    align-items: center;
+    height: 48px;
+    max-width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .employer-card__logo-img {
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  /* Unthemed (the common case, three of four employers): a single image, unconditional,
+     in both themes — .employer-card__logo--themed never applies and the dark image never
+     renders at all, so there is exactly one <img> in the DOM either way. */
+  .employer-card__logo-img--dark {
+    display: none;
+  }
+
+  /* Themed: the dark-theme attribute the toggle sets on the root swaps which of the two
+     already-loaded images is visible. Scoped to --themed so an employer with no dark
+     sibling is never touched by this rule, even though the attribute is global. */
+  :global([data-theme='dark']) .employer-card__logo--themed .employer-card__logo-img--dark {
+    display: block;
+  }
+
+  :global([data-theme='dark']) .employer-card__logo--themed .employer-card__logo-img--light {
+    display: none;
+  }
+
+  /* The default is the caption size, now that the logo above it is the dominant
+     element. 13/600 matches neither --type-small (13.5/400) nor --type-section-label
+     (13/700), so the literal is kept for the same reason the 21/700 it replaces was.
+     Letter-spacing drops the -0.008em tracking that suited 21px bold display type —
+     it reads as cramped on a caption this small — in favour of the family's normal. */
+  .employer-card__name {
+    display: block;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 13px;
+    line-height: 1.3;
+    letter-spacing: normal;
+  }
+
+  /* A role with no logo has nothing to caption, so its name keeps the card's
+     original, pre-caption treatment instead of reading as an undersized label
+     over an empty slot — the wordmark still works alone. */
+  .employer-card__name--standalone {
+    font-weight: 700;
+    font-size: 21px;
+    line-height: 1.25;
+    letter-spacing: -0.008em;
+  }
+
+  /* --type-label matches this step's family and size but not its weight (500 vs the
+     source's default 400), so the literal is kept for the same reason as above. */
+  .employer-card__period {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-ink-faint);
+    margin-top: 10px;
+  }
+</style>

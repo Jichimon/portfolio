@@ -284,20 +284,26 @@
     /* ---------- employers ---------- */
     .employers { padding-top: 52px; padding-bottom: 52px; }
     /* ---------- logo slot ----------
-       The wordmark works ALONE. A logo is an enhancement layered on top of a name that
-       already reads, never a replacement for it — so an employer without one is never a
-       hole, and a fifth employer whose logo nobody can find still ships. That is also why
-       the slot is a fixed box: a row of logos at their natural sizes has no optical
-       baseline, and the box is what gives it one.
+       The logo leads and the name captions it: the slot is the card's dominant
+       element, sized well past the name below it, so a reader recognizes the mark
+       before reading who it belongs to. The wordmark still works ALONE — a logo is
+       an enhancement layered on top of a name that already reads, never a
+       replacement for it — so an employer without one renders its name at the
+       pre-caption size instead of a hole under an empty box. HEIGHT is what is
+       fixed, not a square box: the marks span roughly a 1.4:1 to a 3.6:1 aspect
+       ratio, and a fixed-WIDTH box scales each to its own limiting dimension — the
+       widest mark would render at under half the cap height of the squarest one,
+       which is the opposite of the common optical baseline a logo row needs. A
+       shared height is what four differently-shaped marks can actually share.
        C-06: named security vendors never appear here. Not as a logo, not as a name. */
     .logo-slot {
-      display: flex; align-items: center; justify-content: center;
-      width: 32px; height: 32px; flex: 0 0 auto; margin-bottom: 14px;
+      display: inline-flex; align-items: center; max-width: 100%;
+      height: 48px; flex: 0 0 auto; margin-bottom: 16px;
       border: 1px dashed var(--border-strong); border-radius: 3px;
       font-family: "IBM Plex Mono", monospace; font-size: 8px; letter-spacing: 0.06em;
       text-transform: uppercase; color: var(--ink-faint);
     }
-    .logo-slot img { width: 100%; height: 100%; object-fit: contain; }
+    .logo-slot img { height: 100%; width: auto; max-width: 100%; object-fit: contain; }
 
     .employers h2 { font-family: "IBM Plex Sans", sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); margin: 0 0 28px; }
     .employer-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
@@ -306,7 +312,7 @@
     .employer:nth-child(2) { border-top-color: var(--ink); }
     .employer:nth-child(3) { border-top-color: var(--border-strong); }
     .employer:nth-child(4) { border-top-color: var(--accent); }
-    .employer-name { display: block; font-family: "IBM Plex Sans", sans-serif; font-weight: 700; font-size: 21px; letter-spacing: -0.008em; line-height: 1.25; }
+    .employer-name { display: block; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; font-size: 13px; letter-spacing: normal; line-height: 1.3; }
     .employer-years { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-faint); margin-top: 10px; }
 
     /* ---------- get in touch ---------- */
