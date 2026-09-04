@@ -25,7 +25,11 @@ import {
 } from '../../lib/content/entries/deep-dives.mjs';
 import { NAV_ITEMS, resolveNavItemHref } from '../../lib/nav/nav-structure.mjs';
 import { readAboutMasthead, readPhotoFigures } from '../../lib/content/pages/about-article.mjs';
-import { buildEmploymentRecord } from '../../lib/content/pages/employment-record.mjs';
+import {
+  buildEmploymentRecord,
+  collectDeclaredLogoFiles,
+  deriveDarkLogoFileName,
+} from '../../lib/content/pages/employment-record.mjs';
 import { assertEveryAssetIsReferenced } from '../../lib/content/assets/published-photos.mjs';
 import {
   assertTestimonialIdsAgreeAcrossLocales,
@@ -642,9 +646,80 @@ export interface EmploymentEntryContent {
   title: string;
   paragraphs: string[];
   isMostRecent: boolean;
+  anchor?: string;
   stack?: string[];
   logo?: string;
+  logoDark?: string;
   caseStudyRows?: { title: string; href: string }[];
+}
+
+// The employer marks sit beside the marks the stack strip reads (MARK_SOURCES above), in a
+// separately-scoped folder rather than the same one — a single shared marks folder would
+// make every employer logo read as unreferenced to the stack's own publication-boundary
+// check and every technology mark unreferenced to this one, forcing a roster to tell the
+// two families apart instead of the folder boundary doing it for free.
+//
+// `?url` rather than `?raw`: an employer mark renders as a full-colour <img>, never inlined
+// and painted with currentColor the way a stack mark is, so what this boundary needs is a
+// real, build-processed asset URL rather than the SVG's text.
+//
+// `&no-inline` is load-bearing, not decoration: Vite's own `assetsInlineLimit` (4096 bytes
+// by default) still applies under a bare `?url` — measured directly against this folder's
+// real content, where nice.svg (1,594 bytes) built to a `data:` URI while the other three
+// marks, all larger, built to real `/_astro/*.svg` paths. A logo that only breaks below a
+// byte threshold is exactly the kind of defect that ships quietly, so the query forces the
+// same real-URL behaviour regardless of file size rather than relying on every future mark
+// happening to be large enough.
+const EMPLOYER_LOGO_SOURCES = import.meta.glob('../../../resources/logos/employers/*.svg', {
+  query: '?url&no-inline',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+const EMPLOYER_LOGO_URL_BY_FILE_NAME = new Map(
+  Object.entries(EMPLOYER_LOGO_SOURCES).map(([sourcePath, url]) => [fileNameFromSourcePath(sourcePath), url]),
+);
+
+// The sibling-file convention (deriveDarkLogoFileName): every file in the folder is either
+// a base mark or that base mark's dark-theme variant, told apart by name alone — no second
+// frontmatter key, no schema change. Split once here so both the publication-boundary check
+// below and the resolution step further down read from the same two sets.
+const DARK_LOGO_FILE_SUFFIX_PATTERN = /-dark\.[^.]+$/;
+
+function isDarkLogoFileName(fileName: string): boolean {
+  return DARK_LOGO_FILE_SUFFIX_PATTERN.test(fileName);
+}
+
+const EMPLOYER_LOGO_BASE_FILE_NAMES = [...EMPLOYER_LOGO_URL_BY_FILE_NAME.keys()].filter(
+  (fileName) => !isDarkLogoFileName(fileName),
+);
+const EMPLOYER_LOGO_DARK_FILE_NAMES = [...EMPLOYER_LOGO_URL_BY_FILE_NAME.keys()].filter(isDarkLogoFileName);
+
+// The publication-boundary half of EMP-002, in two parts. Reads every experience entry
+// directly off the pages collection rather than through getExperienceRecord(lang), because
+// the boundary spans both locales at once and a single-locale call only ever sees one of
+// them.
+async function assertEmployerLogoAssetsAreAllReferenced() {
+  const experienceEntries = (await loadPageEntries()).filter((entry) => entry.data.slug === EXPERIENCE_PAGE_SLUG);
+  const rolesByLocale = experienceEntries.map(
+    (entry) => (entry.data.roles ?? []) as Record<string, unknown>[],
+  );
+  const declaredLogosByLocale = rolesByLocale.map((roles) => collectDeclaredLogoFiles(roles) as { file: string }[]);
+
+  // A base mark that no role, in either locale, declares — unchanged from before this asset
+  // gained a themed sibling.
+  assertEveryAssetIsReferenced(EMPLOYER_LOGO_BASE_FILE_NAMES, declaredLogosByLocale);
+
+  // A dark variant pairs with a declared base mark by NAME, never by its own frontmatter
+  // key — a role never declares "logo: nice-dark.svg" itself. So the "reference" this half
+  // checks is each declared base logo's OWN derived dark name, reusing the identical
+  // publication-boundary function rather than a second copy of its logic: an orphaned dark
+  // file (no base mark declares the name it pairs with) is exactly the same shape of finding
+  // as an orphaned base mark, one level removed.
+  assertEveryAssetIsReferenced(
+    EMPLOYER_LOGO_DARK_FILE_NAMES,
+    declaredLogosByLocale.map((entries) => entries.map(({ file }) => ({ file: deriveDarkLogoFileName(file) }))),
+  );
 }
 
 // The About body is the one page body the site renders as prose. Rendering it here rather
@@ -656,15 +731,45 @@ export async function renderAboutBody(lang: Locale) {
 }
 
 export async function getExperienceRecord(lang: Locale): Promise<EmploymentEntryContent[]> {
+  await assertEmployerLogoAssetsAreAllReferenced();
   const entry = await getPage(EXPERIENCE_PAGE_SLUG, lang);
   const roles = (entry.data.roles ?? []) as Record<string, unknown>[];
-  return buildEmploymentRecord(
+  const record = buildEmploymentRecord(
     roles,
     await loadCaseStudyEntries(),
     await listRoutes(),
     lang,
     `${EXPERIENCE_PAGE_SLUG}.${lang}.md`,
+    new Set(EMPLOYER_LOGO_BASE_FILE_NAMES),
+    new Set(EMPLOYER_LOGO_DARK_FILE_NAMES),
   ) as EmploymentEntryContent[];
+
+  // The core validates and carries the declared FILENAMEs; only the gateway knows what
+  // those filenames built into, the same split the stack chips and the about photos
+  // already draw. logoDark rides along exactly like logo — resolved when present, left
+  // alone (absent) when not.
+  return record.map((role) => {
+    if (role.logo === undefined) {
+      return role;
+    }
+    const resolved = { ...role, logo: EMPLOYER_LOGO_URL_BY_FILE_NAME.get(role.logo) as string };
+    if (role.logoDark !== undefined) {
+      resolved.logoDark = EMPLOYER_LOGO_URL_BY_FILE_NAME.get(role.logoDark) as string;
+    }
+    return resolved;
+  });
+}
+
+// The home employers strip links every card at the same target the "most recent" badge and
+// the rest of the record already point readers toward: the /experience page itself. Resolved
+// off the nav's own "experience" item rather than a literal path, the same join
+// getBackToWorkHref below uses for "work" — so a locale added there is not spelled out twice.
+export function getExperienceHref(lang: Locale): string {
+  const experienceItem = NAV_ITEMS.find((item) => item.key === 'experience');
+  if (!experienceItem) {
+    throw new Error('the nav declares no "experience" item for the employers strip to link to');
+  }
+  return resolveNavItemHref(experienceItem, { lang, isIndexPage: false }) as string;
 }
 
 // The not-found page is the one page that belongs to no locale, so it reads both halves of

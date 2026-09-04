@@ -10,6 +10,7 @@ interface Props {
   title: string;
   paragraphs: string[];
   isMostRecent: boolean;
+  anchor?: string;
   stack?: string[];
   logo?: string;
   caseStudyRows?: CaseStudyRow[];
@@ -21,16 +22,21 @@ const { company, period, title, paragraphs, isMostRecent, mostRecentLabel } = As
 // A key the caller omitted must render nothing, so presence is read off the
 // props object itself rather than off the value — an empty string or an
 // empty array is a real value and must not be treated as absence.
+const hasAnchor = Object.hasOwn(Astro.props, 'anchor');
 const hasLogo = Object.hasOwn(Astro.props, 'logo');
 const hasStack = Object.hasOwn(Astro.props, 'stack');
 const hasCaseStudyRows = Object.hasOwn(Astro.props, 'caseStudyRows');
 
+// A card whose role yields no anchor still renders — it just gives a reader arriving
+// via a fragment nothing to land on. Undefined here means Astro omits the id
+// attribute entirely, never an empty id="".
+const anchor = hasAnchor ? (Astro.props.anchor as string) : undefined;
 const logo = hasLogo ? (Astro.props.logo as string) : undefined;
 const stack = hasStack ? (Astro.props.stack as string[]) : undefined;
 const caseStudyRows = hasCaseStudyRows ? (Astro.props.caseStudyRows as CaseStudyRow[]) : undefined;
 ---
 
-<div class="employment-entry">
+<div class="employment-entry" id={anchor}>
   <div class="employment-entry__meta">
     {hasLogo && (
       <span class="employment-entry__logo">

@@ -8,6 +8,7 @@ h1: "I had to solve the same problem in every place I worked"
 intro: "A system built for a reality that had stopped existing, and a business that moved on faster than it did. Another industry, the same shape. Again."
 roles:
   - company: "NICE"
+    logo: nice.svg
     period: "2025–2026"
     title: "Senior Software Engineer"
     body:
@@ -16,6 +17,7 @@ roles:
     stack: [".NET", "legacy PHP", "vanilla JavaScript", "elasticSearch", "AWS", "Jenkins", "RAG", "LLMs", "Snowflake", "Grafana"]
 
   - company: "Banco Solidario S.A."
+    logo: banco-solidario.svg
     period: "2023–2025"
     title: "Backend Developer → Solution Architect in practice"
     body:
@@ -27,6 +29,7 @@ roles:
     stack: [".NET", "AWS", "SNS/SQS", "MassTransit", "SQL Server", "BIAN", "Flutter"]
 
   - company: "Mamaya Tech"
+    logo: mamaya-tech.svg
     period: "2022–2023"
     title: "Systems Analyst"
     body:
@@ -35,6 +38,7 @@ roles:
     stack: ["Oracle EBS", "PL/SQL", "ERP integration", "Android", "Angular", ".NET", "low-code", "javascript"]
 
   - company: "Avícola Sofía"
+    logo: avicola-sofia.svg
     period: "2021–2022"
     title: "Trainee → Systems Analyst"
     body:
