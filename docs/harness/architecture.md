@@ -324,6 +324,8 @@ fresh project
 
 **Retrofit onto an existing codebase** differs in one rule: conventions are **discovered, not invented**. Read the code first; what it already does becomes a rule with an origin of "existing practice", which is a real origin. Inventory what is already mechanized and send those rules straight to the appendix. Then find the done-dimensions that have never been checked — that list is the first improvement backlog.
 
+**This flow now has a portable form** (`TASK 9`, 2026-09-04): `docs/harness/export/` holds one bootstrap per agent tool, each self-contained, each carrying this section as its own step-by-step installation. The two share a byte-identical core that `check-export` keeps identical — the export makes two copies of a body on purpose, because the control-plane half cannot be written once for two tools, so invariant 3’s warning is answered by a check rather than by an author remembering. **They are marked v1 and say so on their own first screen**: the harness has never been *measured* on a codebase it did not build, and that measurement is `TASK 100`.
+
 ---
 
 ## I · Run lifecycle and state authority **`[A17]`**

@@ -96,5 +96,7 @@ guard suite checks this on every run, against the actual git history rather than
 - [`docs/adr/README.md`](docs/adr/README.md) — accepted decisions, indexed.
 - [`docs/harness/architecture.md`](docs/harness/architecture.md) — why the harness is shaped
   this way.
+- [`docs/harness/export/`](docs/harness/export/) — the portable bootstraps, one per agent tool,
+  for installing this harness somewhere else.
 - [`docs/content-conventions.md`](docs/content-conventions.md) — how `resources/**` is written.
 - [`progress/`](progress/) — one log per work item, written as the work happened.

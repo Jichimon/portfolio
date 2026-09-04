@@ -482,6 +482,14 @@
     "yearExclusionPattern": "\\b\\d{4}\\b",
     "_yearExclusionPatternNote": "Stripped from a matched sentence before countsVocabulary is checked. A four-digit year is a fact about the past and does not grow, so 'since 2019' must not misread as a count. Section 5."
   },
+  "export": {
+    "root": "docs/harness/export",
+    "beginMarker": "<!-- SHARED CORE BEGIN -->",
+    "endMarker": "<!-- SHARED CORE END -->",
+    "minFiles": 2,
+    "_rationale": "TASK 9. The export ships ONE body in two documents, because the control-plane half cannot be written once for two agent tools - so invariant 3's warning about two copies drifting is answered by a check instead of by an author remembering. The file set is DERIVED from root rather than listed (P-13): a third bootstrap is covered the day it exists, and the directory index carries no markers and therefore needs no exemption. minFiles is 2 because a parity check over one document can never fail, which is the silent-pass shape this guard exists to close - raise it when a third bootstrap becomes permanent, never lower it.",
+    "_markerRationale": "HTML comments, so the delimiters are invisible in every rendered view of the document while staying exact bytes on disk. They must differ from each other and neither may appear in prose: a document that mentions its own marker verbatim would delimit a core nobody meant."
+  },
   "terms": {
     "opaqueFields": [
       "integrity"

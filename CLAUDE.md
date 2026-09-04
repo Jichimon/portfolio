@@ -27,6 +27,7 @@ TASKS.md               the Work Item register · authoritative for work-item sta
 .claude/agents/        role files          (step 8)
 .claude/skills/        procedures          (step 9)
 docs/harness/          architecture · contracts · procedures · metrics
+docs/harness/export/   the portable bootstraps — one per agent tool, one shared core
 docs/adr/              decisions — README.md is the mandatory entry point
 docs/specs/            behavior specs, for feature and migration items
 progress/              one log per work item · evaluations/ holds scorecards
@@ -60,6 +61,7 @@ private/               NEVER COMMITTED
 | Why the harness is built this way | `docs/harness/architecture.md` |
 | Contract shapes and what enforces them | `docs/harness/contracts.md` |
 | What the runtime trace records, and what it deliberately does not | `docs/harness/evidence.md` |
+| How to install this harness on another project | `docs/harness/export/README.md`, then the bootstrap for that tool |
 | A past architectural decision | `docs/adr/README.md` **first**, then the ADR |
 | Content conventions and diagram tags | `docs/content-conventions.md` |
 | What a past session decided | `progress/` |

@@ -265,6 +265,13 @@ export const STEPS = [
     cmd: ['node', 'scripts/guards/gate/check-templates.mjs'],
   },
   {
+    name: 'export parity',
+    tier: 'fast',
+    protects: 'the two harness bootstraps ship ONE shared core, so an amendment cannot land in only one of them (TASK 9, invariant 3)',
+    redProof: { file: 'scripts/guards/lib/export-parity.test.mjs', test: 'RED: a core differing by ONE byte is caught, and the finding locates it' },
+    cmd: ['node', 'scripts/guards/gate/check-export.mjs'],
+  },
+  {
     name: 'runtime boundary',
     tier: 'fast',
     protects: 'every hard rule has a deny rule behind it, and no boundary rests on ask (G-03)',

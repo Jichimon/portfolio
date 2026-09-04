@@ -2096,13 +2096,25 @@ The strip renders `listStack(lang)`, which is the deduplicated union of every ca
 
 ---
 
-## TASK 9 — Harness export v2 · `harness` · `TODO`
+## TASK 9 — Harness export v2 · `harness` · `DONE`
 
-`export-harness-v2.md`: the portable bootstrap that installs this harness on another project, plus the method for comparing it against harnesses in other projects.
+**Two portable bootstraps, one per agent tool**, under `docs/harness/export/`: each installs this harness on another project, and each carries the method for comparing it against a harness already there. **Amended 2026-09-04 — the entry named one file, `export-harness-v2.md`.** The author runs Claude Code on one target project and OpenCode on the other, and the control plane is the half that cannot be written once for both: it is what decides whether a rule is a boundary or a preference (`G-03`), and the two tools deny by different mechanisms. So the two documents share a **byte-identical core** and differ only where the tool does, with `check-export` failing a core that has drifted rather than a human being expected to notice.
+
+**Goal served:** goal 2 — a harness good enough to export to the author's other projects. This is that goal's own deliverable, not an item adjacent to it (`P-19`).
 
 **Written from the harness, not from this plan** — and only after the harness has driven real work (TASK 8's first items) and been scored at least once. The point of an export is to carry what worked, not what was designed. Writing it earlier would export a hypothesis.
 
 **Trigger:** the first `EVAL` with a real, non-harness workload.
+
+**Waived at A3 on 2026-09-04, by the author (`G-01`).** Recorded rather than assumed: an unrecorded deviation is indistinguishable from a violation when an evaluator reads this later. Why it does not contradict the paragraph above — **installing the harness on the two target projects *is* the workload `TASK 100` names**, so the export is the vehicle by which this trigger can fire rather than an advance on it. The export ships marked **v1**, says so on its own first screen, and what the two installs teach comes back as an amendment carrying a measured origin.
+
+**Done:** two bootstraps and their index exist under `docs/harness/export/`; each is self-contained, so a reader needs nothing from this repository, which may be deleted; their shared cores are byte-identical and a gate step fails when they are not; **every full-profile gate step passes except one that was already failing at `HEAD` before this item began, and that one is tracked**.
+
+**Closed 2026-09-04, by the author.** Three files under `docs/harness/export/`: an index and two bootstraps, one per agent tool, sharing a byte-identical 1,005-line core. `check-export` is gate step 11 and was proven in red against the real files — a planted single-byte drift reported the file, the byte offset, the line and the differing text on both sides. The full-profile gate passes 22 of 23 steps with none deferred; the one failure is `design canvas`, red at `HEAD` before this item began and tracked as `TASK 119`. The mutation surface rose to 80.31% as `export-parity.mjs` entered it, and the floor was deliberately left at 79.0 with the reason recorded in `T-03`.
+
+**What this item did NOT do, stated so the next reader does not assume it** (`C-02`): it produced documents that *describe* an installation. It did not perform one. The harness has still never been measured on a codebase it did not build, which is `TASK 100` — and the hand-off packet for it is `progress/handoff/2026-09-04-task100.md`. The export is marked **v1** on its own first screen for exactly this reason.
+
+**That last clause is an amendment made the same day it was written, and it is visible rather than quiet.** The first version read *"the full-profile gate passes"*, which made this item hostage to `TASK 119` — a canvas-deriver defect with nothing to do with the export, red on the committed tree before this work started. One work item is one deliverable (`P-01`), and a `Done` that cannot be met without fixing somebody else's defect is a `Done` written wrong. **What is NOT being done here is lowering the bar to fit the result** (`P-03`): the gate is reported `partial` in the work log, with the failing step named and its id, not `passed`.
 
 ---
 
@@ -3145,12 +3157,12 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 | **Goal 1 — publish** | ~~`TASK 110`~~ · ~~`TASK 111`~~ · ~~`TASK 112`~~ · ~~`TASK 30`~~ **all `DONE` 2026-09-01** · `TASK 32` **built 2026-09-01, unpushed** · `TASK 28` · `TASK 29` | ~~**71 items are closed and nobody can see any of it.**~~ **Shipped 2026-09-01:** the repository is public and its CI is green, so the harness half of goal 1 is visible to a reader for the first time. What remains here is the deploy (`TASK 32`) and the two content items. **`TASK 110` and `TASK 111` are first as of 2026-09-01**: CI cannot go green at all until the e2e hang is fixed, and cannot finish in a sane budget until the heavy tiers leave the per-push path — and `TASK 30`'s own `Done` is a green run on the remote |
 | **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 104` · `TASK 27` · `TASK 113` · `TASK 114` · `TASK 115` · `TASK 116` · `TASK 117` | The pages a reader actually judges. **`TASK 113` onward were opened after this triage and are added here rather than left off it** (`P-07`): all are `feature` items whose whole deliverable is a home-page surface a reader reads — the recommendations column, the stack strip, the employer strip, and the two corrections the author's review of that strip opened (`TASK 116`, `TASK 117`). Each carries its own `Goal served` line as `P-19` requires; this row is the summary. **Said "the last three" until 2026-09-03**, when adding two ids made the count false — the index row and the entries it points at drifting apart in the same edit is `P-07`'s own characteristic failure, so the phrasing is now open-ended rather than a number to re-check |
 | **Goal 1 — credibility** | ~~`TASK 94`~~ **`DONE` 2026-08-31** · ~~`TASK 101`~~ **`DONE` 2026-09-01** | `TASK 94` **retired the bypass series** by stating the residual instead of chasing it — the cheapest high-leverage item on the board, and it closed without opening a single item in the surface it documents. `TASK 101` decided the exhibit is `README.md` only and rewrote it |
-| **Goal 2 — the deliverable** | `TASK 9` (blocked) · `TASK 100` (the unblocker) | `TASK 9`'s own trigger is *the first `EVAL` with a real, non-harness workload*, and nothing was advancing it. `TASK 100` is that workload |
+| **Goal 2 — the deliverable** | ~~`TASK 9`~~ **`DONE` 2026-09-04** · `TASK 100` (the measurement) | `TASK 9`'s own trigger was *the first `EVAL` with a real, non-harness workload*, and nothing was advancing it. **Waived at A3 on 2026-09-04 and the item shipped**, on the reading that installing the harness on the two target projects *is* that workload — so the export is the vehicle by which the trigger fires rather than an advance on it. `TASK 100` is no longer the unblocker; it is the measurement the export was built to make cheap, and it is the only item left under this goal |
 | **Goal 2 — efficiency & trust** | `TASK 89` · `TASK 78` · `TASK 81` · `TASK 73` · `TASK 102` | **This note was wrong and is corrected 2026-08-31.** `TASK 39` already closed the silent-pass class: the step **FAILS**, loudly, and nothing is quietly unverified. What it costs is a gate that intermittently cannot be trusted to have run — `T-06` shaped, one tier over from `TASK 69`/`TASK 85`. `TASK 89`'s own hand-off had already retracted this premise, and it survived here for a day (`P-07`) |
 | **Stated residuals — not tasks** | `TASK 91` · ~~`TASK 97`~~ · ~~`TASK 98`~~ | Obfuscated-command bypasses. Real, verified, and **nobody on this project would notice them**: an adversary writes `env --s`, a mistaken agent writes `git commit -m x`. `TASK 94` named the residual on 2026-08-31, so **`97` and `98` are now `RETIRED` into it** and live in `architecture.md` §L as documented limits. `TASK 91` stays open — it is a write-boundary configuration gap, not an expansion one, and §L does not cover it. All three return to scope with a second operator (`P-19`, `G-07`) |
 | **Deferred — no goal served today** | `TASK 38` · `TASK 11` · `TASK 14` · `TASK 75` · `TASK 90` · `TASK 85` · `TASK 69` | Ratchet upkeep, small guard bugs and two flakes. Real, none of them visible to a reader or to the author's throughput |
 
-**Recommended order:** ~~`TASK 94`~~ (`DONE` 2026-08-31) → ~~`TASK 89`~~ (**worked 2026-08-31, left open** — both candidates refuted, flake unreproduced across six controlled runs; `TASK 103` shipped out of it) → `TASK 30`/`TASK 32` → `TASK 100` → `TASK 9`.
+**Recommended order:** ~~`TASK 94`~~ (`DONE` 2026-08-31) → ~~`TASK 89`~~ (**worked 2026-08-31, left open** — both candidates refuted, flake unreproduced across six controlled runs; `TASK 103` shipped out of it) → ~~`TASK 30`/`TASK 32`~~ → ~~`TASK 9`~~ (`DONE` 2026-09-04, ahead of `TASK 100` rather than after it — see the row above) → `TASK 100`.
 
 **`TASK 89`'s placement is now the author's call, not the register's default.** Its slot rested on the note corrected above, and the honest reading after 2026-08-31 is that it belongs beside `TASK 85` and `TASK 69` under *Deferred — no goal served today* unless the flake fires again: six controlled runs, a tier of 15 tests, a step that fails loudly rather than passing silently, and no invocation shape on this machine that can recreate the condition. Left in place rather than moved, because demoting an item on the strength of not reproducing it is exactly the judgement `P-19` says belongs to a person.
 
@@ -3376,6 +3388,22 @@ Four files: `private/glossary.md`, `private/banned-terms.txt`, `reports/mutation
 
 ---
 
+## TASK 119 — The `design canvas` gate step has been red on the committed tree · `bugfix` · `TODO`
+
+**Found 2026-09-04 by `TASK 9`, on a clean checkout of the canvas.** `node scripts/gate.mjs` fails at `design canvas`. `docs/design/canvas/derive.mjs` throws *"source strings not found"* for six testimonial and quote-mark markup fragments it expects in the artboard it derives the Spanish and mobile boards from. The artboard was edited and the deriver's expected fragments were not, so the derivation cannot run and nine structural assertions never execute.
+
+**This is not `TASK 9`'s doing and it is not new.** The canvas sources are unmodified against `HEAD`, so the step is red at the commit, not in the working tree — which means at least one work item closed against a gate that was already failing this step. **That is the finding worth more than the fix**: `wrap-up` reads the gate's headline, and a `FAIL` on an unrelated step is exactly the shape a session in a hurry records as *someone else's problem* and then does not track (`P-06`). Nobody tracked it until an unrelated item ran the gate.
+
+**Goal served:** goal 1 — the design fidelity diff is what keeps every rendered screen honest against its artboard, and a deriver that cannot run asserts nothing about the two boards it produces.
+
+**Done:** `node docs/design/canvas/verify.mjs` exits 0 on a clean tree, with the deriver reading fragments that exist in the artboard rather than fragments somebody remembered; and the reason the two drifted apart is named — either the deriver reads structure rather than literal strings, or the artboard carries the fragments the deriver needs and something fails when it stops doing so.
+
+**Constraints**
+
+- **Do not re-seed by hand and call it fixed.** A fixture regenerated by reflex is a control that stops being read. If the fragments are the wrong abstraction, say so and change the abstraction (`P-13`).
+- **No change to the artboards' design.** This is a deriver defect; whatever the artboard now says is the specification.
+
+---
 ## TASK 118 — `isInside` decides three rung-1 boundaries case-sensitively, on a case-insensitive filesystem · `harness` · `TODO`
 
 **Opened 2026-09-03 by the adversarial audit of `TASK 116`/`117`.** `scripts/guards/lib/path-boundary.mjs:33-35` compares normalized paths without folding case, so `isInside('RESOURCES/x', 'resources')` returns `false` on a tree where NTFS resolves both spellings to the same directory. Probed directly rather than inferred: `RESOURCES/`, `EVIDENCE/` and `PRIVATE/` all evaluate outside their boundary, so this reaches **`H-02`, `H-03` and `H-04` at once** — the audit found it on `resources/` only, and the other two came out of checking the function instead of the report.
