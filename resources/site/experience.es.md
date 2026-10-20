@@ -7,6 +7,17 @@ confidentiality: sanitized
 h1: "El mismo problema tuve que resolver en cada lugar en el que estuve"
 intro: "Un sistema construido para una realidad que ya no existía, y un negocio que evolucionó más rápido que él. Otra industria, la misma forma. Una vez más."
 roles:
+  - company: "Trabajo independiente"
+    period: "2026–present"
+    title: "Senior Software Engineer"
+    body:
+      - "Desde julio de 2026 trabajo de manera independiente: dos productos propios y dos desarrollos a medida para empresas locales, los cuatro en proceso."
+      - "Un sistema de finanzas familiares multiusuario y multimoneda que reemplaza el Excel en el que vivía la plata de la casa: fondos, movimientos, presupuestos, tarjetas, préstamos y activos sobre un ledger de decimales exactos."
+      - "Un SaaS multitenant de colas en tiempo real donde el visitante abre la página pública del consultorio, saca su turno y ve la posición actualizarse en vivo, mientras el panel llama al siguiente."
+      - "Desarrollo a medida para una inmobiliaria local, con el alcance definido de punta a punta: una vitrina de sus inmuebles, el seguimiento de contratación de asesores y un dashboard de gestión, integrado con su CRM."
+      - "Una landing page para una empresa de postes de concreto, con su hosting y una administración de contenido para que el cliente mantenga su propio sitio."
+    stack: ["C#", ".NET", "Astro", "React", "Python", "Django", "Node.js", "PostgreSQL", "SignalR", "Docker"]
+
   - company: "NICE"
     logo: nice.svg
     period: "2025–2026"

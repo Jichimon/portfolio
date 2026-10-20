@@ -25,7 +25,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { derive } from "./derive.mjs";
+import { derive, readArtboard } from "./derive.mjs";
 import {
   checkRegistration,
   checkDerivedScreens,
@@ -49,7 +49,7 @@ const preview = readFileSync(join(here, "local-preview.mjs"), "utf8");
 // A screen is "live" if it is on the screens page; the directions page is kept history.
 const page = Object.fromEntries(canvas.artboards.map((a) => [a.file, a.page]));
 const live = files.filter((f) => page[f] === "screens");
-const src = Object.fromEntries(live.map((f) => [f, readFileSync(`${dir}/${f}`, "utf8")]));
+const src = Object.fromEntries(live.map((f) => [f, readArtboard(`${dir}/${f}`)]));
 
 // PAGE versus DOCUMENT, derived from the artboard rather than from a filename list.
 // A page has a rail — it is somewhere you can be on the site, so it owes the reader
@@ -85,7 +85,7 @@ fails.push(...checkPageChrome(pageSrc, canvasCfg));
 // (scripts/guards/lib/canvas.mjs)
 const derived = derive();
 const derivedActual = Object.fromEntries(
-  Object.keys(derived).map((name) => [name, name in src ? src[name] : readFileSync(`${dir}/${name}`, "utf8")]),
+  Object.keys(derived).map((name) => [name, name in src ? src[name] : readArtboard(`${dir}/${name}`)]),
 );
 fails.push(...checkDerivedScreens(derived, derivedActual));
 

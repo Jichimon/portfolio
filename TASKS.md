@@ -3143,7 +3143,7 @@ Verified: `env -S "git commit -m x"` (`H-01`), `env --split-string="git commit -
 | Serves | Items | Note |
 |---|---|---|
 | **Goal 1 — publish** | ~~`TASK 110`~~ · ~~`TASK 111`~~ · ~~`TASK 112`~~ · ~~`TASK 30`~~ **all `DONE` 2026-09-01** · `TASK 32` **built 2026-09-01, unpushed** · `TASK 28` · `TASK 29` | ~~**71 items are closed and nobody can see any of it.**~~ **Shipped 2026-09-01:** the repository is public and its CI is green, so the harness half of goal 1 is visible to a reader for the first time. What remains here is the deploy (`TASK 32`) and the two content items. **`TASK 110` and `TASK 111` are first as of 2026-09-01**: CI cannot go green at all until the e2e hang is fixed, and cannot finish in a sane budget until the heavy tiers leave the per-push path — and `TASK 30`'s own `Done` is a green run on the remote |
-| **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 104` · `TASK 27` · `TASK 113` · `TASK 114` · `TASK 115` · `TASK 116` · `TASK 117` | The pages a reader actually judges. **`TASK 113` onward were opened after this triage and are added here rather than left off it** (`P-07`): all are `feature` items whose whole deliverable is a home-page surface a reader reads — the recommendations column, the stack strip, the employer strip, and the two corrections the author's review of that strip opened (`TASK 116`, `TASK 117`). Each carries its own `Goal served` line as `P-19` requires; this row is the summary. **Said "the last three" until 2026-09-03**, when adding two ids made the count false — the index row and the entries it points at drifting apart in the same edit is `P-07`'s own characteristic failure, so the phrasing is now open-ended rather than a number to re-check |
+| **Goal 1 — content** | `TASK 6` · `TASK 20` · `TASK 19` · `TASK 76` · `TASK 104` · `TASK 27` · `TASK 113` · `TASK 114` · `TASK 115` · `TASK 116` · `TASK 117` · `TASK 119` · `TASK 121` · `TASK 122` | The pages a reader actually judges. **`TASK 113` onward were opened after this triage and are added here rather than left off it** (`P-07`): the `feature` items are home-page surfaces a reader reads — the recommendations column, the stack strip, the employer strip, and the two corrections the author's review of that strip opened (`TASK 116`, `TASK 117`) — and `TASK 119` is the `content` item underneath them: the chronology those surfaces sit on was missing its newest entry. Each carries its own `Goal served` line as `P-19` requires; this row is the summary. **Said "the last three" until 2026-09-03**, when adding two ids made the count false — the index row and the entries it points at drifting apart in the same edit is `P-07`'s own characteristic failure, so the phrasing is now open-ended rather than a number to re-check |
 | **Goal 1 — credibility** | ~~`TASK 94`~~ **`DONE` 2026-08-31** · ~~`TASK 101`~~ **`DONE` 2026-09-01** | `TASK 94` **retired the bypass series** by stating the residual instead of chasing it — the cheapest high-leverage item on the board, and it closed without opening a single item in the surface it documents. `TASK 101` decided the exhibit is `README.md` only and rewrote it |
 | **Goal 2 — the deliverable** | `TASK 9` (blocked) · `TASK 100` (the unblocker) | `TASK 9`'s own trigger is *the first `EVAL` with a real, non-harness workload*, and nothing was advancing it. `TASK 100` is that workload |
 | **Goal 2 — efficiency & trust** | `TASK 89` · `TASK 78` · `TASK 81` · `TASK 73` · `TASK 102` | **This note was wrong and is corrected 2026-08-31.** `TASK 39` already closed the silent-pass class: the step **FAILS**, loudly, and nothing is quietly unverified. What it costs is a gate that intermittently cannot be trusted to have run — `T-06` shaped, one tier over from `TASK 69`/`TASK 85`. `TASK 89`'s own hand-off had already retracted this premise, and it survived here for a day (`P-07`) |
@@ -3393,6 +3393,85 @@ Four files: `private/glossary.md`, `private/banned-terms.txt`, `reports/mutation
 - **`repoRelative`'s existing case folding is not the fix and must not be widened into one.** It folds the *root prefix* so an absolute path relativizes at all; the boundary comparison it feeds is a separate decision and is what this item changes.
 - **The red battery covers all three boundaries, not just the one the audit probed.** A fix verified only against `resources/` would leave `H-03` and `H-04` in exactly the state this entry was opened for (`P-13`).
 - **No claim is made about other spellings until they are probed.** The audit listed absolute paths, backslash separators, variable indirection, quote splitting and interpreter writes (`node -e`, `python -c`) as untested vectors. They are named here so the gap is a stated limit rather than an implied all-clear; closing them is not this item's done.
+
+---
+
+## TASK 119 — Independent role and hero thesis · `content` · `DONE`
+
+**Opened 2026-10-19. Closed 2026-10-20.** The author applied the packet to `experience.{en,es}.md` himself (`H-02`), making two calls of his own: the project names left the bullets (the systems are described; the names are not relevant to a visitor) and `C#` joined the stack. Three one-line edits came after verifying the application — the English queue bullet's parity with its Spanish twin (`C-09`), and the real-estate bullet's scoped wording in both locales, that engagement having no code yet (`C-02`). The thesis stayed as it stood: candidate A, the author's pick. The four artboards gained the fifth entry in the same change, `HomeES` and `HomeMobile` regenerated by the tool, and the competitor's and the product's repository names left the working records on the author's instruction.
+
+**`node scripts/gate.mjs --profile full` — GATE PASSED, 22 of 22, over the final tree.** `e2e smoke`: 103 passed, 0 skipped — the four logo-less card assertions that had been skipping over zero roles since they were written ran for the first time against a real logo-less role, and passed. Nothing under `site/` changed: the five cards, the deep-link anchors, the badge and the collision guard all derived from `roles[]` alone, which was this item's acceptance criterion when it opened.
+
+**Superseded opening note follows, kept for the trail.** The published record ends at NICE "2025–2026" and says nothing after: four months of silence that reads as a gap to the recruiter or client the site exists for. The author has been independent since July 2026, building money-flow (a family finance system), queue-saas (a real-time queue platform), and custom development for a real estate company and a concrete posts company, all four in progress. Everything renders a fifth role from `experience.{en,es}.md` with zero template edits: the employer strip, the deep-link anchors, the "most recent" badge and every e2e assertion derive from `roles[]` and were written expecting this day — `home.smoke.spec.ts` says so by name.
+
+**Goal served (`P-19`):** goal 1, publication. The reader deciding whether to make contact is who notices the silence first.
+
+The hero thesis is the same class of author-owned content and rides the same hand-off: three candidates (keep the current one, restore the artboard's original, or a new hybrid), the author picks.
+
+**Done:** `experience.{en,es}.md` carries a fifth role — "Independent work" / "Trabajo independiente", 2026–present, four project bullets honest about being in progress — and `home.{en,es}.md`'s `thesis` is the author's chosen candidate; the four live artboards that carry employer entries match in the same change; the gate passes on the applied tree, and both home routes render the fifth card with a working deep-link.
+
+**Constraints**
+
+- **`H-02`: the author pastes; the agent drafts.** The deliverable is `progress/handoff/2026-10-19-task119-content.md`, word for word, both locales.
+- **In progress is described as in progress** (`C-02`). The four projects are known only from the author's own account, so the packet carries `<...>` questions where only he has the words, and the stack lists are his to fill (`C-01`, `C-04`).
+- **Both locales in the same change** (`C-09`).
+- **Nothing under `site/` changes.** The strip, the page, the anchors and the badge flow from `roles[]` by construction, and that is the acceptance criterion as much as the constraint: if adding the role needed a template edit, the content-driven promise failed.
+- **The canvas is downstream of the content** (the constraint the testimonials item already set): `Main.dc.html`, `HomeES.dc.html`, `HomeMobile.dc.html` and `Experience.dc.html` gain the fifth employer entry in the same change, once the real words exist to put in it.
+- `CLAUDE.md`'s identity line is reconciled in the same change (`P-07`), as is its now-stale "what remains is publication" claim — the site has been live and CI-deployed since the register's own `TASK 30` closed.
+
+---
+
+## TASK 120 — The design-canvas gate step fails on a CRLF checkout · `bugfix` · `DONE`
+
+**Opened and closed 2026-10-19**, by the first local gate run since the `employer-strip` merge — found while verifying TASK 119's opening edits, not by a hypothesis. `derive.mjs` matches multi-line source blocks byte-exactly (the `ES` table against `Main.dc.html`), and `verify.mjs` compares derived screens byte-exactly against the files on disk. The repository's blobs are LF and CI checks them out as LF — PR #1's `gate` check was green on exactly this content — but the development machine runs `core.autocrlf=true`, so the post-merge pull re-materialized the artboards with CRLF, and every `from` block spanning a line stopped matching. The step passed on 2026-09-03 because the working tree still held the LF bytes those sessions had written; the pull, not an edit, broke it — and nothing ran locally in between, which is why nobody saw it.
+
+**Goal served (`P-19`):** the prerequisite of both goals. No item can close while the local gate is red — `wrap-up` requires a green `--profile full` — so this blocked every item behind it, content included.
+
+**Done:** the design-canvas step passes on a checkout whose working tree carries CRLF line endings — this machine's state, observed failing before the fix and passing after — and the fix changes nothing for CI's LF checkout, where the step was already green.
+
+**Closed 2026-10-19, same session.** The failure was observed live rather than planted (`P-14`): the gate run over TASK 119's opening edits shows `design canvas` FAIL with `derive: source strings not found` on an untouched tree, and `Main.dc.html` measured 799 CRLF lines and zero LF-only. The fix is one exported reader — `readArtboard` in `derive.mjs`, reading UTF-8 and folding `\r\n` to `\n` — used at every artboard read boundary in both `derive.mjs` and `verify.mjs`, so every comparison downstream is EOL-agnostic by construction and no line ending on disk is touched. The step now passes locally; the derived screens, the mirrors and the ES table all compare equal under both line-ending regimes.
+
+**Constraints**
+
+- **Normalize at the read boundary, never by rewriting the checkout.** The files are committed LF; converting the working tree would fix the symptom until the next pull re-materialized it. One reader, every comparison downstream EOL-agnostic.
+- **No `.gitattributes` decision here.** Declaring EOLs repo-wide is a real option with a wider blast radius (index renormalization, every text file), and it is the author's, not this item's. The canvas tooling is EOL-agnostic under either policy, because byte-exact matching is what the step does.
+- **CI's behaviour may not change.** The Linux checkout reads LF today and keeps reading LF; the PR #1 run is the proof that path was already correct.
+
+---
+
+## TASK 121 — Hero call to action · `feature` · `TODO`
+
+**Opened 2026-10-20**, from the feature plan the author approved this cycle: the hero prints the thesis and offers no way to act on it, while the destination already exists and is proven — the nav's Contact anchor, `#contact`, and `TASK 117`'s landing work. One primary button under the thesis: label from content (`ui.home.hero_cta`, both locales, author-pasted), `href="#contact"`, styled after the form's submit, zero JavaScript. The three home artboards move in the same change — adding only the component makes the fidelity diff read the addition as drift (`TASK 116`'s precedent).
+
+**Goal served (`P-19`):** goal 1, publication. The reader who lands, reads the thesis and wants to talk has to scroll or hunt the rail today; the button is the single conversion beat the page lacks.
+
+**Done:** `/` and `/es/` render the CTA when the string exists and nothing when it does not (`S-01`), it lands on the contact section from both locales, the three artboards match, and `node scripts/gate.mjs --profile full` passes with e2e assertions derived from the strings collection.
+
+**Constraints**
+
+- Spec first: `SPEC-TASK-121`, the author's checkpoint before any write-capable delegation (`H-05`).
+- The button is an anchor, not a script — the no-JavaScript contract holds.
+- `Main.dc.html`, `HomeES.dc.html` and `HomeMobile.dc.html` in the same change, narrow states included; the derived pair regenerates by the tool.
+
+---
+
+## TASK 122 — Public visit counter in the footer · `feature` · `TODO`
+
+**Opened 2026-10-20**, from the same plan: the footer's metrics slot has been a designed reservation since pass 1 (`footer.metrics_slot`, both locales: "reserved slot, not built yet"), and the author chose the self-hosted shape over a third-party badge. The Worker that already answers `/api/contact` gains `/api/metrics`: a beacon in the footer counts a visit once per session, D1 holds the counter with an atomic increment — KV reads-modify-writes and loses concurrent increments, and an undercounted "measured" number is exactly what `C-01` forbids — and the slot renders the count with a fallback line when JavaScript is off or the endpoint is absent. Crawlers never execute the beacon, so the count stays honest by construction.
+
+**Goal served (`P-19`):** goal 1, publication, on the slot the design reserved for exactly this; goal 2 second — the counter is a Workers-plus-D1 pattern the export can carry.
+
+**Done:** the footer shows the visit count on every page in both locales, backed by `/api/metrics` on the existing Worker with an atomic D1 counter; the slot keeps its fallback with no JavaScript; `check-terms`, `check-content` and `node scripts/gate.mjs --profile full` pass; and the deploy's route verifier still walks every content route green.
+
+**Constraints**
+
+- Spec first: `SPEC-TASK-122`, checkpoint before delegation (`H-05`).
+- **One Worker, one route list**: `run_worker_first` in `wrangler.jsonc` gains the route; no second workflow, no second deploy path — `check-docs` validates `ci.yml` by name.
+- **The counting logic lives in `site/lib/`** — the mutated surface (`T-01`) — with the route handler thin in `site/worker/index.mjs`, the same seam the contact form uses.
+- **D1, not KV**, the choice stated in the spec with the arithmetic reason.
+- **Author actions**: `wrangler d1 create` plus the initial migration, commands prepared by the item — the same shape as the contact form's secrets.
+- **Strings are content** (`S-01`): the label, the "since" framing and the fallback line are `ui.footer.*`, author-pasted, both locales (`C-09`).
+- The number is locale-formatted, never hardcoded digits; the counter starts at the deploy, so the label carries the honest "since" framing (`C-01`, `C-11`).
 
 ---
 
