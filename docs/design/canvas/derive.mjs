@@ -22,6 +22,14 @@ import { fileURLToPath } from "node:url";
 
 const dir = join(dirname(fileURLToPath(import.meta.url)), "src");
 
+// Both halves of this tool match bytes exactly: the ES table's from-blocks span lines,
+// and the derived-vs-disk comparison is byte-equal. The repository's blobs are LF and
+// CI checks them out as LF, but a `core.autocrlf=true` checkout materializes the same
+// files with CRLF — on which a from-block containing \n stops matching. Reading through
+// this one boundary folds \r\n to \n, making every comparison downstream
+// EOL-agnostic without rewriting what any checkout holds on disk.
+export const readArtboard = (path) => readFileSync(path, "utf8").replaceAll("\r\n", "\n");
+
 // ---------------------------------------------------------------------------
 // HomeES — copy substitution ONLY. Nothing about the layout, the CSS or the markup
 // structure may differ: that is what makes it evidence rather than a second design.
@@ -61,10 +69,14 @@ const ES = [
 
   // --- employers ---------------------------------------------------------------
   [`<h2>Where I've worked</h2>`, `<h2>D&oacute;nde he trabajado</h2>`],
+  [`href="/experience"><span class="employer-name">Freelancer</span>`, `href="/es/experience"><span class="employer-name">Trabajo independiente</span>`],
   [`href="/experience"><span class="logo-slot">logo</span><span class="employer-name">NICE`, `href="/es/experience"><span class="logo-slot">logo</span><span class="employer-name">NICE`],
   [`href="/experience"><span class="logo-slot">logo</span><span class="employer-name">Banco`, `href="/es/experience"><span class="logo-slot">logo</span><span class="employer-name">Banco`],
   [`href="/experience"><span class="logo-slot">logo</span><span class="employer-name">Mamaya`, `href="/es/experience"><span class="logo-slot">logo</span><span class="employer-name">Mamaya`],
   [`href="/experience"><span class="logo-slot">logo</span><span class="employer-name">Av&iacute;cola`, `href="/es/experience"><span class="logo-slot">logo</span><span class="employer-name">Av&iacute;cola`],
+  [`aria-label="Previous"`, `aria-label="Anterior"`],
+  [`aria-label="Next"`, `aria-label="Siguiente"`],
+  [`aria-label="Freelancer"`, `aria-label="Trabajo independiente"`],
 
   // --- work --------------------------------------------------------------------
   [`<h2>What I&rsquo;ve built</h2>`, `<h2>Lo que he construido</h2>`],
@@ -210,7 +222,7 @@ const MIRRORS = [
 export function derive() {
   const out = {};
 
-  let s = readFileSync(join(dir, "Main.dc.html"), "utf8");
+  let s = readArtboard(join(dir, "Main.dc.html"));
   const missing = [];
   for (const [from, to, mode] of ES) {
     if (!s.includes(from)) { missing.push(from.slice(0, 72)); continue; }
@@ -222,7 +234,7 @@ export function derive() {
   out["HomeES.dc.html"] = s;
 
   for (const [from, to] of MIRRORS) {
-    const src = readFileSync(join(dir, from), "utf8");
+    const src = readArtboard(join(dir, from));
     out[to] = src.replace(/^<!doctype html>\r?\n/i, `<!doctype html>\n${BANNER(from)}`);
   }
   return out;
@@ -237,7 +249,7 @@ if (process.argv[1] && /derive\.mjs$/.test(process.argv[1].split(/[\\/]/).pop())
   for (const [name, content] of Object.entries(out)) {
     const path = join(dir, name);
     let current = null;
-    try { current = readFileSync(path, "utf8"); } catch { /* not written yet */ }
+    try { current = readArtboard(path); } catch { /* not written yet */ }
     if (current === content) continue;
     stale.push(name);
     if (!check) writeFileSync(path, content, "utf8");

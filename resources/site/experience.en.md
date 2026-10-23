@@ -7,6 +7,17 @@ confidentiality: sanitized
 h1: "I had to solve the same problem in every place I worked"
 intro: "A system built for a reality that had stopped existing, and a business that moved on faster than it did. Another industry, the same shape. Again."
 roles:
+  - company: "Freelancer"
+    period: "2026–present"
+    title: "Software Engineer"
+    body:
+      - "Since July 2026 I have been working independently: two products of my own and two custom builds for local companies, all four in progress."
+      - "A multi-user, multi-currency family finance system replacing the Excel workbook our household's money lived in: funds, movements, budgets, cards, loans and assets over an exact-decimal ledger."
+      - "A multi-tenant SaaS for real-time queues: a visitor opens a practice's public page, takes a turn and watches their position update live, while the panel calls the next one."
+      - "Custom development for a local real estate company, scoped end to end: a showcase for their property listings, advisor-hiring tracking, and a management dashboard, integrated with their CRM."
+      - "A landing page for a concrete posts company, with its hosting and a content administration setup so the client maintains their own site."
+    stack: ["C#", ".NET", "Astro", "React", "Python", "Django", "Node.js", "PostgreSQL", "SignalR", "Docker"]
+
   - company: "NICE"
     logo: nice.svg
     period: "2025–2026"

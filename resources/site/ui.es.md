@@ -34,6 +34,8 @@ socials:
 home:
   standalone_label: "Fuera de la plataforma: otro empleador, otro sistema"
   employers_heading: "Acá ya trabajé"
+  employers_prev: "Anterior"
+  employers_next: "Siguiente"
   work_heading: "Lo que hice"
   stack_heading: "Tecnologías que he usado"
   contact_heading: "Hablemos"

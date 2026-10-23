@@ -6,9 +6,9 @@ Adapter. Project identity, layout, commands and pointers. **No rule bodies live 
 
 The content source of truth for a Senior Software Engineer portfolio, plus the harness that builds the site from it. Everything publishable is Markdown, bilingual (English + Spanish), sanitized.
 
-**The site exists and builds.** `site/` is an Astro project the gate type-checks and smoke-tests on every run. What remains is publication, not construction — `TASK 30`, `TASK 32`.
+**The site is built and live.** `site/` is an Astro project the gate type-checks and smoke-tests on every run; `main` deploys to Cloudflare through CI on every merged pull request, and the repository is public. What remains is tracked in `TASKS.md`.
 
-**Author:** Luis Octavio Antelo Mansilla — backend engineer / solution architect, ~5 years, most recently Senior Software Engineer at NICE (through June 2026). Cochabamba, Bolivia (GMT-4, full overlap with US business hours). Open to remote, or hybrid/relocation depending on the role.
+**Author:** Luis Octavio Antelo Mansilla — backend engineer / solution architect, ~5 years, most recently Senior Software Engineer at NICE (through June 2026), independent work since July 2026. Cochabamba, Bolivia (GMT-4, full overlap with US business hours). Open to remote, or hybrid/relocation depending on the role.
 
 **Target roles:** Senior Software Engineer · Senior Backend Engineer · Solution Architect — remote, international, English-speaking.
 
@@ -68,4 +68,4 @@ private/               NEVER COMMITTED
 
 Agents write to the working tree. Agents never write to git, `resources/`, `evidence/` or `private/`, and never delegate on an unapproved spec. Five hard rules, all enforced at rung 1: `.claude/rules/00-hard-rules.md`.
 
-The human owns commits. That is what preserves the ability to see, in one diff, everything an agent did.
+The human owns commits. That is what preserves the ability to see, in one diff, everything an agent did. Work happens on `task/NNN-slug` branches, one per work item, landed by pull request into `main` — the only branch CI deploys, and protected so nothing reaches it without a green gate.
