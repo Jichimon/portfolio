@@ -34,6 +34,8 @@ socials:
 home:
   standalone_label: "Not part of the platform: a different employer, a different system"
   employers_heading: "Where I've worked"
+  employers_prev: "Previous"
+  employers_next: "Next"
   work_heading: "What I've done"
   stack_heading: "Technologies I've worked with"
   contact_heading: "Get in touch"

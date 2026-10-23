@@ -69,11 +69,14 @@ const ES = [
 
   // --- employers ---------------------------------------------------------------
   [`<h2>Where I've worked</h2>`, `<h2>D&oacute;nde he trabajado</h2>`],
-  [`href="/experience"><span class="employer-name">Independent work</span>`, `href="/es/experience"><span class="employer-name">Trabajo independiente</span>`],
+  [`href="/experience"><span class="employer-name">Freelancer</span>`, `href="/es/experience"><span class="employer-name">Trabajo independiente</span>`],
   [`href="/experience"><span class="logo-slot">logo</span><span class="employer-name">NICE`, `href="/es/experience"><span class="logo-slot">logo</span><span class="employer-name">NICE`],
   [`href="/experience"><span class="logo-slot">logo</span><span class="employer-name">Banco`, `href="/es/experience"><span class="logo-slot">logo</span><span class="employer-name">Banco`],
   [`href="/experience"><span class="logo-slot">logo</span><span class="employer-name">Mamaya`, `href="/es/experience"><span class="logo-slot">logo</span><span class="employer-name">Mamaya`],
   [`href="/experience"><span class="logo-slot">logo</span><span class="employer-name">Av&iacute;cola`, `href="/es/experience"><span class="logo-slot">logo</span><span class="employer-name">Av&iacute;cola`],
+  [`aria-label="Previous"`, `aria-label="Anterior"`],
+  [`aria-label="Next"`, `aria-label="Siguiente"`],
+  [`aria-label="Freelancer"`, `aria-label="Trabajo independiente"`],
 
   // --- work --------------------------------------------------------------------
   [`<h2>What I&rsquo;ve built</h2>`, `<h2>Lo que he construido</h2>`],

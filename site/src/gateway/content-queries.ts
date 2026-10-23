@@ -79,6 +79,8 @@ interface SocialLink {
 
 interface HomeStrings {
   employers_heading: string;
+  employers_prev: string;
+  employers_next: string;
   work_heading: string;
   standalone_label: string;
   stack_heading: string;

@@ -13,36 +13,105 @@ interface Props {
   heading: string;
   href: string;
   entries: EmployerEntry[];
+  prevLabel: string;
+  nextLabel: string;
 }
 
-const { heading, href, entries } = Astro.props;
+const { heading, href, entries, prevLabel, nextLabel } = Astro.props;
+
+// Slots need two neighbours to mean anything: three or more cards form the ring, and
+// anything less renders the plain static row. The rest state is rendered right here
+// rather than left to the script — the first card centred, its declared neighbours at
+// the sides, the rest hidden — so the strip composes as a readable coverflow before
+// any script runs, and stays one if the script never loads.
+const carousel = entries.length >= 3;
+// The dots carry the position, each named by the company it stands for — no counters
+// anywhere, the author's explicit call — and the group borrows the section heading's
+// own words as its accessible name, so the position indicator adds zero visible copy
+// of its own.
+const initialPos = (index: number): string | undefined => {
+  if (!carousel) return undefined;
+  if (index === 0) return 'active';
+  if (index === 1) return 'right';
+  if (index === entries.length - 1) return 'left';
+  return 'hidden';
+};
 ---
 
 {entries.length > 0 && (
   <section class="employers-section" id="employers">
-    <h2 class="employers-section__heading">{heading}</h2>
-    <div class="employers-section__row">
-      {entries.map((entry) => (
-        // The caller (getExperienceRecord) hands back the full employment record entry;
-        // only company/period/anchor/logo/logoDark cross into EmployerCard, named rather
-        // than spread, so a field this strip has no use for (paragraphs, stack,
-        // caseStudyRows) never leaks into a child component that does not declare it.
-        // `anchor`, `logo` and `logoDark` are conditionally spread rather than always
-        // named, so an absent one leaves no key on the child's props at all — the same
-        // Object.hasOwn convention EmploymentEntry.astro already relies on for `logo`.
-        // `href` still carries the plain experience route; EmployerCard is the one that
-        // knows how to fold an anchor into it, so every card that has no anchor still
-        // links to the page rather than to a broken fragment.
-        <EmployerCard
-          company={entry.company}
-          period={entry.period}
-          href={href}
-          {...(entry.anchor === undefined ? {} : { anchor: entry.anchor })}
-          {...(entry.logo === undefined ? {} : { logo: entry.logo })}
-          {...(entry.logoDark === undefined ? {} : { logoDark: entry.logoDark })}
-        />
-      ))}
-    </div>
+    <h2 class="employers-section__heading" id="employers-heading">{heading}</h2>
+    {carousel ? (
+      <div class="employers-section__stage">
+        {entries.map((entry, index) => (
+          // The caller (getExperienceRecord) hands back the full employment record entry;
+          // only company/period/anchor/logo/logoDark cross into EmployerCard, named rather
+          // than spread, so a field this strip has no use for (paragraphs, stack,
+          // caseStudyRows) never leaks into a child component that does not declare it.
+          // `anchor`, `logo` and `logoDark` are conditionally spread rather than always
+          // named, so an absent one leaves no key on the child's props at all — the same
+          // Object.hasOwn convention EmploymentEntry.astro already relies on for `logo`.
+          // `href` still carries the plain experience route; EmployerCard is the one that
+          // knows how to fold an anchor into it, so every card that has no anchor still
+          // links to the page rather than to a broken fragment. The slot around the card
+          // owns the geometry so the card can keep owning its design untouched.
+          <div class="employers-section__slot" data-carousel-slot data-pos={initialPos(index)}>
+            <EmployerCard
+              company={entry.company}
+              period={entry.period}
+              href={href}
+              {...(entry.anchor === undefined ? {} : { anchor: entry.anchor })}
+              {...(entry.logo === undefined ? {} : { logo: entry.logo })}
+              {...(entry.logoDark === undefined ? {} : { logoDark: entry.logoDark })}
+            />
+          </div>
+        ))}
+        <button class="employers-section__nav employers-section__nav--prev" type="button" aria-label={prevLabel}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4-8 8 8 8" /></svg>
+        </button>
+        <button class="employers-section__nav employers-section__nav--next" type="button" aria-label={nextLabel}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 8 8-8 8" /></svg>
+        </button>
+      </div>
+      <div class="employers-section__dots" role="group" aria-labelledby="employers-heading">
+        {entries.map((entry) => (
+          <button class="employers-section__dot" type="button" aria-label={entry.company}></button>
+        ))}
+      </div>
+    ) : (
+      <div class="employers-section__row">
+        {entries.map((entry) => (
+          <EmployerCard
+            company={entry.company}
+            period={entry.period}
+            href={href}
+            {...(entry.anchor === undefined ? {} : { anchor: entry.anchor })}
+            {...(entry.logo === undefined ? {} : { logo: entry.logo })}
+            {...(entry.logoDark === undefined ? {} : { logoDark: entry.logoDark })}
+          />
+        ))}
+      </div>
+    )}
+    {carousel && (
+      <script>
+        {
+          // Same shape the layout and the contact section use: a braced block around a
+          // dynamic import, so the module ships with this component and never blocks
+          // anything drawn above it. The stage composes without it — this is the movement:
+          // the arrows, the dots, the keyboard, the swipe, and the click contract.
+          import('../../../behaviour/carousel/employer-carousel.mjs').then(function (behaviour) {
+            var sections = document.querySelectorAll('.employers-section');
+
+            sections.forEach(function (section) {
+              // instanceof rather than a cast, and not only to narrow the type: a selector
+              // that stops matching a section is a template change this would otherwise
+              // carry into a runtime error on a page nobody was testing.
+              if (section instanceof HTMLElement) behaviour.mount(section);
+            });
+          });
+        }
+      </script>
+    )}
   </section>
 )}
 
@@ -60,21 +129,209 @@ const { heading, href, entries } = Astro.props;
     margin: 0 0 28px;
   }
 
+  /* The static fallback: fewer than three cards form no ring, so they render as the
+     plain row the strip always was — nothing here scrolls, nothing hides. */
   .employers-section__row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    display: flex;
     gap: 20px;
   }
 
-  @media (max-width: 1180px) {
-    .employers-section__row {
-      grid-template-columns: repeat(2, 1fr);
-    }
+  /* The stage: one card front and centred, its neighbours smaller and lower behind it
+     at each side, the rest hidden underneath — the strip reads as a carousel at a
+     glance, before anything moves. The cards fly between slots on one long curve the
+     moment it does. The stage clips its own overflow — a card peeking past the
+     viewport's edge at the narrow widths is a peek, never a page scrollbar — and
+     carries 3px of headroom so the card's hover lift never clips against it. */
+  .employers-section__stage {
+    position: relative;
+    height: 179px;
+    isolation: isolate;
+    overflow: hidden;
+    /* The stage is a swipe surface first: a drag across it is a carousel step, never
+       a text selection painted across three cards. */
+    user-select: none;
+  }
+
+  .employers-section__slot {
+    position: absolute;
+    top: 29px;
+    left: calc(50% - 105px);
+    width: 210px;
+    transition:
+      left 580ms cubic-bezier(0.22, 0.75, 0.25, 1),
+      top 580ms cubic-bezier(0.22, 0.75, 0.25, 1),
+      width 580ms cubic-bezier(0.22, 0.75, 0.25, 1),
+      transform 580ms cubic-bezier(0.22, 0.75, 0.25, 1),
+      opacity 420ms ease,
+      filter 580ms ease,
+      visibility 580ms;
+  }
+
+  .employers-section__slot[data-pos='active'] {
+    z-index: 3;
+    top: 3px;
+    left: calc(50% - 140px);
+    width: 280px;
+  }
+
+  /* The sides recede — opacity .75, blur 1.5px — so the centred card keeps the
+     attention and the neighbours read as the depth around it: the reference dims
+     its sides with filter: saturate, which reads on full-colour art and as nothing
+     on this near-monochrome card, so the blur carries the depth-of-field instead.
+     The treatment lives on the slot; the card's own design is untouched. */
+  .employers-section__slot[data-pos='left'],
+  .employers-section__slot[data-pos='right'] {
+    z-index: 2;
+    opacity: 0.75;
+    filter: blur(1.5px);
+  }
+
+  .employers-section__slot[data-pos='left'] {
+    left: calc(50% - 370px);
+  }
+
+  .employers-section__slot[data-pos='right'] {
+    left: calc(50% + 160px);
+  }
+
+  .employers-section__slot[data-pos='hidden'] {
+    z-index: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* The card is the child component; the slot owns the geometry and the card fills it,
+     design untouched. A shared min-height, because a wordmark-only card is content-
+     shorter than a logo card and slots of uneven height read as a collage rather
+     than a carousel. */
+  .employers-section__slot :global(.employer-card) {
+    width: 100%;
+    min-height: 150px;
+  }
+
+  /* The top rule cycles across the strip by card order, period 3 — the same cycle and
+     the same reason the card's own stylesheet carries for the static row. Keyed on
+     nth-of-type so the arrow buttons sharing the stage shift nothing: it counts only
+     the slot divs. */
+  .employers-section__slot:nth-of-type(3n + 2) :global(.employer-card) {
+    border-top-color: var(--color-ink);
+  }
+
+  .employers-section__slot:nth-of-type(3n) :global(.employer-card) {
+    border-top-color: var(--color-border-strong);
+  }
+
+  /* The step arrows and the dots, in the site's own tokens — quiet circles at the
+     flanks, thin pills below the stage. */
+  .employers-section__nav {
+    position: absolute;
+    z-index: 5;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background: var(--color-bg-elevated);
+    color: var(--color-ink);
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition:
+      border-color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .employers-section__nav:hover {
+    border-color: var(--color-ink);
+  }
+
+  .employers-section__nav:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
+  .employers-section__nav svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+
+  /* The flank offset is clamped, not fixed: at the wide widths the arrows sit 480px
+     either side of the strip's centre, but the stage clips its own overflow, and a
+     480px offset would push a flank past the stage's edge at a 1280 viewport — the
+     arrow would be clipped out of existence at exactly the laptop widths. max()
+     floors it at the edge instead: the arrow rides the flank when there is one and
+     the edge when there is not, at every width, one rule. */
+  .employers-section__nav--prev {
+    left: max(8px, calc(50% - 480px));
+  }
+
+  .employers-section__nav--next {
+    right: max(8px, calc(50% - 480px));
+  }
+
+  .employers-section__dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 18px;
+  }
+
+  .employers-section__dot {
+    width: 18px;
+    height: 5px;
+    padding: 0;
+    border: 0;
+    border-radius: 99px;
+    background: var(--color-border);
+    cursor: pointer;
+    transition:
+      width 260ms ease,
+      background 260ms ease;
+  }
+
+  .employers-section__dot[aria-current='true'] {
+    width: 36px;
+    background: var(--color-ink);
   }
 
   @media (max-width: 560px) {
-    .employers-section__row {
-      grid-template-columns: 1fr;
+    .employers-section__slot[data-pos='active'] {
+      left: 50%;
+      transform: translateX(-50%);
+      top: 3px;
+      width: min(70vw, 250px);
+    }
+
+    .employers-section__slot[data-pos='left'] {
+      left: 0;
+      transform: translateX(-72%);
+      top: 29px;
+      width: 46vw;
+    }
+
+    .employers-section__slot[data-pos='right'] {
+      left: 100%;
+      transform: translateX(-28%);
+      top: 29px;
+      width: 46vw;
+    }
+
+    .employers-section__slot[data-pos='hidden'] {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+  }
+
+  /* The flight between slots is decoration; the position it lands on is not. A visitor
+     who asked for less motion still gets every card where the strip says it stands. */
+  @media (prefers-reduced-motion: reduce) {
+    .employers-section__slot,
+    .employers-section__dot {
+      transition-duration: 0.01ms;
     }
   }
 </style>

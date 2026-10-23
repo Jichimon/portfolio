@@ -4,6 +4,7 @@ const PREVIEW_PORT = 4321;
 const PREVIEW_URL = `http://localhost:${PREVIEW_PORT}`;
 const READY_TIMEOUT_MS = 120_000;
 const READY_POLL_INTERVAL_MS = 250;
+const PREVIEW_START_ATTEMPTS = 3;
 
 // `--background` is NOT decoration. Astro's preview command decides between a
 // foreground server and a detached daemon by asking whether an AI coding agent is
@@ -38,6 +39,26 @@ function runAstro(args: string[]) {
   });
 }
 
+// `astro preview --background` waits for its own daemon and gives up on a 30s deadline
+// hardcoded in astro's CLI (dist/cli/server.js, `const timeout = 3e4`) — not
+// configurable, and not enough on a dev machine that is busy: a parallel typecheck
+// build on the same box pushes the daemon's first answer past the deadline, the
+// start exits 1, and globalSetup dies having run zero tests. Observed twice on
+// 2026-10-22, both times under load and both times healthy on the immediate retry.
+// So: retry. The failed attempt leaves the daemon's lock file behind; `preview
+// stop` clears it before each attempt, the same cleanup the global teardown runs.
+function startPreviewDaemon() {
+  for (let attempt = 1; attempt <= PREVIEW_START_ATTEMPTS; attempt += 1) {
+    try {
+      runAstro(['preview', '--background']);
+      return;
+    } catch (error) {
+      if (attempt === PREVIEW_START_ATTEMPTS) throw error;
+      runAstro(['preview', 'stop']);
+    }
+  }
+}
+
 async function waitUntilPreviewAnswers() {
   const deadline = Date.now() + READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
@@ -59,7 +80,7 @@ export default async function globalSetup() {
   // a build from twenty minutes earlier.
   runAstro(['preview', 'stop']);
   runAstro(['build']);
-  runAstro(['preview', '--background']);
+  startPreviewDaemon();
   await waitUntilPreviewAnswers();
 
   return async () => {

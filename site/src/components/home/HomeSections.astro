@@ -48,7 +48,13 @@ const { thesis } = page.data as { thesis?: string };
   </Hero>
 )}
 
-<EmployersSection heading={ui.data.home.employers_heading} href={experienceHref} entries={employers} />
+<EmployersSection
+  heading={ui.data.home.employers_heading}
+  href={experienceHref}
+  entries={employers}
+  prevLabel={ui.data.home.employers_prev}
+  nextLabel={ui.data.home.employers_next}
+/>
 
 <WorkBento
   heading={ui.data.home.work_heading}

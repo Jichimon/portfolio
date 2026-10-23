@@ -9,7 +9,7 @@ intro: "Un sistema construido para una realidad que ya no existía, y un negocio
 roles:
   - company: "Trabajo independiente"
     period: "2026–present"
-    title: "Senior Software Engineer"
+    title: "Software Engineer"
     body:
       - "Desde julio de 2026 trabajo de manera independiente: dos productos propios y dos desarrollos a medida para empresas locales, los cuatro en proceso."
       - "Un sistema de finanzas familiares multiusuario y multimoneda que reemplaza el Excel en el que vivía la plata de la casa: fondos, movimientos, presupuestos, tarjetas, préstamos y activos sobre un ledger de decimales exactos."

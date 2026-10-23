@@ -117,6 +117,19 @@ async function visitHome(page: Page, lang: Locale) {
   expect(response?.status(), `${homePathFor(lang)} did not answer 200`).toBe(200);
 }
 
+// The carousel's rest state is server-rendered, but its movement arrives with the
+// behaviour module's dynamic import — and an interaction test that clicks before
+// the module mounted is racing it: no listeners yet, no step, and a drag's click
+// even navigates away. The module's own first write is the first dot's aria-current,
+// which the server never renders; waiting for it is waiting for the carousel to be
+// alive, the precondition of every interaction below.
+async function untilCarouselIsAlive(page: Page) {
+  await expect(page.locator('#employers .employers-section__dot').first()).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
+}
+
 // HOME-003 — the two bento groups, with the counts taken from the content rather
 // than written down here, so a sixth case study moves this assertion by itself.
 for (const lang of LOCALES) {
@@ -230,7 +243,10 @@ for (const lang of LOCALES) {
     // /experience regardless of anchors, so it is the one card that would appear to
     // work with the whole mechanism broken. This asserts the promise itself — the
     // page actually scrolled — not merely that the href and the target both exist.
+    // Since the strip became a carousel, the non-first card starts at a side slot:
+    // the first click CENTRES it, the second is the link it always was.
     const nonFirstIndex = 1;
+    await cards.nth(nonFirstIndex).click();
     await cards.nth(nonFirstIndex).click();
     await page.waitForLoadState('networkidle');
 
@@ -368,10 +384,12 @@ for (const lang of LOCALES) {
   });
 }
 
-// EMP-004's other edge case: the caption must never become a paragraph. At each
-// sanctioned artboard width, the row must not scroll horizontally — a column forced
-// wider than its own share of the grid never wraps onto a second row, it overflows the
-// viewport instead — and no name, the longest included, sets on more than two lines.
+// EMP-004's other edge case: the caption must never become a paragraph. Since the strip
+// became a coverflow carousel, the STAGE positions its cards absolutely and EMP-014
+// asserts that mechanism; what this test holds is what it always held — the PAGE must
+// never scroll horizontally (the stage clips its own overflow, so a card peeking past
+// the viewport's edge is a peek, never a scrollbar), and no name, the longest included,
+// sets on more than two lines inside the cards at their slot widths.
 const ARTBOARD_WIDTHS = [390, 1024, 1440] as const;
 for (const lang of LOCALES) {
   for (const width of ARTBOARD_WIDTHS) {
@@ -403,6 +421,191 @@ for (const lang of LOCALES) {
       }
     });
   }
+}
+
+// EMP-014 — the strip is a coverflow carousel: one card centred and largest, its two
+// neighbours smaller and lower at the sides, every remaining card hidden underneath.
+// The slots are rendered server-side and kept in step by the behaviour module, so the
+// initial state is assertable the moment the page paints. The hidden cards are the
+// accessibility edge: invisible to the tree and unreachable by tab, or the stage is
+// a trap rather than a carousel.
+for (const lang of LOCALES) {
+  test(`the strip renders one active card, its two neighbours, and the rest hidden in "${lang}"`, async ({ page }) => {
+    const roles = rolesFor(lang);
+    test.skip(roles.length < 3, 'fewer than three roles: the static fallback renders instead');
+
+    await visitHome(page, lang);
+
+    await expect(page.locator('#employers [data-pos]')).toHaveCount(roles.length);
+    await expect(page.locator('#employers [data-pos="active"]')).toHaveCount(1);
+    await expect(page.locator('#employers [data-pos="left"]')).toHaveCount(1);
+    await expect(page.locator('#employers [data-pos="right"]')).toHaveCount(1);
+    await expect(page.locator('#employers [data-pos="hidden"]')).toHaveCount(roles.length - 3);
+
+    const hiddenCards = page.locator('#employers [data-pos="hidden"] .employer-card');
+    const hiddenCount = await hiddenCards.count();
+    for (let index = 0; index < hiddenCount; index += 1) {
+      await expect(hiddenCards.nth(index)).toHaveAttribute('tabindex', '-1');
+      await expect(hiddenCards.nth(index)).toHaveAttribute('aria-hidden', 'true');
+    }
+
+    // Exactly the three visible cards are reachable by tab — no more, no fewer.
+    const visibleCards = page.locator(
+      '#employers [data-pos="active"] .employer-card, #employers [data-pos="left"] .employer-card, #employers [data-pos="right"] .employer-card',
+    );
+    await expect(visibleCards).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await expect(visibleCards.nth(index)).not.toHaveAttribute('tabindex', '-1');
+    }
+  });
+}
+
+// EMP-015 — the step arrows advance the carousel one slot at a time, and the ring
+// wraps: a step back from the first card lands on the last, a step forward from the
+// last lands on the first. Both wraps are exercised in two clicks. The arrows also
+// carry their invisible names, read off the ui strings — the one content step the
+// author owns, asserted so it cannot ship silently missing.
+for (const lang of LOCALES) {
+  test(`the step arrows advance the carousel and wrap past both ends in "${lang}"`, async ({ page }) => {
+    const roles = rolesFor(lang);
+    test.skip(roles.length < 3, 'fewer than three roles: the static fallback renders instead');
+
+    await visitHome(page, lang);
+    await untilCarouselIsAlive(page);
+
+    const ui = uiStringsFor(lang).home;
+    expect(ui.employers_prev, 'the ui strings lack the prev arrow label — a content step the author owns').toBeTruthy();
+    expect(ui.employers_next, 'the ui strings lack the next arrow label — a content step the author owns').toBeTruthy();
+    await expect(page.locator('#employers .employers-section__nav--prev')).toHaveAttribute('aria-label', ui.employers_prev);
+    await expect(page.locator('#employers .employers-section__nav--next')).toHaveAttribute('aria-label', ui.employers_next);
+
+    const activeName = page.locator('#employers [data-pos="active"] .employer-card__name');
+    await expect(activeName).toHaveText(roles[0].company);
+
+    // Back from the first card wraps to the last.
+    await page.locator('#employers .employers-section__nav--prev').click();
+    await expect(activeName).toHaveText(roles[roles.length - 1].company);
+
+    // Forward from the last wraps back to the first.
+    await page.locator('#employers .employers-section__nav--next').click();
+    await expect(activeName).toHaveText(roles[0].company);
+  });
+}
+
+// EMP-016 — the dots carry the position the progress track once did: one per declared
+// role, each named by the company it stands for (no counters anywhere), and the dot
+// standing for the active card holds the widened current state. A jump moves that
+// state both ways: the target's dot gains it and the previous one loses it.
+for (const lang of LOCALES) {
+  test(`the dots reflect the active card and jump to their own in "${lang}"`, async ({ page }) => {
+    const roles = rolesFor(lang);
+    test.skip(roles.length < 3, 'fewer than three roles: the static fallback renders instead');
+
+    await visitHome(page, lang);
+
+    const dots = page.locator('#employers .employers-section__dot');
+    await expect(dots).toHaveCount(roles.length);
+
+    const dotFor = (company: string) =>
+      page.locator(`#employers .employers-section__dot[aria-label="${company}"]`);
+    await expect(dotFor(roles[0].company)).toHaveAttribute('aria-current', 'true');
+
+    const target = roles[2].company;
+    await dotFor(target).click();
+    await expect(dotFor(target)).toHaveAttribute('aria-current', 'true');
+    await expect(dotFor(roles[0].company)).not.toHaveAttribute('aria-current', 'true');
+    await expect(page.locator('#employers [data-pos="active"] .employer-card__name')).toHaveText(target);
+  });
+}
+
+// EMP-017 — the author's click contract, both halves: a side card's click CENTRES it
+// (the page does not navigate), and the centred card's click NAVIGATES to its own
+// anchored section on the experience page. The side half is what a coverflow is for;
+// the centre half is what the card has always been — the entry to the employer's story.
+for (const lang of LOCALES) {
+  test(`a side card's click centres it and the centred card's click navigates in "${lang}"`, async ({ page }) => {
+    const roles = rolesFor(lang);
+    test.skip(roles.length < 3, 'fewer than three roles: the static fallback renders instead');
+
+    await visitHome(page, lang);
+    await untilCarouselIsAlive(page);
+
+    const rightCard = page.locator('#employers [data-pos="right"] .employer-card');
+    const rightName = (await rightCard.locator('.employer-card__name').textContent()) ?? '';
+
+    await rightCard.click();
+    await expect(page.locator('#employers [data-pos="active"] .employer-card__name')).toHaveText(rightName);
+    expect(page.url(), 'a side card click navigated').not.toContain('experience');
+
+    const expectedHref = experienceAnchorHrefFor(lang, rightName);
+    await page.locator('#employers [data-pos="active"] .employer-card').click();
+    await expect(page).toHaveURL(new RegExp(`${escapeForRegExp(expectedHref)}$`));
+  });
+}
+
+// EMP-018 — the keyboard steps the carousel from inside it: with focus on a control
+// within the strip, the left and right arrow keys move one slot each way, and the
+// keypress never scrolls the page sideways.
+for (const lang of LOCALES) {
+  test(`the arrow keys step the carousel from within it in "${lang}"`, async ({ page }) => {
+    const roles = rolesFor(lang);
+    test.skip(roles.length < 3, 'fewer than three roles: the static fallback renders instead');
+
+    await visitHome(page, lang);
+    await untilCarouselIsAlive(page);
+
+    const activeName = page.locator('#employers [data-pos="active"] .employer-card__name');
+    await page.locator('#employers .employers-section__nav--next').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(activeName).toHaveText(roles[1].company);
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(activeName).toHaveText(roles[0].company);
+    const pageScrollsWithTheKeypress = await page.evaluate(
+      () => document.body.scrollWidth <= document.body.clientWidth,
+    );
+    expect(pageScrollsWithTheKeypress, 'the page scrolls horizontally after a key step').toBe(true);
+  });
+}
+
+// EMP-019 — the drag threshold, the reference's own number: a horizontal drag past
+// 45px steps one slot in the drag's direction, and a shorter one changes nothing.
+// A drag left brings the NEXT card in, the way every carousel the visitor has ever
+// used does it.
+for (const lang of LOCALES) {
+  test(`a drag past the threshold steps the carousel and a short one does not in "${lang}"`, async ({ page }) => {
+    const roles = rolesFor(lang);
+    test.skip(roles.length < 3, 'fewer than three roles: the static fallback renders instead');
+
+    await visitHome(page, lang);
+    await untilCarouselIsAlive(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    const activeName = page.locator('#employers [data-pos="active"] .employer-card__name');
+    const stage = page.locator('#employers .employers-section__stage');
+    // The stage sits below the fold at this height; a drag is raw pointer
+    // coordinates, so the stage must be in view before the gesture or the
+    // pointerdown lands outside the viewport and never reaches it.
+    await stage.scrollIntoViewIfNeeded();
+    const box = await stage.boundingBox();
+    if (!box) throw new Error('the carousel stage did not render');
+    const midX = box.x + box.width / 2;
+    const midY = box.y + box.height / 2;
+
+    // Past the threshold: one step forward.
+    await page.mouse.move(midX, midY);
+    await page.mouse.down();
+    await page.mouse.move(midX - 120, midY, { steps: 4 });
+    await page.mouse.up();
+    await expect(activeName).toHaveText(roles[1].company);
+
+    // Shorter than the threshold: nothing moves.
+    await page.mouse.move(midX, midY);
+    await page.mouse.down();
+    await page.mouse.move(midX - 20, midY, { steps: 2 });
+    await page.mouse.up();
+    await expect(activeName).toHaveText(roles[1].company);
+  });
 }
 
 // EMP-005 — a role with no declared logo renders its name at the card's original,
