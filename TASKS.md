@@ -3439,17 +3439,23 @@ The hero thesis is the same class of author-owned content and rides the same han
 
 ---
 
-## TASK 121 — Hero call to action · `feature` · `TODO`
+## TASK 121 — Hero: title, subtitle and call to action · `feature` · `DONE`
 
-**Opened 2026-10-20**, from the feature plan the author approved this cycle: the hero prints the thesis and offers no way to act on it, while the destination already exists and is proven — the nav's Contact anchor, `#contact`, and `TASK 117`'s landing work. One primary button under the thesis: label from content (`ui.home.hero_cta`, both locales, author-pasted), `href="#contact"`, styled after the form's submit, zero JavaScript. The three home artboards move in the same change — adding only the component makes the fidelity diff read the addition as drift (`TASK 116`'s precedent).
+**Opened 2026-10-20**, from the feature plan the author approved this cycle: the hero prints the thesis and offers no way to act on it, while the destination already exists and is proven — the nav's Contact anchor, `#contact`, and `TASK 117`'s landing work. **Scope expanded 2026-10-27 with the author:** the hero becomes a three-level composition — a title, a new lead line, and one action — and the title becomes the page's only `<h1>` (it had none). Title and subtitle are content in `home.{en,es}.md`; the CTA label is `ui.home.hero_cta`; all three are author-pasted (`H-02`). One primary button under the subtitle, styled after the form's submit, zero JavaScript. The three home artboards move in the same change — adding only the component makes the fidelity diff read the addition as drift (`TASK 116`'s precedent).
 
-**Goal served (`P-19`):** goal 1, publication. The reader who lands, reads the thesis and wants to talk has to scroll or hunt the rail today; the button is the single conversion beat the page lacks.
+**Closed 2026-10-27.** `node scripts/gate.mjs --profile full` — **GATE PASSED, 22 of 22**, mutation **80.24** against the 79.0 floor. `/` and `/es/` render the new title as the page's only `<h1>`, the subtitle, and the CTA into `#contact`; `home.smoke.spec.ts` is **63 of 63** after the six new tests were watched failing first. The content packet was applied by the author; the three artboards moved in the same change and `HomeES`/`HomeMobile` were regenerated. The screenshot review found an orphaned line break; `text-wrap: balance` was added to the title and subtitle, and the spec's drift log records it. K1 = 3 (`checkpoint=1`, `verify=2`). Detail: `progress/2026-10-27-01-task121-hero-composition.md`.
 
-**Done:** `/` and `/es/` render the CTA when the string exists and nothing when it does not (`S-01`), it lands on the contact section from both locales, the three artboards match, and `node scripts/gate.mjs --profile full` passes with e2e assertions derived from the strings collection.
+**Goal served (`P-19`):** goal 1, publication. The reader who lands, reads the hero and wants to talk has to scroll or hunt the rail today; the button is the single conversion beat the page lacks. The subtitle supplies the "what I do" the title deliberately leaves out, and the `<h1>` closes the page's only missing heading.
+
+**Done:** `/` and `/es/` render the title as the page's only `<h1>`, the subtitle when the string exists and nothing when it does not, and the CTA when its string exists and nothing when it does not (`S-01`); the CTA lands on the contact section from both locales; the three artboards match; and `node scripts/gate.mjs --profile full` passes with e2e assertions derived from the content and the strings collection.
 
 **Constraints**
 
 - Spec first: `SPEC-TASK-121`, the author's checkpoint before any write-capable delegation (`H-05`).
+- The title (`home.thesis`), the subtitle (`home.subtitle`) and the CTA (`ui.home.hero_cta`) are content; the author pastes them (`H-02`). The exact blocks are in `progress/handoff/2026-10-27-task121-content.md`.
+- The title is the page's only `<h1>`; the page had none before. No visual change: the existing display treatment carries over.
+- **No inline emphasis inside the title** — the hierarchy (title → muted subtitle → solid CTA) is the contrast. A second content key or Markdown split would be a separate decision.
+- The hero's content top padding moves 340 → 300px wide and 190 → 160px narrow so the CTA stays on the first screen; the artboards carry the same numbers.
 - The button is an anchor, not a script — the no-JavaScript contract holds.
 - `Main.dc.html`, `HomeES.dc.html` and `HomeMobile.dc.html` in the same change, narrow states included; the derived pair regenerates by the tool.
 

@@ -32,6 +32,7 @@ socials:
     url: "https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/"
 
 home:
+  hero_cta: "Let's talk"
   standalone_label: "Not part of the platform: a different employer, a different system"
   employers_heading: "Where I've worked"
   employers_prev: "Previous"
@@ -136,6 +137,7 @@ Every value above was lifted from an artboard in `docs/design/canvas/src/`, exce
 | `rail` | `Main.dc.html` 425–427, 439, 446 · `MobileSeam.dc.html` 99 for `menu`, which only appears in the narrow top bar |
 | `socials` | `Main.dc.html` 448 · the same two links the footer carries (`CaseStudiesIndex.dc.html` 343). Values are identical in both locales: a name and a URL, nothing to translate |
 | `home.employers_heading`, `home.contact_heading`, `home.contact_email` | `Main.dc.html` 531, 667, 687 |
+| `home.hero_cta` | `Main.dc.html` · the `.hero` section's CTA anchor · the author's wording, carried into the artboard in the same change |
 | the two seam labels | `MobileSeam.dc.html` 142 |
 | `article` | `CaseStudyDetail.dc.html` 288 · `PlatformPage.dc.html` 286 · `CaseStudiesIndex.dc.html` 334 |
 | `about` | `About.dc.html` 266, 270–272, 329–336 |
@@ -147,6 +149,8 @@ Every value above was lifted from an artboard in `docs/design/canvas/src/`, exce
 **`home.work_heading`, `home.stack_heading`, `home.contact_invite` and `home.contact_note` no longer come from the artboard.** They were lifted from `Main.dc.html` 542, 655, 668, then rewritten in `ui.es.md` and matched here. The source of those four strings is now the pair of content files, not the design.
 
 **And one substitution runs across the whole file.** Where an artboard value used an em-dash, this file uses a colon, a full stop or parentheses instead. So `home.standalone_label`, `home.contact_note`, `footer.metrics_slot` and `not_found.body` differ from their artboard source by that punctuation and by nothing else.
+
+**`home.hero_cta` did not exist in the design before this item.** The wording is the author's, and the artboard carries it in the same change; the artboard is the record of the decision, not its origin.
 
 ## Three things worth knowing before editing this file
 

@@ -4,10 +4,11 @@ lang: en
 type: page
 title: "Luis Octavio Antelo · Senior Software Engineer"
 confidentiality: sanitized
-thesis: "If you need your systems to do something new, talk to each other, or solve something specific... that's where I come in."
+thesis: "Software should fit the problem, not the other way around."
+subtitle: "I build practical software solutions, connect systems, and turn complex needs into things that work."
 ---
 
-This file is read for its frontmatter. The home page renders `title` and `thesis`; nothing renders this body, and that is the decision rather than an oversight.
+This file is read for its frontmatter. The home page renders `title`, `thesis` and `subtitle`; nothing renders this body, and that is the decision rather than an oversight.
 
 It is written down here so the next person to open the file does not restore the prose. Everything the body used to carry is addressable somewhere the site actually reads:
 
@@ -15,6 +16,7 @@ It is written down here so the next person to open the file does not restore the
 |---|---|
 | the role · location · timezone line | `ui.rail.role`, `ui.rail.location`, `ui.rail.timezone` |
 | the thesis sentence | the `thesis` key above, which the hero prints |
+| the hero subtitle | the `subtitle` key above, which the hero prints |
 | the four evidence bullets | the work section, derived from the case studies themselves |
 | "Get in touch" and the two profile links | `ui.home.contact_*` and `ui.socials` |
 | the five-years paragraph | `about.en.md`, which already tells that story at length |

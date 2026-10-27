@@ -13,6 +13,7 @@ import {
   ROUTED_PAGE_SLUGS,
   INDEX_PAGE_SLUG,
 } from '../../lib/content/routes/route-set.mjs';
+import { NAV_ITEMS, resolveNavItemHref } from '../../lib/nav/nav-structure.mjs';
 
 // Same reason as the route suite next door: Playwright runs under plain Node, so the
 // gateway cannot be imported — it reaches for astro:content, which only Astro's own
@@ -76,6 +77,24 @@ function experiencePathFor(lang: Locale): string {
   const route = derivedRoutes.find((candidate) => candidate.slug === 'experience' && candidate.lang === lang);
   if (!route) throw new Error(`no experience route derived for locale "${lang}"`);
   return route.path;
+}
+
+// HOME-012/013 — the hero's two copy lines are read from the page's own frontmatter, so a
+// locale that loses either key fails by name rather than rendering a silently shorter hero.
+function homePageData(lang: Locale): { thesis?: string; subtitle?: string } {
+  const entry = pageEntries.find(
+    (candidate) => candidate.data.slug === 'home' && candidate.data.lang === lang,
+  );
+  if (!entry) throw new Error(`no home entry for locale "${lang}"`);
+  return entry.data as { thesis?: string; subtitle?: string };
+}
+
+// HOME-014 — the destination is the nav's contact anchor, derived through the same
+// resolver the rail uses rather than restated as "#contact" here.
+function contactHrefFor(lang: Locale): string {
+  const item = NAV_ITEMS.find((candidate) => candidate.key === 'contact');
+  if (!item) throw new Error('the nav declares no "contact" item');
+  return resolveNavItemHref(item, { lang, isIndexPage: true }) as string;
 }
 
 // EMP-009 — the destination a card is meant to reach: that locale's experience route,
@@ -867,3 +886,112 @@ test('both index routes return 200 and cross-link to each other', async ({ page 
     );
   }
 });
+
+// HOME-012/013 — the hero's two copy lines are content. A locale that loses either key
+// fails here by name rather than rendering a silently shorter hero.
+test('the home content carries the hero title and subtitle in both locales', () => {
+  for (const lang of LOCALES) {
+    const { thesis, subtitle } = homePageData(lang);
+    expect(thesis?.trim(), `home.${lang}.md carries no thesis`).toBeTruthy();
+    expect(subtitle?.trim(), `home.${lang}.md carries no subtitle`).toBeTruthy();
+  }
+});
+
+// HOME-014 — the CTA label is content too, and a missing key is a page that loses its
+// only action.
+test('the interface strings carry the hero call to action in both locales', () => {
+  for (const lang of LOCALES) {
+    const label = uiStringsFor(lang).home?.hero_cta as string | undefined;
+    expect(label?.trim(), `ui.${lang}.md carries no home.hero_cta`).toBeTruthy();
+  }
+});
+
+for (const lang of LOCALES) {
+  test(`the hero prints the title as the page's only h1 in "${lang}"`, async ({ page }) => {
+    const { thesis } = homePageData(lang);
+    expect(thesis?.trim(), `home.${lang}.md carries no thesis`).toBeTruthy();
+
+    await visitHome(page, lang);
+
+    const headings = page.locator('h1');
+    await expect(headings).toHaveCount(1);
+    await expect(headings).toHaveText(thesis as string);
+  });
+}
+
+for (const lang of LOCALES) {
+  test(`the hero prints the subtitle from content in "${lang}"`, async ({ page }) => {
+    const { subtitle } = homePageData(lang);
+
+    await visitHome(page, lang);
+
+    const lead = page.locator('.home-hero__subtitle');
+    if (!subtitle?.trim()) {
+      await expect(lead).toHaveCount(0);
+      return;
+    }
+
+    await expect(lead).toHaveCount(1);
+    await expect(lead).toHaveText(subtitle);
+
+    // It is the lead under the title, not a second heading: it follows the h1 and shares
+    // its left edge while taking a narrower measure.
+    const followsTitle = await page.locator('.home-hero').evaluate((hero) => {
+      const heading = hero.querySelector('h1');
+      const leadElement = hero.querySelector('.home-hero__subtitle');
+      return Boolean(
+        heading &&
+          leadElement &&
+          heading.compareDocumentPosition(leadElement) & Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+    expect(followsTitle, 'the subtitle does not follow the title').toBe(true);
+
+    const titleBox = await page.locator('.home-hero h1').boundingBox();
+    const leadBox = await lead.boundingBox();
+    expect(titleBox, 'the title has no box').not.toBeNull();
+    expect(leadBox, 'the subtitle has no box').not.toBeNull();
+    expect(Math.abs(leadBox!.x - titleBox!.x)).toBeLessThanOrEqual(1);
+    expect(leadBox!.width).toBeLessThanOrEqual(titleBox!.width + 1);
+  });
+}
+
+for (const lang of LOCALES) {
+  test(`the hero carries a call to action into the contact section in "${lang}"`, async ({ page }) => {
+    const label = uiStringsFor(lang).home?.hero_cta as string | undefined;
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await visitHome(page, lang);
+
+    const cta = page.locator('.home-hero__cta');
+    if (!label?.trim()) {
+      await expect(cta).toHaveCount(0);
+      return;
+    }
+
+    await expect(cta).toHaveCount(1);
+    await expect(cta).toHaveText(label);
+    expect(await cta.evaluate((element) => element.tagName)).toBe('A');
+
+    const href = contactHrefFor(lang);
+    await expect(cta).toHaveAttribute('href', href);
+    await expect(page.locator(href)).toHaveCount(1);
+
+    // The action is on the first screen at the wide sanctioned width.
+    const wideBox = await cta.boundingBox();
+    expect(wideBox, 'the CTA has no box').not.toBeNull();
+    expect(wideBox!.y + wideBox!.height).toBeLessThanOrEqual(900);
+
+    // And at the phone width, where the composition is tallest.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await visitHome(page, lang);
+    const phoneBox = await cta.boundingBox();
+    expect(phoneBox, 'the CTA has no box at 390px').not.toBeNull();
+    expect(phoneBox!.y + phoneBox!.height).toBeLessThanOrEqual(844);
+
+    // The click lands on the contact section, not the page top.
+    await cta.click();
+    await expect(page).toHaveURL(new RegExp(`${escapeForRegExp(href)}$`));
+    await expect(page.locator('#contact .contact-section__heading')).toBeInViewport();
+  });
+}
