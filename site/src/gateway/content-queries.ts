@@ -78,6 +78,9 @@ interface SocialLink {
 }
 
 interface HomeStrings {
+  // Optional because absence is a designed state: the hero omits the CTA rather than
+  // inventing a label or rendering an empty anchor.
+  hero_cta?: string;
   employers_heading: string;
   employers_prev: string;
   employers_next: string;

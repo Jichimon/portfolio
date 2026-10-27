@@ -64,8 +64,12 @@ const ES = [
    `<a href="#contact"><span class="ind"></span>Contacto</a>`],
 
   // --- hero --------------------------------------------------------------------
-  [`When a system is too critical to touch and too old to ignore, that's my problem to solve.`,
-   `Cuando un sistema es demasiado cr&iacute;tico para tocar y demasiado viejo para ignorar, ese es mi problema.`],
+  [`<h1 class="thesis">Software should fit the problem, not the other way around.</h1>`,
+   `<h1 class="thesis">El software debe adaptarse al problema, no al rev&eacute;s.</h1>`],
+  [`<p class="subtitle">I build practical software solutions, connect systems, and turn complex needs into things that work.</p>`,
+   `<p class="subtitle">Creo soluciones de software, conecto sistemas y transformo necesidades complejas en resultados concretos.</p>`],
+  [`<a class="cf-submit hero-cta" href="#contact">Let's talk</a>`,
+   `<a class="cf-submit hero-cta" href="#contact">Hablemos</a>`],
 
   // --- employers ---------------------------------------------------------------
   [`<h2>Where I've worked</h2>`, `<h2>D&oacute;nde he trabajado</h2>`],
@@ -197,7 +201,8 @@ const ES = [
 // a CSS token or a job title, all of which stay English in the Spanish content too.
 const LEFTOVERS = [
   "Where I've worked", "What I&rsquo;ve built", "Get in touch", "Technologies I&rsquo;ve",
-  "too critical to touch", "Case study<", "Your email", "Send</button>", "Dark mode",
+  "Software should fit the problem", "I build practical software solutions", "Let's talk",
+  "Case study<", "Your email", "Send</button>", "Dark mode",
 ];
 
 // ---------------------------------------------------------------------------

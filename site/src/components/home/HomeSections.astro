@@ -9,6 +9,7 @@ import {
   getExperienceHref,
 } from '../../gateway/content-queries.ts';
 import type { Locale } from '../../gateway/content-queries.ts';
+import { NAV_ITEMS, resolveNavItemHref } from '../../../lib/nav/nav-structure.mjs';
 import Hero from './Hero.astro';
 import HeroBackdrop from './HeroBackdrop.astro';
 import EmployersSection from './employers/EmployersSection.astro';
@@ -39,11 +40,19 @@ const [page, ui, technologies, tiles, testimonials, employers] = await Promise.a
 
 const experienceHref = getExperienceHref(lang);
 
-const { thesis } = page.data as { thesis?: string };
+// The hero's one action points at the contact section of THIS page. The anchor is declared
+// once in the nav structure, so the hero asks it rather than spelling the fragment out.
+const contactItem = NAV_ITEMS.find((item) => item.key === 'contact');
+if (!contactItem) {
+  throw new Error('the nav declares no "contact" item for the hero call to action');
+}
+const contactHref = resolveNavItemHref(contactItem, { lang, isIndexPage: true }) as string;
+
+const { thesis, subtitle } = page.data as { thesis?: string; subtitle?: string };
 ---
 
 {thesis !== undefined && (
-  <Hero thesis={thesis}>
+  <Hero thesis={thesis} subtitle={subtitle} ctaLabel={ui.data.home.hero_cta} ctaHref={contactHref}>
     <HeroBackdrop />
   </Hero>
 )}

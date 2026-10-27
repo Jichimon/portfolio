@@ -1,9 +1,17 @@
 ---
 interface Props {
   thesis: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
 }
 
-const { thesis } = Astro.props;
+const { thesis, subtitle, ctaLabel, ctaHref } = Astro.props;
+
+// Both optional blocks are absent when their content is absent: no empty paragraph, and no
+// anchor ever renders without a label.
+const hasSubtitle = subtitle !== undefined && subtitle.trim() !== '';
+const hasCta = ctaLabel !== undefined && ctaLabel.trim() !== '' && ctaHref !== undefined;
 ---
 
 <section class="home-hero">
@@ -11,7 +19,9 @@ const { thesis } = Astro.props;
     <slot />
   </div>
   <div class="home-hero__content">
-    <p class="home-hero__thesis">{thesis}</p>
+    <h1 class="home-hero__thesis">{thesis}</h1>
+    {hasSubtitle && <p class="home-hero__subtitle">{subtitle}</p>}
+    {hasCta && <a class="home-hero__cta" href={ctaHref}>{ctaLabel}</a>}
   </div>
 </section>
 
@@ -42,7 +52,7 @@ const { thesis } = Astro.props;
   .home-hero__content {
     position: relative;
     z-index: 2;
-    padding-top: 340px;
+    padding-top: 300px;
     max-width: 1032px;
     margin-inline: auto;
   }
@@ -53,6 +63,43 @@ const { thesis } = Astro.props;
     letter-spacing: -0.012em;
     max-width: 800px;
     margin: 0;
+    text-wrap: balance;
+  }
+
+  .home-hero__subtitle {
+    font-family: var(--font-body);
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+    max-width: 640px;
+    margin: 20px 0 0;
+    text-wrap: balance;
+  }
+
+  .home-hero__cta {
+    display: inline-block;
+    margin-top: 32px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--color-bg);
+    background: var(--color-ink);
+    border-radius: 2px;
+    padding: 12px 28px;
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+
+  /* The global link hover would repaint the label in the accent colour, which is the
+     background this rule sets: keep the label on the surface colour. */
+  .home-hero__cta:hover {
+    color: var(--color-bg);
+    background: var(--color-accent);
+  }
+
+  .home-hero__cta:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
   }
 
   @media (max-width: 820px) {
@@ -62,19 +109,29 @@ const { thesis } = Astro.props;
       padding-bottom: 40px;
     }
     .home-hero__content {
-      padding-top: 190px;
+      padding-top: 160px;
     }
-    /* The thesis is the one line on the page that has to survive every width, and
-       the design steps it down twice rather than letting it wrap into a wall. The
+    /* The thesis is the largest statement on the page and has to survive every width,
+       and the design steps it down twice rather than letting it wrap into a wall. The
        token carries the widest step, so the two below it are named here. */
     .home-hero__thesis {
       font-size: 30px;
+    }
+    .home-hero__subtitle {
+      font-size: 17px;
+      margin-top: 16px;
+    }
+    .home-hero__cta {
+      margin-top: 28px;
     }
   }
 
   @media (max-width: 560px) {
     .home-hero__thesis {
       font-size: 25px;
+    }
+    .home-hero__subtitle {
+      font-size: 16px;
     }
   }
 </style>

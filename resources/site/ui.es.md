@@ -32,8 +32,9 @@ socials:
     url: "https://www.linkedin.com/in/luis-octavio-antelo-mansilla-92b8ba150/"
 
 home:
+  hero_cta: "Hablemos"
   standalone_label: "Fuera de la plataforma: otro empleador, otro sistema"
-  employers_heading: "Acá ya trabajé"
+  employers_heading: "Acá trabajé"
   employers_prev: "Anterior"
   employers_next: "Siguiente"
   work_heading: "Lo que hice"
@@ -136,6 +137,7 @@ Se levanta tal cual del artboard, sin tocar una coma.
 | `rail.wordmark` | `HomeES.dc.html` 425 |
 | `socials`, los dos: nombre y URL | `HomeES.dc.html` 448 · idénticos al artboard inglés: un nombre propio y una URL, nada que traducir |
 | `home.contact_heading`, `home.contact_email` | `HomeES.dc.html` 667, 687 |
+| `home.hero_cta` | `HomeES.dc.html` · la sección `.hero`, el ancla del CTA · redacción del autor, llevada al artboard en el mismo cambio |
 | `contact_form`: los siete | `HomeES.dc.html` 672–683 |
 | `footer.metrics_slot` | `HomeES.dc.html` 716 |
 | `not_found`: `status_word`, `heading`, `body` y las cuatro destinaciones | `NotFound.dc.html` 228, 275–286 |
@@ -143,6 +145,8 @@ Se levanta tal cual del artboard, sin tocar una coma.
 **`home.employers_heading`, `home.work_heading`, `home.stack_heading`, `home.contact_invite` y `home.contact_note` ya no salen del artboard.** Se levantaron de `HomeES.dc.html` 532, 542, 655, 668 y después se reescribieron con voz propia. Hoy la fuente de esos cinco strings es este archivo, y el inglés se alinea contra él, no al revés.
 
 **Y hay una sustitución que corre sobre todo el archivo.** Donde el artboard usaba raya, acá van dos puntos, un punto o paréntesis. Así que `footer.metrics_slot` y `not_found.body` difieren de su origen en el artboard por esa puntuación y por nada más.
+
+**`home.hero_cta` no existía en el diseño antes de este item.** La redacción es del autor y el artboard la lleva en el mismo cambio; el artboard es el registro de la decisión, no su origen.
 
 `rail.role` queda en inglés a propósito: *Senior Software Engineer* es el título del puesto, y así aparece en el artboard español.
 

@@ -157,7 +157,7 @@
        resets margin-inline and would silently un-centre exactly those elements. */
     .hero { max-width: none; position: relative; min-height: 560px; padding-top: 76px; padding-bottom: 64px; overflow: hidden; }
     .hero-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-    .hero-content { position: relative; z-index: 2; padding-top: 340px; max-width: 1032px; margin-inline: auto; }
+    .hero-content { position: relative; z-index: 2; padding-top: 300px; max-width: 1032px; margin-inline: auto; }
 
     /* legacy side: stacked strata. Every fade is a plain linear gradient that finishes well
        INSIDE the element box — a fade that runs to the box edge shows the edge instead of hiding it,
@@ -215,6 +215,32 @@
       letter-spacing: -0.012em;
       max-width: 800px;
       margin: 0;
+      text-wrap: balance;
+    }
+
+    .subtitle {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-size: 18px;
+      line-height: 1.6;
+      color: var(--ink-muted);
+      max-width: 640px;
+      margin: 20px 0 0;
+      text-wrap: balance;
+    }
+
+    /* The hero's one action borrows the form's button treatment. The colour is repeated
+       because the board's link reset would otherwise inherit the ink colour. */
+    .cf-submit.hero-cta {
+      display: inline-block;
+      margin-top: 32px;
+      color: var(--bg);
+    }
+    .cf-submit.hero-cta:hover {
+      color: var(--bg);
+    }
+    .cf-submit.hero-cta:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
     }
 
     /* ---------- marquee — quiet directory strip, not a card; text is a placeholder for real logos later ---------- */
@@ -454,8 +480,10 @@
     }
     @media (max-width: 820px) {
       .hero { min-height: 420px; padding-top: 40px; padding-bottom: 40px; }
-      .hero-content { padding-top: 190px; }
-      .hero-title { font-size: 30px; }
+      .hero-content { padding-top: 160px; }
+      .thesis { font-size: 30px; }
+      .subtitle { font-size: 17px; margin-top: 16px; }
+      .hero-cta { margin-top: 28px; }
       .strata-bg { width: 76%; }
       .nodes-bg { width: 82%; opacity: .7; }
       .bento { grid-template-columns: 1fr; }
@@ -467,7 +495,8 @@
       .testimonials .wide { grid-column: auto; }
     }
     @media (max-width: 560px) {
-      .hero-title { font-size: 25px; }
+      .thesis { font-size: 25px; }
+      .subtitle { font-size: 16px; }
     }
   </style>
 </helmet>
@@ -577,7 +606,9 @@
       </div>
 
       <div class="hero-content">
-        <p class="thesis">When a system is too critical to touch and too old to ignore, that's my problem to solve.</p>
+        <h1 class="thesis">Software should fit the problem, not the other way around.</h1>
+        <p class="subtitle">I build practical software solutions, connect systems, and turn complex needs into things that work.</p>
+        <a class="cf-submit hero-cta" href="#contact">Let's talk</a>
       </div>
     </section>
 
